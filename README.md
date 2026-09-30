@@ -1,1 +1,2 @@
 # Versorgungsassistent – Deployment\n\nÖffentliches Deployment-Repository für den Versorgungsassistenten.\n\nDieses Repository enthält ausschließlich die statische Weboberfläche. Fachdaten liegen nicht in diesem Repository, sondern werden nach erfolgreicher Anmeldung, MFA/AAL2 und Allowlist-Prüfung aus der abgesicherten Supabase-Datenbank gelesen.\n
+Deployment: GitHub Pages (`main`, GitHub Actions).
