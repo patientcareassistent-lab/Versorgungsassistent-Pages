@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light" />
+  <title>Versorgungsassistent</title>
+  <style>
+    :root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f2937;background:#f4f7f8;font-synthesis:none}
+    *{box-sizing:border-box}body{margin:0;min-width:320px;min-height:100vh}button,input,select,textarea{font:inherit}button{cursor:pointer}
+    .hidden{display:none!important}.auth-page{min-height:100vh;display:grid;place-items:center;padding:32px;background:radial-gradient(circle at 20% 20%,#eefaf6,transparent 38%),linear-gradient(135deg,#f8fafc,#eef5f5)}
+    .auth-card{width:min(460px,100%);background:#fff;border:1px solid #dde7e7;border-radius:22px;padding:30px;box-shadow:0 24px 60px rgba(15,23,42,.08)}
+    .auth-card.wide{width:min(580px,100%)}.brand-lockup{display:flex;align-items:center;gap:14px;margin-bottom:26px}.brand-lockup h1{margin:0;font-size:1.25rem}.brand-lockup p{margin:3px 0 0;color:#6b7280;font-size:.9rem}
+    .brand-icon{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:#0f766e;color:#fff;font-weight:800}.brand-icon.small{width:34px;height:34px;border-radius:10px}
+    .auth-card h2{margin:0 0 8px}.muted{color:#667085;line-height:1.55}.stack{display:grid;gap:16px;margin-top:20px}label{display:grid;gap:7px;font-size:.88rem;font-weight:650;color:#344054}
+    input,select,textarea{width:100%;border:1px solid #d7e0e0;border-radius:10px;background:#fff;padding:10px 12px;color:#111827;outline:none;transition:.15s}
+    input:focus,select:focus,textarea:focus{border-color:#0f766e;box-shadow:0 0 0 3px rgba(15,118,110,.09)}textarea{resize:vertical}
+    .primary{border:0;border-radius:10px;background:#0f766e;color:#fff;padding:11px 16px;font-weight:700}.primary:hover{background:#0c625c}.primary:disabled{opacity:.55;cursor:not-allowed}
+    .secondary{border:1px solid #d7e0e0;border-radius:10px;background:#fff;color:#344054;padding:10px 14px;font-weight:650}
+    .security-note{display:flex;gap:9px;margin-top:22px;padding:12px;border-radius:12px;background:#f0fdf9;color:#35645f;font-size:.82rem}.qr{display:block;width:220px;max-width:100%;margin:20px auto;border:12px solid #fff;border-radius:12px;box-shadow:0 0 0 1px #e5e7eb}.secret{display:block;margin-top:10px;padding:10px;background:#f8fafc;border-radius:8px;word-break:break-all}
+    .mfa-row{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:18px}.otp{font-size:1.35rem;letter-spacing:.3em;text-align:center}
+    .center{min-height:100vh;display:grid;place-items:center;align-content:center;gap:12px;color:#667085}.spinner{width:38px;height:38px;border:4px solid #dce8e6;border-top-color:#0f766e;border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    .shell{min-height:100vh;display:grid;grid-template-columns:250px 1fr}.sidebar{position:sticky;top:0;height:100vh;background:#102a2a;color:#dbe9e6;padding:18px 14px;display:flex;flex-direction:column}
+    .side-brand{height:54px;display:flex;align-items:center;gap:11px;padding:0 6px;font-weight:760;color:#fff;white-space:nowrap}.sidebar nav{display:grid;gap:5px;margin-top:20px}
+    .sidebar nav button,.logout{border:0;background:transparent;color:#b8cbc8;border-radius:10px;padding:10px 11px;display:flex;align-items:center;gap:11px;text-align:left}.sidebar nav button:hover,.sidebar nav button.active{background:#174342;color:#fff}.logout{margin-top:auto;border:1px solid #2d5150}
+    .main{min-width:0}.topbar{min-height:84px;background:#fff;border-bottom:1px solid #e4e9e9;padding:17px 28px;display:flex;justify-content:space-between;align-items:center;gap:16px;position:sticky;top:0;z-index:5}.topbar h1{font-size:1.28rem;margin:0}.topbar p{margin:4px 0 0;color:#8a949e;font-size:.82rem}.header-actions{display:flex;align-items:center;gap:12px}.user{font-size:.85rem;color:#667085}
+    .content{padding:26px;max-width:1600px;margin:0 auto}.page-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.span2{grid-column:1/-1}
+    .hero{grid-column:1/-1;display:flex;justify-content:space-between;gap:24px;padding:28px 30px;border-radius:18px;background:linear-gradient(130deg,#0f766e,#164e63);color:#fff;box-shadow:0 14px 30px rgba(15,118,110,.13)}.hero h2{font-size:1.65rem;margin:14px 0 8px}.hero p{max-width:780px;margin:0;color:#dbf1ee;line-height:1.55}.hero-mark{font-size:3rem;align-self:center;opacity:.8}
+    .metrics{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.metric,.card{background:#fff;border:1px solid #e0e7e7;border-radius:15px;box-shadow:0 3px 13px rgba(15,23,42,.03)}.metric{padding:18px}.metric span,.metric small{display:block;color:#7a8794}.metric strong{display:block;font-size:1.65rem;margin:2px 0}.metric small{font-size:.75rem}
+    .card{padding:20px}.section-title{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:16px}.section-title h3{margin:0;font-size:1.03rem}.section-title p{margin:5px 0 0;color:#7a8794;font-size:.84rem}
+    .pill{display:inline-flex;align-items:center;gap:5px;padding:4px 8px;border-radius:999px;background:#f2f4f7;color:#475467;font-size:.75rem;font-weight:700;white-space:nowrap}.pill.success{background:#ecfdf3;color:#067647}.pill.blue{background:#e8f2ff;color:#175cd3}.pill.warning{background:#fffaeb;color:#b54708}.hero .pill.blue{background:rgba(255,255,255,.15);color:#fff}
+    .table-wrap{overflow:auto;border:1px solid #edf0f0;border-radius:11px}table{border-collapse:collapse;width:100%;font-size:.83rem}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #edf0f0;vertical-align:top}th{background:#f8fafb;color:#56616d;font-size:.76rem;text-transform:uppercase;letter-spacing:.03em;position:sticky;top:0}tbody tr:hover{background:#fafcfc}
+    .form-grid{display:grid;gap:14px}.form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.rule-box{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-top:16px;padding:14px;border-radius:12px;background:#f7faf9;border:1px solid #e3ecea}.rule-box p{margin:5px 0 0;color:#667085}
+    .field-list{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}.field{padding:12px 0;border-bottom:1px solid #eef2f2;grid-template-columns:minmax(180px,.9fr) 1.1fr;align-items:start}.field>span{font-weight:650}.field b{color:#b42318;margin-left:3px}.field small{display:block;margin-top:3px;font-weight:400;color:#98a2b3}
+    .search{display:flex;align-items:center;gap:7px;border:1px solid #dde5e5;border-radius:10px;padding:0 10px;background:#fff}.search input{border:0;box-shadow:none;padding:8px 0;width:240px}.source-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.source{border:1px solid #e5ebeb;border-radius:12px;padding:15px;min-width:0}.source h4{font-size:.9rem;margin:8px 0;line-height:1.35}.source p{font-size:.8rem;color:#667085;word-break:break-word}.source small{color:#98a2b3}
+    .alert{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:11px;margin-bottom:16px;font-size:.86rem}.alert p{margin:3px 0 0}.alert.error{background:#fef3f2;color:#b42318;border:1px solid #fecdca}.alert.warning{background:#fffaeb;color:#7a2e0e;border:1px solid #fedf89}.num{text-align:right;white-space:nowrap}.actions{display:flex;gap:10px;flex-wrap:wrap}
+    @media(max-width:1100px){.metrics{grid-template-columns:repeat(2,1fr)}.source-grid{grid-template-columns:repeat(2,1fr)}.field-list{grid-template-columns:1fr}.form-grid.three{grid-template-columns:1fr}}
+    @media(max-width:800px){.shell{grid-template-columns:76px 1fr}.side-brand span,.sidebar nav span,.logout span{display:none}.topbar{padding:14px 18px;height:auto}.header-actions .user{display:none}.content{padding:16px}.page-grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.source-grid{grid-template-columns:1fr}.hero-mark{display:none}.header-actions .pill{display:none}}
+    @media print{.sidebar,.topbar,.no-print{display:none!important}.shell{display:block}.content{padding:0}.card,.metric{box-shadow:none}}
+  </style>
+</head>
+<body>
+  <div id="loading" class="center"><div class="spinner"></div><p>Versorgungsassistent wird geladen …</p></div>
+
+  <main id="auth" class="auth-page hidden">
+    <section class="auth-card">
+      <div class="brand-lockup"><div class="brand-icon">VA</div><div><h1>Versorgungsassistent</h1><p>Teststand v0.3.4</p></div></div>
+      <div id="loginPane">
+        <h2>Anmelden</h2>
+        <p class="muted">Zugriff nur für freigegebene Tester. Nach dem Passwort ist die Authenticator-MFA erforderlich.</p>
+        <form id="loginForm" class="stack">
+          <label>Benutzername<input id="username" autocomplete="username" placeholder="Mitarbeiter1" required /></label>
+          <label>Passwort<input id="password" type="password" autocomplete="current-password" required /></label>
+          <div id="loginError" class="alert error hidden"></div>
+          <button id="loginButton" class="primary" type="submit">Anmelden</button>
+        </form>
+        <div class="security-note"><span>🔐</span><span>Fachdatenzugriff wird serverseitig über RLS, Tester-Allowlist und MFA/AAL2 abgesichert.</span></div>
+      </div>
+      <div id="mfaPane" class="hidden">
+        <h2>Mehrfaktor-Anmeldung</h2>
+        <p id="mfaText" class="muted">Aktuellen Code aus Microsoft Authenticator eingeben.</p>
+        <img id="qr" class="qr hidden" alt="QR-Code für Authenticator" />
+        <details id="secretDetails" class="hidden"><summary>Schlüssel manuell eingeben</summary><code id="secret" class="secret"></code></details>
+        <div id="mfaError" class="alert error hidden"></div>
+        <div class="mfa-row"><input id="otp" class="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="000000" /><button id="verifyButton" class="primary">Bestätigen</button></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="app" class="shell hidden">
+    <aside class="sidebar">
+      <div class="side-brand"><div class="brand-icon small">VA</div><span>Versorgungsassistent</span></div>
+      <nav>
+        <button data-view="overview" class="active">◉ <span>Übersicht</span></button>
+        <button data-view="care">✚ <span>Versorgung</span></button>
+        <button data-view="forms">▤ <span>Formulare</span></button>
+        <button data-view="pg26">∑ <span>Sitzschalen PG 26</span></button>
+        <button data-view="sources">▣ <span>Quellen</span></button>
+      </nav>
+      <button id="logoutButton" class="logout">↪ <span>Abmelden</span></button>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <div><h1 id="pageTitle">Übersicht</h1><p>Fachliche Entscheidungsunterstützung · Teststand 30.09.2026</p></div>
+        <div class="header-actions"><span class="pill success">🔐 MFA aktiv</span><span id="currentUser" class="user"></span></div>
+      </header>
+      <main class="content">
+        <div id="appError" class="alert error hidden"></div>
+
+        <section id="overviewView">
+          <div class="page-grid">
+            <section class="hero"><div><span class="pill blue">Version 0.3.4</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
+            <section class="metrics">
+              <div class="metric"><span>Krankenkassen</span><strong id="metricKassen">0</strong><small>Kassenmatrix</small></div>
+              <div class="metric"><span>Formularregeln</span><strong id="metricForms">0</strong><small>Vertrags-/Formularlogik</small></div>
+              <div class="metric"><span>Produktgruppen</span><strong id="metricPg">0</strong><small>fachlich strukturiert</small></div>
+              <div class="metric"><span>Quellen</span><strong id="metricSources">0</strong><small>Projekt- und Webquellen</small></div>
+            </section>
+            <section class="card span2"><div class="section-title"><div><h3>Produktgruppenstatus</h3><p>Generische Erhebungsblätter und kassenbezogene Ausnahmen</p></div></div><div class="table-wrap"><table><thead><tr><th>PG</th><th>Generisches Blatt</th><th>Reifegrad</th><th>Kritischer Hinweis</th></tr></thead><tbody id="productBody"></tbody></table></div></section>
+          </div>
+        </section>
+
+        <section id="careView" class="hidden">
+          <div class="page-grid">
+            <section class="card span2"><div class="section-title"><div><h3>Neue Versorgung</h3><p>Kasse und Produktgruppe bestimmen die anzuwendenden Regeln.</p></div><div class="actions no-print"><button id="printButton" class="secondary">Drucken / PDF</button><button id="clearButton" class="secondary">Eingaben leeren</button></div></div>
+              <div class="form-grid three">
+                <label>Krankenkasse<select id="careKasse"><option value="">Bitte wählen</option></select></label>
+                <label>Produktgruppe<select id="carePg"><option value="">Bitte wählen</option></select></label>
+                <label>Formular / Regel<select id="careForm"><option value="">Generisches Blatt / automatisch</option></select></label>
+              </div>
+              <div id="ruleBox" class="rule-box hidden"></div>
+            </section>
+            <section class="card span2"><div class="section-title"><div><h3>Erhebungsdaten</h3><p id="fieldInfo">Kasse und Produktgruppe auswählen, um Felder zu laden.</p></div></div><div id="fieldList" class="field-list"></div></section>
+          </div>
+        </section>
+
+        <section id="formsView" class="hidden card">
+          <div class="section-title"><div><h3>Formularmatrix</h3><p>Explizite Kassenanforderungen und generische Verarbeitung</p></div><div class="search no-print"><span>⌕</span><input id="formSearch" placeholder="Kasse, PG, Status …" /></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Kasse</th><th>PG</th><th>Versorgungsart</th><th>Status</th><th>Aktion</th><th>Stand</th></tr></thead><tbody id="formsBody"></tbody></table></div>
+        </section>
+
+        <section id="pg26View" class="hidden">
+          <div class="page-grid">
+            <section class="card span2"><div class="section-title"><div><h3>Sitzschalen · PG 26</h3><p>Vertragspositionen</p></div><label style="min-width:220px">Kasse<select id="pg26Kasse"><option value="">Alle</option></select></label></div><div class="table-wrap"><table><thead><tr><th>Kasse</th><th>Kategorie</th><th>Art.-Nr.</th><th>HMV</th><th>Inhalt</th><th>Preis netto</th></tr></thead><tbody id="positionBody"></tbody></table></div></section>
+            <section class="card span2"><div class="section-title"><div><h3>Kalkulationsbausteine</h3><p>Änderung Sitzschale / anatomischer Sitz oder Rücken</p></div><span id="calcCount" class="pill blue"></span></div><div class="table-wrap"><table><thead><tr><th>Abschnitt</th><th>Art.-Nr.</th><th>Bezeichnung</th><th>Arbeitszeit</th><th>Material</th><th>Summe / Regel</th></tr></thead><tbody id="calcBody"></tbody></table></div></section>
+          </div>
+        </section>
+
+        <section id="sourcesView" class="hidden card"><div class="section-title"><div><h3>Quellenregister</h3><p>Nachvollziehbare fachliche Herkunft der Regeln und Formulare</p></div></div><div id="sourceGrid" class="source-grid"></div></section>
+      </main>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4'
+
+    const supabase = createClient(
+      'https://pypljdyqjpdkismbwuag.supabase.co',
+      'sb_publishable_dyiVrJQX8HYWKrWxJzqLmw_RmFAWJRI',
+      { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
+    )
+
+    const $ = (id) => document.getElementById(id)
+    const views = ['overview','care','forms','pg26','sources']
+    const titles = {overview:'Übersicht',care:'Versorgung',forms:'Formulare',pg26:'Sitzschalen PG 26',sources:'Quellen'}
+    const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[]}
+    const values = {}
+    let currentSession = null
+    let factorId = ''
+
+    function escapeHtml(value){
+      return String(value ?? '—').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))
+    }
+    function showError(id,message){ const el=$(id); el.textContent=message||''; el.classList.toggle('hidden',!message) }
+    function showLoading(show=true){ $('loading').classList.toggle('hidden',!show) }
+    function friendlyUser(email){ return email?.split('@')[0]?.replace(/^mitarbeiter/i,'Mitarbeiter') || 'Tester' }
+
+    async function start(){
+      const {data:{session}} = await supabase.auth.getSession()
+      showLoading(false)
+      if(session) await handleSession(session)
+      else showLogin()
+    }
+
+    function showLogin(){
+      $('auth').classList.remove('hidden'); $('app').classList.add('hidden')
+      $('loginPane').classList.remove('hidden'); $('mfaPane').classList.add('hidden')
+    }
+
+    async function handleSession(session){
+      currentSession=session
+      const aal=await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+      if(aal.error){ showLogin(); showError('loginError',aal.error.message); return }
+      if(aal.data.currentLevel==='aal2'){ await openApp(session); return }
+
+      const factors=await supabase.auth.mfa.listFactors()
+      if(factors.error){ showLogin(); showError('loginError',factors.error.message); return }
+      const verified=(factors.data.totp||[]).find(f=>f.status==='verified') || (factors.data.totp||[])[0]
+
+      $('auth').classList.remove('hidden'); $('app').classList.add('hidden')
+      $('loginPane').classList.add('hidden'); $('mfaPane').classList.remove('hidden')
+      showError('mfaError','')
+
+      if(verified){
+        factorId=verified.id
+        $('mfaText').textContent='Aktuellen Code aus Microsoft Authenticator eingeben.'
+        $('qr').classList.add('hidden'); $('secretDetails').classList.add('hidden')
+      }else{
+        const enrolled=await supabase.auth.mfa.enroll({factorType:'totp',friendlyName:'Versorgungsassistent'})
+        if(enrolled.error){ showError('mfaError',enrolled.error.message); return }
+        factorId=enrolled.data.id
+        $('qr').src=enrolled.data.totp.qr_code
+        $('qr').classList.remove('hidden')
+        $('secret').textContent=enrolled.data.totp.secret
+        $('secretDetails').classList.remove('hidden')
+        $('mfaText').textContent='QR-Code mit Microsoft Authenticator scannen und anschließend den aktuellen sechsstelligen Code eingeben.'
+      }
+    }
+
+    async function openApp(session){
+      showLoading(true)
+      const access=await supabase.rpc('current_access')
+      if(access.error || !access.data?.[0]?.allowed){
+        showLoading(false); $('auth').classList.remove('hidden'); $('app').classList.add('hidden')
+        $('loginPane').classList.add('hidden'); $('mfaPane').classList.remove('hidden')
+        showError('mfaError',access.error?.message || 'Dieser Benutzer ist nicht für den Versorgungsassistenten freigegeben.')
+        return
+      }
+
+      const defs=[
+        ['kassen','kassen'],['produktgruppen','produktgruppen'],['formulare','formulare'],
+        ['formularfelder','formularfelder'],['quellen','quellen'],['pg26_positionen','pg26'],['pg26_kalkulation','kalk']
+      ]
+      const responses=await Promise.all(defs.map(([table])=>supabase.from(table).select('*')))
+      let firstError=''
+      responses.forEach((response,index)=>{
+        data[defs[index][1]]=response.data||[]
+        if(response.error && !firstError) firstError=response.error.message
+      })
+      showError('appError',firstError)
+
+      $('currentUser').textContent=friendlyUser(session.user.email)
+      $('auth').classList.add('hidden'); $('app').classList.remove('hidden')
+      showLoading(false)
+      populateSelectors()
+      renderAll()
+    }
+
+    function populateSelectors(){
+      const kassen=[...new Set(data.kassen.map(x=>x.Kasse_Kanonisch).filter(Boolean))].sort()
+      const pgs=[...new Set(data.produktgruppen.map(x=>String(x.PG)).filter(Boolean))].sort((a,b)=>Number(a)-Number(b))
+      $('careKasse').innerHTML='<option value="">Bitte wählen</option>'+kassen.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
+      $('carePg').innerHTML='<option value="">Bitte wählen</option>'+pgs.map(x=>'<option value="'+escapeHtml(x)+'">PG '+escapeHtml(x)+'</option>').join('')
+      const pg26Kassen=[...new Set(data.pg26.map(x=>x.Kasse).filter(Boolean))].sort()
+      $('pg26Kasse').innerHTML='<option value="">Alle</option>'+pg26Kassen.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
+    }
+
+    function renderAll(){
+      $('metricKassen').textContent=data.kassen.length
+      $('metricForms').textContent=data.formulare.length
+      $('metricPg').textContent=data.produktgruppen.length
+      $('metricSources').textContent=data.quellen.length
+
+      $('productBody').innerHTML=data.produktgruppen.map(r=>'<tr><td><strong>PG '+escapeHtml(r.PG)+'</strong></td><td>'+escapeHtml(r.Generisches_Blatt)+'</td><td><span class="pill">'+escapeHtml(r.Reifegrad)+'</span></td><td>'+escapeHtml(r.Kritischer_Hinweis)+'</td></tr>').join('')
+      renderForms('')
+      renderPg26()
+      $('calcCount').textContent=data.kalk.length+' Positionen'
+      $('calcBody').innerHTML=data.kalk.map(r=>'<tr><td>'+escapeHtml(r.Abschnitt)+'</td><td>'+escapeHtml(r.Art_Nr)+'</td><td>'+escapeHtml(r.Bezeichnung)+'</td><td>'+(r.AZ_gerundet_min?escapeHtml(r.AZ_gerundet_min)+' min':'—')+'</td><td>'+(r.Material_Position_EUR?escapeHtml(r.Material_Position_EUR)+' €':'—')+'</td><td>'+escapeHtml(r.Summe_oder_Regel)+'</td></tr>').join('')
+      $('sourceGrid').innerHTML=data.quellen.map(r=>'<article class="source"><span class="pill">'+escapeHtml(r.Typ)+'</span><h4>'+escapeHtml(r.Beschreibung)+'</h4><p>'+escapeHtml(r.URL_oder_Datei)+'</p><small>'+escapeHtml(r.Quelle_ID)+'</small></article>').join('')
+    }
+
+    function renderForms(query=''){
+      const q=query.toLowerCase()
+      const rows=data.formulare.filter(r=>JSON.stringify(r).toLowerCase().includes(q))
+      $('formsBody').innerHTML=rows.map(r=>'<tr><td>'+escapeHtml(r.Kasse)+'</td><td>PG '+escapeHtml(r.PG)+'</td><td>'+escapeHtml(r.Versorgungsart)+'</td><td><span class="pill">'+escapeHtml(r.Status)+'</span></td><td>'+escapeHtml(r.Aktion_Versorgungsassistent)+'</td><td>'+escapeHtml(r.Gueltigkeit_Stand)+'</td></tr>').join('')
+    }
+
+    function renderPg26(){
+      const kasse=$('pg26Kasse').value
+      const rows=data.pg26.filter(r=>!kasse||r.Kasse===kasse)
+      $('positionBody').innerHTML=rows.map(r=>'<tr><td>'+escapeHtml(r.Kasse)+'</td><td>'+escapeHtml(r.Kategorie)+'</td><td>'+escapeHtml(r.Art_Nr)+'</td><td>'+escapeHtml(r.HMV_Nr)+'</td><td>'+escapeHtml(r.Inhalt)+'</td><td class="num">'+(r.Preis_Netto_EUR?escapeHtml(r.Preis_Netto_EUR)+' €':'—')+'</td></tr>').join('')
+    }
+
+    function updateCare(){
+      const kasse=$('careKasse').value
+      const pg=$('carePg').value
+      const current=$('careForm').value
+      const forms=data.formulare.filter(f=>(!kasse||f.Kasse===kasse)&&(!pg||String(f.PG)===String(pg)))
+      $('careForm').innerHTML='<option value="">Generisches Blatt / automatisch</option>'+forms.map(f=>'<option value="'+escapeHtml(f.Formular_ID)+'">'+escapeHtml(f.Versorgungsart||f.Formular_ID)+'</option>').join('')
+      if(forms.some(f=>f.Formular_ID===current)) $('careForm').value=current
+      updateCareFields()
+    }
+
+    function updateCareFields(){
+      const pg=$('carePg').value
+      const formId=$('careForm').value
+      const selected=data.formulare.find(f=>f.Formular_ID===formId)
+      if(selected){
+        $('ruleBox').classList.remove('hidden')
+        $('ruleBox').innerHTML='<div><strong>'+escapeHtml(selected.Status)+'</strong><p>'+escapeHtml(selected.Aktion_Versorgungsassistent)+'</p></div><span class="pill blue">'+escapeHtml(selected.Region_Vertrag||'allgemein')+'</span>'
+      }else $('ruleBox').classList.add('hidden')
+
+      let fields=[]
+      if(formId) fields=data.formularfelder.filter(f=>f.Formular_ID===formId)
+      const map={FORM_001:'BARMER_PG18_ANH4',FORM_002:'BARMER_PG22_ANHB'}
+      if(!fields.length && map[formId]) fields=data.formularfelder.filter(f=>f.Formular_ID===map[formId])
+      if(!fields.length && pg) fields=data.formularfelder.filter(f=>String(f.PG)===String(pg)&&f.Formular_Typ==='GENERISCH')
+
+      $('fieldInfo').textContent=fields.length?fields.length+' Felder aus der hinterlegten Formularlogik':'Für diese Auswahl sind noch keine Felddefinitionen hinterlegt.'
+      $('fieldList').innerHTML=''
+      fields.forEach(renderField)
+    }
+
+    function renderField(f){
+      const id=f.Feldzeile_ID
+      const label=document.createElement('label')
+      label.className='field'
+      const title=document.createElement('span')
+      title.innerHTML=escapeHtml(f.Feldbezeichnung)+(String(f.Pflichtstatus).toLowerCase()==='ja'?'<b>*</b>':'')+'<small>'+escapeHtml([f.Abschnitt,f.Einheit_Optionen].filter(Boolean).join(' · '))+'</small>'
+      let control
+      const type=String(f.Datentyp||'')
+      if(type.includes('Ja/Nein')){
+        control=document.createElement('select')
+        control.innerHTML='<option value="">Bitte wählen</option><option>Ja</option><option>Nein</option>'
+      }else if(type==='Datum'){
+        control=document.createElement('input'); control.type='date'
+      }else if(type==='Zahl'){
+        control=document.createElement('input'); control.type='number'
+      }else if(type==='Langtext'||type==='Messreihe'||type.includes('Langtext')){
+        control=document.createElement('textarea'); control.rows=3
+      }else if(type==='Auswahl'){
+        control=document.createElement('select')
+        const raw=String(f.Einheit_Optionen||f.Bedingung_UI||'')
+        const options=raw.split('|').map(x=>x.trim()).filter(Boolean)
+        control.innerHTML='<option value="">Bitte wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
+      }else{
+        control=document.createElement('input')
+      }
+      control.value=values[id]||''
+      control.addEventListener('input',()=>{values[id]=control.value})
+      label.append(title,control)
+      $('fieldList').appendChild(label)
+    }
+
+    $('loginForm').addEventListener('submit',async(event)=>{
+      event.preventDefault(); showError('loginError','')
+      const username=$('username').value.trim().toLowerCase()
+      if(!['mitarbeiter1','mitarbeiter2','mitarbeiter3'].includes(username)){ showError('loginError','Unbekannter Benutzer.'); return }
+      $('loginButton').disabled=true
+      const result=await supabase.auth.signInWithPassword({email:username+'@versorgungsassistent.test',password:$('password').value})
+      $('loginButton').disabled=false
+      if(result.error){ showError('loginError',result.error.message); return }
+      await handleSession(result.data.session)
+    })
+
+    $('verifyButton').addEventListener('click',async()=>{
+      showError('mfaError','')
+      const code=$('otp').value.trim()
+      if(code.length<6){ showError('mfaError','Bitte den aktuellen Authenticator-Code eingeben.'); return }
+      $('verifyButton').disabled=true
+      const challenge=await supabase.auth.mfa.challenge({factorId})
+      if(challenge.error){ $('verifyButton').disabled=false; showError('mfaError',challenge.error.message); return }
+      const verify=await supabase.auth.mfa.verify({factorId,challengeId:challenge.data.id,code})
+      $('verifyButton').disabled=false
+      if(verify.error){ showError('mfaError',verify.error.message); return }
+      const {data:{session}}=await supabase.auth.getSession()
+      await openApp(session)
+    })
+
+    $('logoutButton').addEventListener('click',async()=>{await supabase.auth.signOut(); location.reload()})
+    $('formSearch').addEventListener('input',e=>renderForms(e.target.value))
+    $('pg26Kasse').addEventListener('change',renderPg26)
+    $('careKasse').addEventListener('change',updateCare)
+    $('carePg').addEventListener('change',updateCare)
+    $('careForm').addEventListener('change',updateCareFields)
+    $('printButton').addEventListener('click',()=>window.print())
+    $('clearButton').addEventListener('click',()=>{Object.keys(values).forEach(k=>delete values[k]);updateCareFields()})
+
+    document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{
+      document.querySelectorAll('[data-view]').forEach(b=>b.classList.remove('active'))
+      button.classList.add('active')
+      const view=button.dataset.view
+      views.forEach(v=>$(v+'View').classList.toggle('hidden',v!==view))
+      $('pageTitle').textContent=titles[view]
+    }))
+
+    supabase.auth.onAuthStateChange((event,session)=>{
+      if(event==='SIGNED_OUT') showLogin()
+      currentSession=session
+    })
+
+    start()
+  </script>
+</body>
+</html>
