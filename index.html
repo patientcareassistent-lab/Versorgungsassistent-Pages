@@ -34,6 +34,31 @@
     .field-list{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}.field{padding:12px 0;border-bottom:1px solid #eef2f2;grid-template-columns:minmax(180px,.9fr) 1.1fr;align-items:start}.field>span{font-weight:650}.field b{color:#b42318;margin-left:3px}.field small{display:block;margin-top:3px;font-weight:400;color:#98a2b3}
     .search{display:flex;align-items:center;gap:7px;border:1px solid #dde5e5;border-radius:10px;padding:0 10px;background:#fff}.search input{border:0;box-shadow:none;padding:8px 0;width:240px}.source-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.source{border:1px solid #e5ebeb;border-radius:12px;padding:15px;min-width:0}.source h4{font-size:.9rem;margin:8px 0;line-height:1.35}.source p{font-size:.8rem;color:#667085;word-break:break-word}.source small{color:#98a2b3}
     .alert{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:11px;margin-bottom:16px;font-size:.86rem}.alert p{margin:3px 0 0}.alert.error{background:#fef3f2;color:#b42318;border:1px solid #fecdca}.alert.warning{background:#fffaeb;color:#7a2e0e;border:1px solid #fedf89}.num{text-align:right;white-space:nowrap}.actions{display:flex;gap:10px;flex-wrap:wrap}
+
+    /* V0.3.5: fallbezogener Schritt-für-Schritt-Versorgungsassistent */
+    .wizard-top{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}
+    .wizard-top h3{margin:0}.wizard-top p{margin:5px 0 0;color:#7a8794;font-size:.84rem}
+    .wizard-context{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+    .wizard-shell{display:grid;grid-template-columns:260px minmax(0,1fr);gap:18px;align-items:start}
+    .wizard-rail{position:sticky;top:108px;background:#fff;border:1px solid #e0e7e7;border-radius:15px;padding:12px;box-shadow:0 3px 13px rgba(15,23,42,.03)}
+    .wizard-progress{height:7px;border-radius:999px;background:#edf1f1;overflow:hidden;margin:4px 5px 12px}.wizard-progress i{display:block;height:100%;background:#0f766e;width:0;transition:.2s}
+    .wizard-progress-text{font-size:.75rem;color:#7a8794;padding:0 5px 10px}
+    .wizard-step{width:100%;border:0;background:transparent;text-align:left;display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;padding:9px;border-radius:10px;color:#596673}
+    .wizard-step:hover{background:#f5f8f8}.wizard-step.active{background:#ecfdf9;color:#0f625c}.wizard-step.done .step-no{background:#0f766e;color:#fff}.wizard-step.done .step-state:after{content:"✓";color:#067647;font-weight:800}
+    .step-no{width:27px;height:27px;border-radius:999px;display:grid;place-items:center;background:#eef2f2;color:#667085;font-size:.75rem;font-weight:800}.wizard-step.active .step-no{background:#ccfbf1;color:#0f625c}
+    .step-label{font-size:.81rem;font-weight:700;line-height:1.22}.step-state{width:14px}
+    .wizard-stage{min-width:0}.wizard-panel{display:none}.wizard-panel.active{display:block}
+    .wizard-panel .card{padding:22px}.wizard-panel h2{margin:0;font-size:1.2rem}.wizard-panel .lead{margin:6px 0 18px;color:#667085;line-height:1.55}
+    .wizard-actions{display:flex;justify-content:space-between;gap:12px;margin-top:16px;padding:14px 16px;background:#fff;border:1px solid #e0e7e7;border-radius:14px;position:sticky;bottom:12px;box-shadow:0 10px 30px rgba(15,23,42,.08);z-index:4}
+    .wizard-actions .right{display:flex;gap:10px}.step-section{border:1px solid #e7ecec;border-radius:13px;padding:16px;margin-top:14px;background:#fff}.step-section h4{margin:0 0 12px;font-size:.95rem}
+    .mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.mini-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.check-tile{display:flex;gap:10px;align-items:flex-start;border:1px solid #e7ecec;border-radius:11px;padding:12px;background:#fafcfc}.check-tile input{width:auto;margin-top:3px}.check-tile b{display:block;font-size:.86rem}.check-tile small{display:block;color:#7a8794;margin-top:2px;line-height:1.4}
+    .course-grid{display:grid;grid-template-columns:160px 1fr 150px;gap:9px;align-items:center}.course-grid>div{display:contents}.course-grid .head{font-size:.72rem;color:#667085;font-weight:800;text-transform:uppercase}
+    .status-card{padding:16px;border-radius:13px;background:#f7faf9;border:1px solid #e3ecea}.status-card strong{display:block;margin-bottom:5px}.status-card.ready{background:#ecfdf3;border-color:#abefc6;color:#067647}.status-card.open{background:#fffaeb;border-color:#fedf89;color:#7a2e0e}
+    .source-note{margin-top:12px;font-size:.78rem;color:#667085;line-height:1.5}
+    @media(max-width:1050px){.wizard-shell{grid-template-columns:1fr}.wizard-rail{position:static;display:flex;overflow:auto;gap:5px}.wizard-progress,.wizard-progress-text{display:none}.wizard-step{min-width:150px;grid-template-columns:28px 1fr}.wizard-step .step-state{display:none}}
+    @media(max-width:760px){.mini-grid,.mini-grid.three,.check-grid,.course-grid{grid-template-columns:1fr}.course-grid>div{display:block}.wizard-top{display:block}.wizard-top .actions{margin-top:12px}.wizard-actions{position:static}.wizard-actions .right{margin-left:auto}}
+
     @media(max-width:1100px){.metrics{grid-template-columns:repeat(2,1fr)}.source-grid{grid-template-columns:repeat(2,1fr)}.field-list{grid-template-columns:1fr}.form-grid.three{grid-template-columns:1fr}}
     @media(max-width:800px){.shell{grid-template-columns:76px 1fr}.side-brand span,.sidebar nav span,.logout span{display:none}.topbar{padding:14px 18px;height:auto}.header-actions .user{display:none}.content{padding:16px}.page-grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.source-grid{grid-template-columns:1fr}.hero-mark{display:none}.header-actions .pill{display:none}}
     @media print{.sidebar,.topbar,.no-print{display:none!important}.shell{display:block}.content{padding:0}.card,.metric{box-shadow:none}}
@@ -44,7 +69,7 @@
 
   <main id="auth" class="auth-page hidden">
     <section class="auth-card">
-      <div class="brand-lockup"><div class="brand-icon">VA</div><div><h1>Versorgungsassistent</h1><p>Teststand v0.3.4</p></div></div>
+      <div class="brand-lockup"><div class="brand-icon">VA</div><div><h1>Versorgungsassistent</h1><p>Teststand v0.3.5</p></div></div>
       <div id="loginPane">
         <h2>Anmelden</h2>
         <p class="muted">Zugriff nur für freigegebene Tester. Nach dem Passwort ist die Authenticator-MFA erforderlich.</p>
@@ -71,10 +96,10 @@
     <aside class="sidebar">
       <div class="side-brand"><div class="brand-icon small">VA</div><span>Versorgungsassistent</span></div>
       <nav>
-        <button data-view="overview" class="active">◉ <span>Übersicht</span></button>
-        <button data-view="care">✚ <span>Versorgung</span></button>
-        <button data-view="forms">▤ <span>Formulare</span></button>
-        <button data-view="pg26">∑ <span>Sitzschalen PG 26</span></button>
+        <button data-view="care" class="active">✚ <span>Versorgung</span></button>
+        <button data-view="overview">◉ <span>Wissensbasis</span></button>
+        <button data-view="forms">▤ <span>Formularregeln</span></button>
+        <button data-view="pg26">∑ <span>PG 26</span></button>
         <button data-view="sources">▣ <span>Quellen</span></button>
       </nav>
       <button id="logoutButton" class="logout">↪ <span>Abmelden</span></button>
@@ -82,7 +107,7 @@
 
     <div class="main">
       <header class="topbar">
-        <div><h1 id="pageTitle">Übersicht</h1><p>Fachliche Entscheidungsunterstützung · Teststand 30.09.2026</p></div>
+        <div><h1 id="pageTitle">Versorgung</h1><p>Fachliche Entscheidungsunterstützung · Teststand 30.09.2026</p></div>
         <div class="header-actions"><span class="pill success">🔐 MFA aktiv</span><span id="currentUser" class="user"></span></div>
       </header>
       <main class="content">
@@ -90,7 +115,7 @@
 
         <section id="overviewView">
           <div class="page-grid">
-            <section class="hero"><div><span class="pill blue">Version 0.3.4</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
+            <section class="hero"><div><span class="pill blue">Version 0.3.5</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
             <section class="metrics">
               <div class="metric"><span>Krankenkassen</span><strong id="metricKassen">0</strong><small>Kassenmatrix</small></div>
               <div class="metric"><span>Formularregeln</span><strong id="metricForms">0</strong><small>Vertrags-/Formularlogik</small></div>
@@ -101,17 +126,176 @@
           </div>
         </section>
 
-        <section id="careView" class="hidden">
+
+        <section id="careView">
           <div class="page-grid">
-            <section class="card span2"><div class="section-title"><div><h3>Neue Versorgung</h3><p>Kasse und Produktgruppe bestimmen die anzuwendenden Regeln.</p></div><div class="actions no-print"><button id="printButton" class="secondary">Drucken / PDF</button><button id="clearButton" class="secondary">Eingaben leeren</button></div></div>
-              <div class="form-grid three">
-                <label>Krankenkasse<select id="careKasse"><option value="">Bitte wählen</option></select></label>
-                <label>Produktgruppe<select id="carePg"><option value="">Bitte wählen</option></select></label>
-                <label>Formular / Regel<select id="careForm"><option value="">Generisches Blatt / automatisch</option></select></label>
+            <section class="card span2">
+              <div class="wizard-top">
+                <div><h3>Versorgung Schritt für Schritt</h3><p>Ein Vorgang führt durch alle fachlich relevanten Arbeitsschritte. Kasse, Produktgruppe und Versorgungssituation steuern Formular- und Regelhinweise.</p></div>
+                <div class="actions no-print"><button id="newSupplyButton" class="primary">+ Neue Versorgung</button><button id="printButton" class="secondary">Drucken / PDF</button><button id="clearButton" class="secondary">Eingaben leeren</button></div>
               </div>
-              <div id="ruleBox" class="rule-box hidden"></div>
+              <div id="wizardContext" class="wizard-context"><span class="pill">Neuer Vorgang</span></div>
             </section>
-            <section class="card span2"><div class="section-title"><div><h3>Erhebungsdaten</h3><p id="fieldInfo">Kasse und Produktgruppe auswählen, um Felder zu laden.</p></div></div><div id="fieldList" class="field-list"></div></section>
+
+            <section class="span2 wizard-shell">
+              <aside class="wizard-rail no-print">
+                <div class="wizard-progress"><i id="wizardProgressBar"></i></div>
+                <div class="wizard-progress-text"><span id="wizardProgressText">0 von 11 Arbeitsschritten bearbeitet</span></div>
+                <button class="wizard-step active" data-step="0"><span class="step-no">1</span><span class="step-label">Auftrag & Rezept</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="1"><span class="step-no">2</span><span class="step-label">Versorgungssituation</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="2"><span class="step-no">3</span><span class="step-label">Profilerhebung / Befund</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="3"><span class="step-no">4</span><span class="step-label">Maßaufnahme</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="4"><span class="step-no">5</span><span class="step-label">Versorgungsplanung</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="5"><span class="step-no">6</span><span class="step-label">Vertrag & Kostenvoranschlag</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="6"><span class="step-no">7</span><span class="step-label">Genehmigung / Voraussetzungen</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="7"><span class="step-no">8</span><span class="step-label">Versorgungsverlauf</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="8"><span class="step-no">9</span><span class="step-label">Erprobung / Bild / Video</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="9"><span class="step-no">10</span><span class="step-label">Abgabe</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="10"><span class="step-no">11</span><span class="step-label">Abrechnung & Abschluss</span><span class="step-state"></span></button>
+              </aside>
+
+              <div class="wizard-stage">
+                <section class="wizard-panel active" data-panel="0"><div class="card">
+                  <h2>1. Auftrag & Rezept</h2><p class="lead">Vorgang anlegen und die Ausgangsdaten erfassen. Rezeptdaten bilden den Einstieg; OCR kann später wieder direkt an dieser Stelle angebunden werden.</p>
+                  <div class="step-section"><h4>Vorgang / Patient</h4><div class="mini-grid three">
+                    <label>Vorgangsnummer<input data-case-field="caseNumber" placeholder="z. B. 2026-001" /></label>
+                    <label>Patient / Versicherte Person<input data-case-field="patientName" placeholder="Name" /></label>
+                    <label>Versichertennummer<input data-case-field="insuredNo" /></label>
+                    <label>Krankenkasse<select id="careKasse"><option value="">Bitte wählen</option></select></label>
+                    <label>Produktgruppe<select id="carePg"><option value="">Bitte wählen</option></select></label>
+                    <label>Rezeptdatum<input type="date" data-case-field="rxDate" /></label>
+                  </div></div>
+                  <div class="step-section"><h4>Verordnung</h4><div class="mini-grid">
+                    <label>Verordnungstext<textarea data-case-field="rxText" rows="4" placeholder="Hilfsmittel / Diagnose / ärztliche Angaben"></textarea></label>
+                    <label>Rezeptdatei<input type="file" id="rxFile" accept="image/*,application/pdf" /><small id="rxFileName" class="muted">Datei wird in dieser Version nicht hochgeladen oder gespeichert.</small></label>
+                  </div></div>
+                </div></section>
+
+                <section class="wizard-panel" data-panel="1"><div class="card">
+                  <h2>2. Versorgungssituation</h2><p class="lead">Hier wird festgelegt, in welchem Versorgungskontext gearbeitet wird. Diese Auswahl bestimmt später, welche Dokumente und Prüfschritte relevant sind.</p>
+                  <div class="mini-grid three">
+                    <label>Versorgungsart<select data-case-field="supplyType"><option value="">Bitte wählen</option><option>Post-OP</option><option>Interim</option><option>Definitiv</option><option>Folge</option><option>Wechsel</option><option>Reparatur</option><option>Änderung</option><option>Instandhaltung</option><option>Funktionsbauteilerprobung</option></select></label>
+                    <label>Amputationshöhe / Versorgungsbereich<select data-case-field="ampLevel"><option value="">Bitte wählen</option><option>Vor-/Mittelfuß</option><option>Fuß/Fußwurzel/Rückfuß</option><option>Unterschenkel</option><option>Knie-Exartikulation</option><option>Oberschenkel</option><option>Hüft-Exartikulation / Hemipelvis</option><option>Sonstige</option></select></label>
+                    <label>Seite<select data-case-field="side"><option value="">Bitte wählen</option><option>rechts</option><option>links</option><option>beidseitig</option></select></label>
+                    <label>Versorgungsanlass<textarea data-case-field="serviceReason" rows="3"></textarea></label>
+                    <label>Vorversorgung<textarea data-case-field="previousSupply" rows="3"></textarea></label>
+                    <label>Besondere Rahmenbedingungen<textarea data-case-field="contextFactors" rows="3"></textarea></label>
+                  </div>
+                </div></section>
+
+                <section class="wizard-panel" data-panel="2"><div class="card">
+                  <h2>3. Profilerhebung / Befund</h2><p class="lead" id="fieldInfo">Kasse und Produktgruppe auswählen, um den passenden Erhebungsbogen aus der hinterlegten Formularlogik zu laden.</p>
+                  <div class="status-card open" id="profileHint"><strong>Formularlogik</strong>Kassenspezifische Vorgaben werden bevorzugt; ansonsten wird der generische PG-Bogen verwendet.</div>
+                  <div id="fieldList" class="field-list" style="margin-top:14px"></div>
+                </div></section>
+
+                <section class="wizard-panel" data-panel="3"><div class="card">
+                  <h2>4. Maßaufnahme</h2><p class="lead">Maßdokumentation bleibt ein eigener Versorgungsschritt. Das spätere Ziel ist wieder die direkte Eingabe in das passende Maßschema.</p>
+                  <div class="mini-grid three">
+                    <label>Messdatum<input type="date" data-case-field="measureDate" /></label>
+                    <label>Techniker/in<input data-case-field="measureTech" /></label>
+                    <label>Maßblatt / Schema<input data-case-field="measureSchema" placeholder="automatisch / Auswahl" /></label>
+                  </div>
+                  <div class="step-section"><h4>Messwerte / Besonderheiten</h4><div class="mini-grid">
+                    <label>Wesentliche Maße<textarea data-case-field="measureValues" rows="6" placeholder="Messwerte / Verlaufsmessungen"></textarea></label>
+                    <label>Stumpf- und Passformhinweise<textarea data-case-field="measureNotes" rows="6"></textarea></label>
+                  </div></div>
+                  <div class="source-note">Die alte Grundidee sah hierfür ein interaktives Maßblatt mit Direkteingabe in die Skizze und Verlaufsmessung vor. Dieser Schritt bleibt deshalb bewusst als eigener Kernschritt erhalten.</div>
+                </div></section>
+
+                <section class="wizard-panel" data-panel="4"><div class="card">
+                  <h2>5. Versorgungsplanung</h2><p class="lead">Erst die fachliche Planung, danach Vertrag und Preis. So bleibt die Versorgung und nicht die Gebührenposition der Ausgangspunkt.</p>
+                  <div class="mini-grid">
+                    <label>Formular / Regel<select id="careForm"><option value="">Generisches Blatt / automatisch</option></select></label>
+                    <label>Versorgungsziel<textarea data-case-field="planGoal" rows="3"></textarea></label>
+                    <label>Schaft-/Bettungskonzept<textarea data-case-field="planShaft" rows="4"></textarea></label>
+                    <label>Geplante Komponenten / Passteile<textarea data-case-field="planParts" rows="4"></textarea></label>
+                    <label>Haftung / Liner / Verschlusssystem<textarea data-case-field="planSuspension" rows="4"></textarea></label>
+                    <label>Zusätze / Besonderheiten<textarea data-case-field="planExtras" rows="4"></textarea></label>
+                  </div>
+                </div></section>
+
+                <section class="wizard-panel" data-panel="5"><div class="card">
+                  <h2>6. Vertrag & Kostenvoranschlag</h2><p class="lead">Die ausgewählte Kasse und Versorgung bestimmen die anzuwendende Formular- und Vertragslogik. Die Datenbank bleibt die Quelle; der Vorgang zeigt nur die relevanten Hinweise.</p>
+                  <div id="ruleBox" class="rule-box hidden"></div>
+                  <div class="step-section"><h4>Kostenvoranschlag</h4><div class="mini-grid">
+                    <label>Beantragte Positionen / HMV / GPOS<textarea data-case-field="quotePositions" rows="5"></textarea></label>
+                    <label>Begründung / medizinische Notwendigkeit<textarea data-case-field="quoteReason" rows="5"></textarea></label>
+                    <label>Hersteller-/Fremdfertigungsnachweis<textarea data-case-field="manufacturerEvidence" rows="3"></textarea></label>
+                    <label>Kalkulationsnotiz<textarea data-case-field="quoteCalc" rows="3"></textarea></label>
+                  </div></div>
+                </div></section>
+
+                <section class="wizard-panel" data-panel="6"><div class="card">
+                  <h2>7. Genehmigung / offene Voraussetzungen</h2><p class="lead">Vor der Einreichung wird sichtbar, welche Unterlagen vorhanden sind und welche Punkte noch offen sind.</p>
+                  <div class="check-grid">
+                    <label class="check-tile"><input type="checkbox" data-case-field="docRx"><span><b>Verordnung geprüft</b><small>Rezept / Entlassverordnung, sofern erforderlich.</small></span></label>
+                    <label class="check-tile"><input type="checkbox" data-case-field="docProfile"><span><b>Profilerhebung vorhanden</b><small>Kassen- oder PG-spezifischer Bogen.</small></span></label>
+                    <label class="check-tile"><input type="checkbox" data-case-field="docMeasure"><span><b>Maßdokumentation vorhanden</b><small>Sofern für den Vorgang erforderlich.</small></span></label>
+                    <label class="check-tile"><input type="checkbox" data-case-field="docQuote"><span><b>Kostenvoranschlag vollständig</b><small>Positionen und Begründungen geprüft.</small></span></label>
+                  </div>
+                  <div class="mini-grid three" style="margin-top:14px">
+                    <label>Einreichung / eKVA am<input type="date" data-case-field="ekvaSent" /></label>
+                    <label>Genehmigungsstatus<select data-case-field="approvalState"><option value="">Noch nicht eingereicht</option><option>Eingereicht</option><option>Rückfrage</option><option>Genehmigt</option><option>Abgelehnt</option></select></label>
+                    <label>Genehmigung am<input type="date" data-case-field="approvalDate" /></label>
+                  </div>
+                </div></section>
+
+                <section class="wizard-panel" data-panel="7"><div class="card">
+                  <h2>8. Versorgungsverlauf</h2><p class="lead">Der tatsächliche Verlauf der Versorgung wird chronologisch dokumentiert – von Formerfassung und statischen Anproben bis zur dynamischen Erprobung.</p>
+                  <div class="step-section"><div class="course-grid">
+                    <div class="head">Maßnahme</div><div class="head">Ergebnis / Bemerkung</div><div class="head">Datum</div>
+                    <div><strong>Formerfassung</strong></div><div><input data-case-field="courseFormNote" /></div><div><input type="date" data-case-field="courseFormDate" /></div>
+                    <div><strong>Statische Anprobe</strong></div><div><input data-case-field="courseStaticNote" /></div><div><input type="date" data-case-field="courseStaticDate" /></div>
+                    <div><strong>Weitere statische Anprobe</strong></div><div><input data-case-field="courseStatic2Note" /></div><div><input type="date" data-case-field="courseStatic2Date" /></div>
+                    <div><strong>1. dynamische Anprobe</strong></div><div><input data-case-field="courseDynamicNote" /></div><div><input type="date" data-case-field="courseDynamicDate" /></div>
+                    <div><strong>Weitere dynamische Anprobe</strong></div><div><input data-case-field="courseDynamic2Note" /></div><div><input type="date" data-case-field="courseDynamic2Date" /></div>
+                  </div></div>
+                  <div class="mini-grid" style="margin-top:14px"><label>Erprobte Komponenten<textarea data-case-field="testedParts" rows="4"></textarea></label><label>Ergebnis / Gebrauchsvorteile<textarea data-case-field="courseResult" rows="4"></textarea></label></div>
+                </div></section>
+
+                <section class="wizard-panel" data-panel="8"><div class="card">
+                  <h2>9. Erprobung / Bild / Video</h2><p class="lead">Dieser Schritt wird nur genutzt, wenn der konkrete Fall eine Erprobungs-, Bild-/Video- oder Ganganalyse-Dokumentation erfordert.</p>
+                  <div class="check-grid">
+                    <label class="check-tile"><input type="checkbox" data-case-field="evidenceRequired"><span><b>Bild-/Videodokumentation erforderlich</b><small>Fallbezogene Anforderung.</small></span></label>
+                    <label class="check-tile"><input type="checkbox" data-case-field="consentPresent"><span><b>Einwilligung vorhanden</b><small>Vor Erstellung bzw. Übermittlung prüfen.</small></span></label>
+                    <label class="check-tile"><input type="checkbox" data-case-field="comparisonRecorded"><span><b>Vergleich dokumentiert</b><small>Bisherige Versorgung und Erprobungsversorgung, sofern erforderlich.</small></span></label>
+                    <label class="check-tile"><input type="checkbox" data-case-field="secureTransfer"><span><b>Sichere Übermittlung geprüft</b><small>Nur wenn Unterlagen übermittelt werden.</small></span></label>
+                  </div>
+                  <div class="mini-grid" style="margin-top:14px"><label>Erprobungszeitraum / Verlauf<textarea data-case-field="trialPeriod" rows="4"></textarea></label><label>Funktionsverbesserung / Gebrauchsvorteil<textarea data-case-field="functionalBenefit" rows="4"></textarea></label></div>
+                </div></section>
+
+                <section class="wizard-panel" data-panel="9"><div class="card">
+                  <h2>10. Abgabe</h2><p class="lead">Abgabe, Gebrauchseinweisung und Empfang werden zusammengeführt.</p>
+                  <div class="mini-grid three">
+                    <label>Abgabedatum<input type="date" data-case-field="deliveryDate" /></label>
+                    <label>Hilfsmittel / Produkt<input data-case-field="deliveredAid" /></label>
+                    <label>HMV-Position<input data-case-field="deliveredHmv" /></label>
+                  </div>
+                  <div class="check-grid" style="margin-top:14px">
+                    <label class="check-tile"><input type="checkbox" data-case-field="deliveryUsable"><span><b>Gebrauchsfähig abgegeben</b><small>Zustand geprüft.</small></span></label>
+                    <label class="check-tile"><input type="checkbox" data-case-field="deliveryInstruction"><span><b>Gebrauchseinweisung erfolgt</b><small>Handhabung und Hinweise vermittelt.</small></span></label>
+                    <label class="check-tile"><input type="checkbox" data-case-field="deliveryReceipt"><span><b>Empfang bestätigt</b><small>Empfangsbestätigung dokumentiert.</small></span></label>
+                    <label class="check-tile"><input type="checkbox" data-case-field="deliveryDocs"><span><b>Unterlagen übergeben</b><small>Erforderliche Informationen ausgehändigt.</small></span></label>
+                  </div>
+                </div></section>
+
+                <section class="wizard-panel" data-panel="10"><div class="card">
+                  <h2>11. Abrechnung & Abschluss</h2><p class="lead">Zum Abschluss werden Genehmigung, Abrechnungsdaten und die rechnungsbegründenden Unterlagen gemeinsam geprüft.</p>
+                  <div class="mini-grid three">
+                    <label>Abrechnungsposition<input data-case-field="billingPosition" /></label>
+                    <label>VWKZ<input data-case-field="billingVwkz" /></label>
+                    <label>Tarif / Vertragskennzeichen<input data-case-field="billingTariff" /></label>
+                    <label>Gesetzliche Zuzahlung (€)<input type="number" step="0.01" data-case-field="copay" /></label>
+                    <label>Mehrkosten (€)<input type="number" step="0.01" data-case-field="moreCost" /></label>
+                    <label>Abrechnungsstatus<select data-case-field="billingState"><option value="">Offen</option><option>Vorbereitet</option><option>Eingereicht</option><option>Abgerechnet</option></select></label>
+                  </div>
+                  <div id="finalStatusBox" class="status-card open" style="margin-top:16px"><strong>Arbeitsstand wird geprüft</strong>Die Anzeige bewertet nur den Bearbeitungsstand im Assistenten und ersetzt keine fachliche oder vertragliche Prüfung.</div>
+                </div></section>
+
+                <div class="wizard-actions no-print"><button id="wizardBack" class="secondary">← Zurück</button><div class="right"><button id="wizardNext" class="primary">Weiter →</button></div></div>
+              </div>
+            </section>
           </div>
         </section>
 
@@ -143,7 +327,7 @@
 
     const $ = (id) => document.getElementById(id)
     const views = ['overview','care','forms','pg26','sources']
-    const titles = {overview:'Übersicht',care:'Versorgung',forms:'Formulare',pg26:'Sitzschalen PG 26',sources:'Quellen'}
+    const titles = {overview:'Wissensbasis',care:'Versorgung',forms:'Formularregeln',pg26:'PG 26',sources:'Quellen'}
     const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[]}
     const values = {}
     let currentSession = null
@@ -225,6 +409,10 @@
       showLoading(false)
       populateSelectors()
       renderAll()
+      updateCare()
+      bindWizardInputs()
+      setView('care')
+      renderWizard()
     }
 
     function populateSelectors(){
@@ -318,9 +506,134 @@
         control=document.createElement('input')
       }
       control.value=values[id]||''
-      control.addEventListener('input',()=>{values[id]=control.value})
+      control.dataset.required=String(f.Pflichtstatus).toLowerCase()==='ja'?'true':'false'
+      control.addEventListener('input',()=>{values[id]=control.value;updateWizardStatus()}); control.addEventListener('change',()=>{values[id]=control.value;updateWizardStatus()})
       label.append(title,control)
       $('fieldList').appendChild(label)
+    }
+
+
+    const wizardSteps=[
+      {name:'Auftrag & Rezept'}, {name:'Versorgungssituation'}, {name:'Profilerhebung / Befund'},
+      {name:'Maßaufnahme'}, {name:'Versorgungsplanung'}, {name:'Vertrag & Kostenvoranschlag'},
+      {name:'Genehmigung / Voraussetzungen'}, {name:'Versorgungsverlauf'}, {name:'Erprobung / Bild / Video'},
+      {name:'Abgabe'}, {name:'Abrechnung & Abschluss'}
+    ]
+    let wizardIndex=0
+    let wizardBound=false
+
+    function setView(view){
+      document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view))
+      views.forEach(v=>$(v+'View').classList.toggle('hidden',v!==view))
+      $('pageTitle').textContent=titles[view]
+    }
+
+    function readCaseField(el){
+      if(el.type==='checkbox') return !!el.checked
+      return el.value
+    }
+
+    function writeCaseField(el,value){
+      if(el.type==='checkbox') el.checked=!!value
+      else if(value!==undefined && value!==null) el.value=value
+    }
+
+    function bindWizardInputs(){
+      if(wizardBound) return
+      wizardBound=true
+      document.querySelectorAll('[data-case-field]').forEach(el=>{
+        const key=el.dataset.caseField
+        writeCaseField(el,values[key])
+        const save=()=>{values[key]=readCaseField(el);updateWizardStatus()}
+        el.addEventListener('input',save)
+        el.addEventListener('change',save)
+      })
+      document.querySelectorAll('.wizard-step').forEach(b=>b.addEventListener('click',()=>goWizard(Number(b.dataset.step))))
+      $('wizardBack').addEventListener('click',()=>goWizard(wizardIndex-1))
+      $('wizardNext').addEventListener('click',()=>{ if(wizardIndex<wizardSteps.length-1) goWizard(wizardIndex+1); else updateWizardStatus() })
+      $('newSupplyButton').addEventListener('click',resetWizard)
+      $('rxFile').addEventListener('change',e=>{ const file=e.target.files?.[0]; $('rxFileName').textContent=file?file.name+' · nur lokal ausgewählt, nicht hochgeladen':'Datei wird in dieser Version nicht hochgeladen oder gespeichert.' })
+    }
+
+    function goWizard(index){
+      wizardIndex=Math.max(0,Math.min(wizardSteps.length-1,index))
+      renderWizard()
+      window.scrollTo({top:0,behavior:'smooth'})
+    }
+
+    function renderWizard(){
+      document.querySelectorAll('.wizard-step').forEach((b,i)=>b.classList.toggle('active',i===wizardIndex))
+      document.querySelectorAll('.wizard-panel').forEach((p,i)=>p.classList.toggle('active',i===wizardIndex))
+      $('wizardBack').disabled=wizardIndex===0
+      $('wizardNext').textContent=wizardIndex===wizardSteps.length-1?'Status prüfen':'Weiter →'
+      updateWizardStatus()
+    }
+
+    function requiredProfileComplete(){
+      const controls=[...$('fieldList').querySelectorAll('input,select,textarea')]
+      if(!controls.length) return false
+      const required=controls.filter(x=>x.dataset.required==='true')
+      if(!required.length) return controls.some(x=>String(x.value||'').trim())
+      return required.every(x=>String(x.value||'').trim())
+    }
+
+    function stepDone(index){
+      switch(index){
+        case 0: return !!($('careKasse').value && $('carePg').value && (values.patientName||values.rxText||values.caseNumber))
+        case 1: return !!values.supplyType
+        case 2: return requiredProfileComplete()
+        case 3: return !!(values.measureDate||values.measureValues||values.measureNotes)
+        case 4: return !!(values.planGoal||values.planShaft||values.planParts)
+        case 5: return !!(values.quotePositions||values.quoteReason||$('careForm').value)
+        case 6: return !!(values.approvalState||values.ekvaSent)
+        case 7: return !!(values.courseFormDate||values.courseStaticDate||values.courseDynamicDate||values.courseResult)
+        case 8: return !!(values.evidenceRequired||values.consentPresent||values.trialPeriod||values.functionalBenefit)
+        case 9: return !!values.deliveryDate
+        case 10:return !!values.billingState
+        default:return false
+      }
+    }
+
+    function updateWizardStatus(){
+      const done=wizardSteps.map((_,i)=>stepDone(i))
+      document.querySelectorAll('.wizard-step').forEach((b,i)=>b.classList.toggle('done',done[i]))
+      const count=done.filter(Boolean).length
+      $('wizardProgressBar').style.width=Math.round(count/wizardSteps.length*100)+'%'
+      $('wizardProgressText').textContent=count+' von '+wizardSteps.length+' Arbeitsschritten bearbeitet'
+      const context=[]
+      const patient=values.patientName||values.caseNumber
+      if(patient) context.push('<span class="pill blue">'+escapeHtml(patient)+'</span>')
+      if($('careKasse').value) context.push('<span class="pill">'+escapeHtml($('careKasse').value)+'</span>')
+      if($('carePg').value) context.push('<span class="pill">PG '+escapeHtml($('carePg').value)+'</span>')
+      if(values.supplyType) context.push('<span class="pill">'+escapeHtml(values.supplyType)+'</span>')
+      $('wizardContext').innerHTML=context.length?context.join(''):'<span class="pill">Neuer Vorgang</span>'
+
+      const missing=wizardSteps.filter((_,i)=>!done[i]).map(x=>x.name)
+      const box=$('finalStatusBox')
+      if(box){
+        if(!missing.length){
+          box.className='status-card ready'
+          box.innerHTML='<strong>Versorgung im Assistenten vollständig bearbeitet</strong>Alle 11 Arbeitsschritte enthalten Bearbeitungsdaten. Vor Einreichung oder Abrechnung bleibt die fachliche und vertragliche Prüfung erforderlich.'
+        }else{
+          box.className='status-card open'
+          box.innerHTML='<strong>Noch '+missing.length+' Arbeitsschritte offen</strong>'+escapeHtml(missing.slice(0,5).join(' · '))+(missing.length>5?' …':'')+'<br><small>Dies ist ein Bearbeitungsstatus, keine automatische Freigabe.</small>'
+        }
+      }
+    }
+
+    function resetWizard(){
+      Object.keys(values).forEach(k=>delete values[k])
+      document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox')el.checked=false;else el.value=''})
+      $('careKasse').value=''
+      $('carePg').value=''
+      $('careForm').innerHTML='<option value="">Generisches Blatt / automatisch</option>'
+      $('fieldList').innerHTML=''
+      $('fieldInfo').textContent='Kasse und Produktgruppe auswählen, um den passenden Erhebungsbogen aus der hinterlegten Formularlogik zu laden.'
+      $('ruleBox').classList.add('hidden')
+      $('rxFile').value=''
+      $('rxFileName').textContent='Datei wird in dieser Version nicht hochgeladen oder gespeichert.'
+      wizardIndex=0
+      renderWizard()
     }
 
     $('loginForm').addEventListener('submit',async(event)=>{
@@ -351,19 +664,13 @@
     $('logoutButton').addEventListener('click',async()=>{await supabase.auth.signOut(); location.reload()})
     $('formSearch').addEventListener('input',e=>renderForms(e.target.value))
     $('pg26Kasse').addEventListener('change',renderPg26)
-    $('careKasse').addEventListener('change',updateCare)
-    $('carePg').addEventListener('change',updateCare)
-    $('careForm').addEventListener('change',updateCareFields)
+    $('careKasse').addEventListener('change',()=>{updateCare();updateWizardStatus()})
+    $('carePg').addEventListener('change',()=>{updateCare();updateWizardStatus()})
+    $('careForm').addEventListener('change',()=>{updateCareFields();updateWizardStatus()})
     $('printButton').addEventListener('click',()=>window.print())
-    $('clearButton').addEventListener('click',()=>{Object.keys(values).forEach(k=>delete values[k]);updateCareFields()})
+    $('clearButton').addEventListener('click',resetWizard)
 
-    document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>{
-      document.querySelectorAll('[data-view]').forEach(b=>b.classList.remove('active'))
-      button.classList.add('active')
-      const view=button.dataset.view
-      views.forEach(v=>$(v+'View').classList.toggle('hidden',v!==view))
-      $('pageTitle').textContent=titles[view]
-    }))
+    document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)))
 
     supabase.auth.onAuthStateChange((event,session)=>{
       if(event==='SIGNED_OUT') showLogin()
