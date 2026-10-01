@@ -94,6 +94,19 @@
     @media(max-width:1100px){.metrics{grid-template-columns:repeat(2,1fr)}.source-grid{grid-template-columns:repeat(2,1fr)}.field-list{grid-template-columns:1fr}.form-grid.three{grid-template-columns:1fr}}
     @media(max-width:800px){.shell{grid-template-columns:88px 1fr}.side-brand span,.sidebar nav span,.logout span{display:none}.side-logo{width:62px;padding:3px}.topbar{padding:14px 18px;height:auto}.header-actions .user{display:none}.content{padding:16px}.page-grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.source-grid{grid-template-columns:1fr}.hero-mark{display:none}.header-actions .pill{display:none}}
     @media print{.sidebar,.topbar,.no-print{display:none!important}.shell{display:block}.content{padding:0}.card,.metric{box-shadow:none}}
+    .form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .knowledge-gate{background:linear-gradient(135deg,#fff,#f5f7ff)}
+    .review-chain{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:16px}
+    .review-chain span{padding:10px 9px;border:1px solid #dfe3f5;border-radius:10px;background:#fff;color:#33406d;font-size:.77rem;font-weight:700;text-align:center}
+    .knowledge-list,.question-list{display:grid;gap:10px}.knowledge-card{border:1px solid #dfe5ef;border-radius:12px;padding:15px;background:#fcfdff}
+    .knowledge-head,.question-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}.knowledge-head small,.question-row small{display:block;margin-top:4px;color:#87939f;font-weight:400}
+    .knowledge-card p{margin:10px 0 0;line-height:1.5;font-size:.86rem}.knowledge-question{color:#667085;font-style:italic}
+    .knowledge-meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:12px;padding-top:10px;border-top:1px solid #edf0f6;color:#7a8794;font-size:.75rem}
+    .question-row{padding:12px;border:1px solid #e5e9f1;border-radius:11px;background:#fff}.question-row strong{font-size:.86rem;line-height:1.35}
+    .empty-panel{padding:18px;border:1px dashed #ccd3e2;border-radius:11px;color:#7a8794;background:#fafbfe;font-size:.85rem}
+    .alert.success{background:#ecfdf3;color:#067647;border:1px solid #abefc6}
+    @media(max-width:1100px){.review-chain{grid-template-columns:repeat(3,1fr)}.form-grid.two{grid-template-columns:1fr}}
+    @media(max-width:800px){.review-chain{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -101,7 +114,7 @@
 
   <main id="auth" class="auth-page hidden">
     <section class="auth-card">
-      <div class="brand-lockup"><img class="brand-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" /><div><h1>Versorgungsassistent</h1><p>Teststand v0.4.2</p></div></div>
+      <div class="brand-lockup"><img class="brand-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" /><div><h1>Versorgungsassistent</h1><p>Teststand v0.4.3 · VN 2.1</p></div></div>
       <div id="loginPane">
         <h2>Anmelden</h2>
         <p class="muted">Zugriff nur für freigegebene Tester. Nach dem Passwort ist die Authenticator-MFA erforderlich.</p>
@@ -132,6 +145,7 @@
         <button data-view="supplyOverview">▦ <span>Versorgungsübersicht</span></button>
         <button data-view="overview">◉ <span>Wissensbasis</span></button>
         <button data-view="forms">▤ <span>Formularregeln</span></button>
+        <button data-view="contractQuestions">? <span>Vertragsfragen</span></button>
         <button data-view="pg26">∑ <span>PG 26</span></button>
         <button data-view="sources">▣ <span>Quellen</span></button>
       </nav>
@@ -140,7 +154,7 @@
 
     <div class="main">
       <header class="topbar">
-        <div><h1 id="pageTitle">Versorgung</h1><p>Fachliche Entscheidungsunterstützung · Teststand 30.09.2026</p></div>
+        <div><h1 id="pageTitle">Versorgung</h1><p>Fachliche Entscheidungsunterstützung · VN 2.1 · Stand 01.10.2026</p></div>
         <div class="header-actions"><span class="pill success">🔐 MFA aktiv</span><span id="currentUser" class="user"></span></div>
       </header>
       <main class="content">
@@ -192,7 +206,7 @@
 
         <section id="overviewView">
           <div class="page-grid">
-            <section class="hero"><div><span class="pill blue">Version 0.3.9</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
+            <section class="hero"><div><span class="pill blue">Version 0.4.3 · VN 2.1</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
             <section class="metrics">
               <div class="metric"><span>Krankenkassen</span><strong id="metricKassen">0</strong><small>Kassenmatrix</small></div>
               <div class="metric"><span>Formularregeln</span><strong id="metricForms">0</strong><small>Vertrags-/Formularlogik</small></div>
@@ -505,6 +519,42 @@
           </div>
         </section>
 
+
+        <section id="contractQuestionsView" class="hidden">
+          <div class="page-grid">
+            <section class="card span2 knowledge-gate">
+              <div class="section-title"><div><h3>Vertragswissen zuerst</h3><p>Bestehende freigegebene Entscheidungen werden vor einer neuen Vertragsprüfung berücksichtigt.</p></div><span id="approvedKnowledgeCount" class="pill success">0 verwendbar</span></div>
+              <div class="review-chain">
+                <span>1 · Vertragswissen</span><span>2 · Gültigkeit / Geltungsbereich</span><span>3 · Originalvertrag</span><span>4 · Frage klären</span><span>5 · Freigeben</span><span>6 · Wissen zurückführen</span>
+              </div>
+              <div id="knowledgeRevalidationWarning" class="alert warning hidden"></div>
+            </section>
+
+            <section class="card span2">
+              <div class="section-title"><div><h3>Vertragswissen-Bibliothek</h3><p>Nur APPROVED, aktuell gültig und nicht revalidierungspflichtig.</p></div><div class="search"><span>⌕</span><input id="knowledgeSearch" placeholder="Kasse, Vertrag, PG, HMV, Position …" /></div></div>
+              <div id="knowledgeList" class="knowledge-list"></div>
+            </section>
+
+            <section class="card">
+              <div class="section-title"><div><h3>Neue Vertragsfrage</h3><p>Wenn kein belastbarer Wissenseintrag vorhanden ist.</p></div></div>
+              <form id="contractQuestionForm" class="stack">
+                <label>Vertragsfrage<textarea id="cqQuestion" rows="4" placeholder="Was ist vertraglich zu klären?" required></textarea></label>
+                <div class="form-grid two"><label>Kostenträger<input id="cqPayer" /></label><label>PG<input id="cqPg" /></label></div>
+                <div class="form-grid two"><label>Vertrag<input id="cqContract" /></label><label>Vertragsversion<input id="cqVersion" /></label></div>
+                <div class="form-grid two"><label>HMV / Produktart<input id="cqHmv" /></label><label>Position / GPOS<input id="cqPosition" /></label></div>
+                <div class="form-grid two"><label>Standort / IK<input id="cqSite" /></label><label>Quellenhinweis<input id="cqSource" /></label></div>
+                <div id="contractQuestionMessage" class="alert hidden"></div>
+                <button id="contractQuestionSubmit" class="primary" type="submit">Vertragsfrage anlegen</button>
+              </form>
+            </section>
+
+            <section class="card">
+              <div class="section-title"><div><h3>Prüfqueue Vertragsfragen</h3><p>Offene und bereits bearbeitete Fragen.</p></div><span id="contractQuestionCount" class="pill">0</span></div>
+              <div id="contractQuestionList" class="question-list"></div>
+            </section>
+          </div>
+        </section>
+
         <section id="sourcesView" class="hidden card"><div class="section-title"><div><h3>Quellenregister</h3><p>Nachvollziehbare fachliche Herkunft der Regeln und Formulare</p></div></div><div id="sourceGrid" class="source-grid"></div></section>
       </main>
     </div>
@@ -520,9 +570,9 @@
     )
 
     const $ = (id) => document.getElementById(id)
-    const views = ['overview','care','supplyOverview','forms','pg26','sources']
-    const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Versorgungsübersicht',forms:'Formularregeln',pg26:'PG 26',sources:'Quellen'}
-    const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[]}
+    const views = ['overview','care','supplyOverview','forms','contractQuestions','pg26','sources']
+    const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Versorgungsübersicht',forms:'Formularregeln',contractQuestions:'Vertragsfragen',pg26:'PG 26',sources:'Quellen'}
+    const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[],contractQuestions:[],contractKnowledge:[],approvedKnowledge:[]}
     const values = {}
     let activeSupplyId = null
     let draftSaveTimer = null
@@ -846,7 +896,8 @@
       const defs=[
         ['kassen','kassen'],['produktgruppen','produktgruppen'],['formulare','formulare'],
         ['formularfelder','formularfelder'],['quellen','quellen'],['pg26_positionen','pg26'],['pg26_kalkulation','kalk'],
-        ['hilfsmittel_logik','himilogik'],['massfelder','massfelder'],['himi_formular_regeln','himiformularregeln']
+        ['hilfsmittel_logik','himilogik'],['massfelder','massfelder'],['himi_formular_regeln','himiformularregeln'],
+        ['contract_questions','contractQuestions'],['contract_knowledge','contractKnowledge'],['contract_knowledge_approved','approvedKnowledge']
       ]
       const responses=await Promise.all(defs.map(([table])=>supabase.from(table).select('*')))
       let firstError=''
@@ -1002,6 +1053,57 @@
       $('pg26Kasse').innerHTML='<option value="">Alle</option>'+pg26Kassen.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
     }
 
+
+    function renderContractKnowledge(query=''){
+      const q=String(query||'').trim().toLowerCase()
+      const rows=data.approvedKnowledge.filter(r=>!q||JSON.stringify(r).toLowerCase().includes(q))
+      $('approvedKnowledgeCount').textContent=data.approvedKnowledge.length+' verwendbar'
+      const revalidation=data.contractKnowledge.filter(r=>r.status==='APPROVED' && r.needs_revalidation)
+      const warning=$('knowledgeRevalidationWarning')
+      warning.classList.toggle('hidden',!revalidation.length)
+      if(revalidation.length) warning.innerHTML='<strong>'+revalidation.length+' Wissenseinträge benötigen erneute Prüfung.</strong><p>Diese Einträge werden nicht als bestehende Entscheidung verwendet.</p>'
+      $('knowledgeList').innerHTML=rows.length?rows.map(r=>
+        '<article class="knowledge-card"><div class="knowledge-head"><div><strong>'+escapeHtml(r.title)+'</strong><small>'+escapeHtml([r.payer,r.pg?'PG '+r.pg:'',r.hmv_code,r.position_code].filter(Boolean).join(' · ')||'Allgemeiner Geltungsbereich')+'</small></div><span class="pill success">APPROVED</span></div>'+
+        (r.question_text?'<p class="knowledge-question">'+escapeHtml(r.question_text)+'</p>':'')+
+        '<p>'+escapeHtml(r.decision_text)+'</p><div class="knowledge-meta"><span>Vertrag: '+escapeHtml(r.contract_id||'—')+'</span><span>Version: '+escapeHtml(r.contract_version||'—')+'</span><span>Standort: '+escapeHtml(r.site_reference||'—')+'</span><span>Quelle: '+escapeHtml(r.source_reference||'—')+'</span>'+(r.contract_rule_id?'<span>Regel: '+escapeHtml(r.contract_rule_id)+'</span>':'')+'</div></article>'
+      ).join(''):'<div class="empty-panel">Kein passender freigegebener Wissenseintrag gefunden.</div>'
+
+      const questions=[...data.contractQuestions].sort((a,b)=>String(b.created_at).localeCompare(String(a.created_at)))
+      $('contractQuestionCount').textContent=questions.length
+      $('contractQuestionList').innerHTML=questions.length?questions.slice(0,100).map(r=>
+        '<article class="question-row"><div><strong>'+escapeHtml(r.question_text)+'</strong><small>'+escapeHtml([r.payer,r.pg?'PG '+r.pg:'',r.hmv_code,r.position_code].filter(Boolean).join(' · ')||'ohne Zuordnung')+'</small></div><span class="pill">'+escapeHtml(r.status)+'</span></article>'
+      ).join(''):'<div class="empty-panel">Noch keine Vertragsfragen vorhanden.</div>'
+    }
+
+    async function submitContractQuestion(event){
+      event.preventDefault()
+      const msg=$('contractQuestionMessage')
+      const question=$('cqQuestion').value.trim()
+      msg.className='alert hidden'; msg.textContent=''
+      if(question.length<5){msg.className='alert error';msg.textContent='Bitte eine konkrete Vertragsfrage eingeben.';return}
+      const button=$('contractQuestionSubmit')
+      button.disabled=true;button.textContent='Wird angelegt …'
+      const payload={
+        created_by:currentSession.user.id,
+        question_text:question,status:'OPEN',
+        payer:$('cqPayer').value.trim()||null,
+        contract_id:$('cqContract').value.trim()||null,
+        contract_version:$('cqVersion').value.trim()||null,
+        pg:$('cqPg').value.trim()||null,
+        hmv_code:$('cqHmv').value.trim()||null,
+        position_code:$('cqPosition').value.trim()||null,
+        site_reference:$('cqSite').value.trim()||null,
+        source_reference:$('cqSource').value.trim()||null
+      }
+      const result=await supabase.from('contract_questions').insert(payload).select('*').single()
+      button.disabled=false;button.textContent='Vertragsfrage anlegen'
+      if(result.error){msg.className='alert error';msg.textContent=result.error.message;return}
+      data.contractQuestions.unshift(result.data)
+      $('contractQuestionForm').reset()
+      msg.className='alert success';msg.textContent='Vertragsfrage wurde in die Prüfqueue übernommen.'
+      renderContractKnowledge($('knowledgeSearch').value)
+    }
+
     function renderAll(){
       $('metricKassen').textContent=data.kassen.length
       $('metricForms').textContent=data.formulare.length
@@ -1014,6 +1116,7 @@
       $('calcCount').textContent=data.kalk.length+' Positionen'
       $('calcBody').innerHTML=data.kalk.map(r=>'<tr><td>'+escapeHtml(r.Abschnitt)+'</td><td>'+escapeHtml(r.Art_Nr)+'</td><td>'+escapeHtml(r.Bezeichnung)+'</td><td>'+(r.AZ_gerundet_min?escapeHtml(r.AZ_gerundet_min)+' min':'—')+'</td><td>'+(r.Material_Position_EUR?escapeHtml(r.Material_Position_EUR)+' €':'—')+'</td><td>'+escapeHtml(r.Summe_oder_Regel)+'</td></tr>').join('')
       $('sourceGrid').innerHTML=data.quellen.map(r=>'<article class="source"><span class="pill">'+escapeHtml(r.Typ)+'</span><h4>'+escapeHtml(r.Beschreibung)+'</h4><p>'+escapeHtml(r.URL_oder_Datei)+'</p><small>'+escapeHtml(r.Quelle_ID)+'</small></article>').join('')
+      renderContractKnowledge('')
     }
 
     function renderForms(query=''){
@@ -3467,6 +3570,8 @@
     $('supplyOverviewBody').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-supply-id]')){e.preventDefault();restoreSupplyDraft(e.target.dataset.supplyId)}})
 
     document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)))
+    $('knowledgeSearch').addEventListener('input',e=>renderContractKnowledge(e.target.value))
+    $('contractQuestionForm').addEventListener('submit',submitContractQuestion)
 
     supabase.auth.onAuthStateChange((event,session)=>{
       if(event==='SIGNED_OUT') showLogin()
