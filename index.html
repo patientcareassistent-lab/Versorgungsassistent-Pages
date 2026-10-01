@@ -53,6 +53,9 @@
     .wizard-actions{display:flex;justify-content:space-between;gap:12px;margin-top:16px;padding:14px 16px;background:#fff;border:1px solid #e0e7e7;border-radius:14px;position:sticky;bottom:12px;box-shadow:0 10px 30px rgba(15,23,42,.08);z-index:4}
     .wizard-actions .right{display:flex;gap:10px}.step-section{border:1px solid #e7ecec;border-radius:13px;padding:16px;margin-top:14px;background:#fff}.step-section h4{margin:0 0 12px;font-size:.95rem}
     .mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.mini-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .order-capture{display:grid;gap:14px;margin-top:4px}.order-section{border:1px solid #dfe4ef;border-radius:15px;background:#fff;overflow:hidden}.order-section-head{display:flex;align-items:center;gap:11px;padding:13px 15px;background:#f8f9fc;border-bottom:1px solid #e7eaf0}.order-section-no{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;flex:0 0 auto;background:#00157A;color:#fff;font-size:.75rem;font-weight:850}.order-section-head h4{margin:0;color:#102a43;font-size:.93rem}.order-section-head p{margin:2px 0 0;color:#667085;font-size:.73rem;line-height:1.35}.order-section-body{padding:15px}.order-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 14px;align-items:start}.order-field{display:grid;gap:6px;min-width:0;font-size:.82rem;font-weight:700}.order-field small{font-weight:400;color:#667085;line-height:1.35}.order-field-name{grid-column:span 4}.order-field-case{grid-column:span 4}.order-field-payer{grid-column:span 5}.order-field-pg{grid-column:span 2}.order-field-aid{grid-column:span 5}.order-field-supply{grid-column:span 4}.order-field-level{grid-column:span 5}.order-field-side{grid-column:span 3}.order-optional{display:inline-flex;align-items:center;width:max-content;margin-left:5px;padding:2px 6px;border-radius:999px;background:#f2f4f7;color:#667085;font-size:.64rem;font-weight:700;vertical-align:middle}.order-required{color:#b42318;font-weight:850}.order-help{display:flex;align-items:flex-start;gap:7px;margin-top:11px;padding:9px 10px;border-radius:10px;background:#f7f9fc;color:#596673;font-size:.72rem;line-height:1.4}.order-help strong{color:#344054}.order-flow-note{display:flex;align-items:center;gap:8px;margin:-6px 0 14px;color:#667085;font-size:.76rem}.order-flow-note:before{content:"";width:18px;height:2px;background:#00157A;border-radius:2px}
+    @media(max-width:900px){.order-field-name,.order-field-case,.order-field-payer,.order-field-pg,.order-field-aid,.order-field-supply,.order-field-level,.order-field-side{grid-column:span 6}}
+    @media(max-width:620px){.order-grid{grid-template-columns:1fr}.order-field-name,.order-field-case,.order-field-payer,.order-field-pg,.order-field-aid,.order-field-supply,.order-field-level,.order-field-side{grid-column:1}.order-section-body{padding:13px}}
     .check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.check-tile{display:flex;gap:10px;align-items:flex-start;border:1px solid #e7ecec;border-radius:11px;padding:12px;background:#fafcfc}.check-tile input{width:auto;margin-top:3px}.check-tile b{display:block;font-size:.86rem}.check-tile small{display:block;color:#7a8794;margin-top:2px;line-height:1.4}
     .course-grid{display:grid;grid-template-columns:160px 1fr 150px;gap:9px;align-items:center}.course-grid>div{display:contents}.course-grid .head{font-size:.72rem;color:#667085;font-weight:800;text-transform:uppercase}
     .status-card{padding:16px;border-radius:13px;background:#f7faf9;border:1px solid #e3ecea}.status-card strong{display:block;margin-bottom:5px}.status-card.ready{background:#ecfdf3;border-color:#abefc6;color:#067647}.status-card.open{background:#fffaeb;border-color:#fedf89;color:#7a2e0e}
@@ -220,20 +223,73 @@
 
               <div class="wizard-stage">
                 <section class="wizard-panel active" data-panel="0"><div class="card">
-                  <h2>1. Auftragserfassung</h2><p class="lead">Auftrag anlegen und die versorgungssteuernden Stammdaten erfassen. Rezeptdaten werden bewusst erst im nächsten Arbeitsschritt verarbeitet.</p>
-                  <div class="step-section"><h4>Vorgang / Patient</h4><div class="mini-grid three">
-                    <label>Vorgangsnummer (SIC, wenn vorhanden)<input data-case-field="caseNumber" placeholder="SIC-Vorgangsnummer" /><small class="muted">Optional. Bei vorhandener SIC-Vorgangsnummer wird diese übernommen bzw. hier eingetragen.</small></label>
-                    <label>Vorname<input data-case-field="patientFirstName" autocomplete="given-name" placeholder="Vorname" /></label>
-                    <label>Nachname<input data-case-field="patientLastName" autocomplete="family-name" placeholder="Nachname" /></label>
-                    <label>Krankenkasse / Kostenträger<select id="careKasse"><option value="">Bitte wählen</option></select></label>
-                    <label>Produktgruppe<select id="carePg"><option value="">Bitte wählen</option></select></label>
-                    <label>Hilfsmittel / Versorgungsbereich<select id="careHimi"><option value="">Bitte zuerst PG wählen</option></select></label>
-                  </div></div>
-                  <div class="step-section"><h4>Versorgungssituation</h4><div class="mini-grid three">
-                    <label>Versorgungsart<select id="careSupplyType" data-case-field="supplyType"><option value="">Bitte wählen</option><option>Post-OP</option><option>Interim</option><option>Definitiv</option><option>Folge</option><option>Wechsel</option><option>Reparatur</option><option>Änderung</option><option>Instandhaltung</option><option>Funktionsbauteilerprobung</option></select></label>
-                    <label id="careAmpLevelLabel"><span id="careAmpLevelText">Amputationshöhe / Versorgungsbereich</span><select id="careAmpLevel" data-case-field="ampLevel"><option value="">Bitte wählen</option><option>Vor-/Mittelfuß</option><option>Fuß/Fußwurzel/Rückfuß</option><option>Unterschenkel</option><option>Knie-Exartikulation</option><option>Oberschenkel</option><option>Hüft-Exartikulation / Hemipelvis</option><option>Sonstige</option></select></label>
-                    <label id="careSideLabel"><span>Seite</span><select id="careSide" data-case-field="side"><option value="">Bitte wählen</option><option>rechts</option><option>links</option><option>beidseitig</option></select></label>
-                  </div></div>
+                  <h2>1. Auftragserfassung</h2>
+                  <p class="lead">Die wichtigsten Stammdaten einmal erfassen. Sie steuern anschließend Rezept, Profilerhebung und Maßblatt.</p>
+                  <div class="order-flow-note">Rezept- und Versichertendaten folgen im nächsten Schritt.</div>
+
+                  <div class="order-capture">
+                    <section class="order-section">
+                      <div class="order-section-head">
+                        <span class="order-section-no">1</span>
+                        <div><h4>Patient & Vorgang</h4><p>Wer wird versorgt und gibt es bereits einen SIC-Vorgang?</p></div>
+                      </div>
+                      <div class="order-section-body">
+                        <div class="order-grid">
+                          <label class="order-field order-field-name">Vorname <span class="order-required">*</span>
+                            <input data-case-field="patientFirstName" autocomplete="given-name" placeholder="Vorname" />
+                          </label>
+                          <label class="order-field order-field-name">Nachname <span class="order-required">*</span>
+                            <input data-case-field="patientLastName" autocomplete="family-name" placeholder="Nachname" />
+                          </label>
+                          <label class="order-field order-field-case">Vorgangsnummer <span class="order-optional">optional</span>
+                            <input data-case-field="caseNumber" placeholder="SIC-Vorgangsnummer" />
+                            <small>Nur eintragen, wenn bereits eine Vorgangsnummer aus SIC vorhanden ist.</small>
+                          </label>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section class="order-section">
+                      <div class="order-section-head">
+                        <span class="order-section-no">2</span>
+                        <div><h4>Kostenträger & Hilfsmittel</h4><p>Diese Auswahl bestimmt die nachfolgenden Vertrags- und Formularregeln.</p></div>
+                      </div>
+                      <div class="order-section-body">
+                        <div class="order-grid">
+                          <label class="order-field order-field-payer">Krankenkasse / Kostenträger <span class="order-required">*</span>
+                            <select id="careKasse"><option value="">Bitte wählen</option></select>
+                          </label>
+                          <label class="order-field order-field-pg">Produktgruppe <span class="order-required">*</span>
+                            <select id="carePg"><option value="">Bitte wählen</option></select>
+                          </label>
+                          <label class="order-field order-field-aid">Hilfsmittel / Versorgungsbereich <span class="order-required">*</span>
+                            <select id="careHimi"><option value="">Bitte zuerst PG wählen</option></select>
+                          </label>
+                        </div>
+                        <div class="order-help"><span>ℹ</span><span><strong>Reihenfolge:</strong> zuerst Kostenträger und Produktgruppe wählen, danach wird der passende Hilfsmittel-/Versorgungsbereich eingegrenzt.</span></div>
+                      </div>
+                    </section>
+
+                    <section class="order-section">
+                      <div class="order-section-head">
+                        <span class="order-section-no">3</span>
+                        <div><h4>Versorgungssituation</h4><p>Versorgungsart, anatomischer Bereich und Seite legen den weiteren PG24-Ablauf fest.</p></div>
+                      </div>
+                      <div class="order-section-body">
+                        <div class="order-grid">
+                          <label class="order-field order-field-supply">Versorgungsart <span class="order-required">*</span>
+                            <select id="careSupplyType" data-case-field="supplyType"><option value="">Bitte wählen</option><option>Post-OP</option><option>Interim</option><option>Definitiv</option><option>Folge</option><option>Wechsel</option><option>Reparatur</option><option>Änderung</option><option>Instandhaltung</option><option>Funktionsbauteilerprobung</option></select>
+                          </label>
+                          <label class="order-field order-field-level" id="careAmpLevelLabel"><span id="careAmpLevelText">Amputationshöhe / Versorgungsbereich</span> <span class="order-required">*</span>
+                            <select id="careAmpLevel" data-case-field="ampLevel"><option value="">Bitte wählen</option><option>Vor-/Mittelfuß</option><option>Fuß/Fußwurzel/Rückfuß</option><option>Unterschenkel</option><option>Knie-Exartikulation</option><option>Oberschenkel</option><option>Hüft-Exartikulation / Hemipelvis</option><option>Sonstige</option></select>
+                          </label>
+                          <label class="order-field order-field-side" id="careSideLabel"><span>Seite <span class="order-required">*</span></span>
+                            <select id="careSide" data-case-field="side"><option value="">Bitte wählen</option><option>rechts</option><option>links</option><option>beidseitig</option></select>
+                          </label>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
                 </div></section>
 
                 <section class="wizard-panel" data-panel="1"><div class="card">
