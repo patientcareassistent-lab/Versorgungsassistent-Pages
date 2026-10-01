@@ -69,7 +69,7 @@
 
   <main id="auth" class="auth-page hidden">
     <section class="auth-card">
-      <div class="brand-lockup"><div class="brand-icon">VA</div><div><h1>Versorgungsassistent</h1><p>Teststand v0.3.7</p></div></div>
+      <div class="brand-lockup"><div class="brand-icon">VA</div><div><h1>Versorgungsassistent</h1><p>Teststand v0.3.8</p></div></div>
       <div id="loginPane">
         <h2>Anmelden</h2>
         <p class="muted">Zugriff nur für freigegebene Tester. Nach dem Passwort ist die Authenticator-MFA erforderlich.</p>
@@ -115,7 +115,7 @@
 
         <section id="overviewView">
           <div class="page-grid">
-            <section class="hero"><div><span class="pill blue">Version 0.3.7</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
+            <section class="hero"><div><span class="pill blue">Version 0.3.8</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
             <section class="metrics">
               <div class="metric"><span>Krankenkassen</span><strong id="metricKassen">0</strong><small>Kassenmatrix</small></div>
               <div class="metric"><span>Formularregeln</span><strong id="metricForms">0</strong><small>Vertrags-/Formularlogik</small></div>
@@ -175,7 +175,7 @@
                 <section class="wizard-panel" data-panel="1"><div class="card">
                   <h2>2. Versorgungssituation</h2><p class="lead">Hier wird festgelegt, in welchem Versorgungskontext gearbeitet wird. Diese Auswahl bestimmt später, welche Dokumente und Prüfschritte relevant sind.</p>
                   <div class="mini-grid three">
-                    <label>Versorgungsart<select data-case-field="supplyType"><option value="">Bitte wählen</option><option>Post-OP</option><option>Interim</option><option>Definitiv</option><option>Folge</option><option>Wechsel</option><option>Reparatur</option><option>Änderung</option><option>Instandhaltung</option><option>Funktionsbauteilerprobung</option></select></label>
+                    <label>Versorgungsart<select id="careSupplyType" data-case-field="supplyType"><option value="">Bitte wählen</option><option>Post-OP</option><option>Interim</option><option>Definitiv</option><option>Folge</option><option>Wechsel</option><option>Reparatur</option><option>Änderung</option><option>Instandhaltung</option><option>Funktionsbauteilerprobung</option></select></label>
                     <label>Amputationshöhe / Versorgungsbereich<select data-case-field="ampLevel"><option value="">Bitte wählen</option><option>Vor-/Mittelfuß</option><option>Fuß/Fußwurzel/Rückfuß</option><option>Unterschenkel</option><option>Knie-Exartikulation</option><option>Oberschenkel</option><option>Hüft-Exartikulation / Hemipelvis</option><option>Sonstige</option></select></label>
                     <label>Seite<select data-case-field="side"><option value="">Bitte wählen</option><option>rechts</option><option>links</option><option>beidseitig</option></select></label>
                     <label>Versorgungsanlass<textarea data-case-field="serviceReason" rows="3"></textarea></label>
@@ -197,9 +197,11 @@
                     <label>Techniker/in<input data-case-field="measureTech" /></label>
                     <label>Maßblatt / Schema<input data-case-field="measureSchema" placeholder="automatisch / Auswahl" /></label>
                   </div>
-                  <div class="step-section"><h4>Messwerte / Besonderheiten</h4><div class="mini-grid">
-                    <label>Wesentliche Maße<textarea data-case-field="measureValues" rows="6" placeholder="Messwerte / Verlaufsmessungen"></textarea></label>
-                    <label>Stumpf- und Passformhinweise<textarea data-case-field="measureNotes" rows="6"></textarea></label>
+                  <div id="measureLogicNote" class="status-card open"><strong>Maßlogik</strong>Nach Auswahl von Produktgruppe und Hilfsmittel werden die passenden Maßfelder geladen.</div>
+                  <div id="measureFieldList" class="field-list" style="margin-top:14px"></div>
+                  <div class="step-section"><h4>Zusätzliche Mess-/Passformhinweise</h4><div class="mini-grid">
+                    <label>Freie Messnotiz<textarea data-case-field="measureValues" rows="4" placeholder="Zusätzliche Messwerte / Verlaufsmessungen"></textarea></label>
+                    <label>Besonderheiten<textarea data-case-field="measureNotes" rows="4"></textarea></label>
                   </div></div>
                   <div class="source-note">Die alte Grundidee sah hierfür ein interaktives Maßblatt mit Direkteingabe in die Skizze und Verlaufsmessung vor. Dieser Schritt bleibt deshalb bewusst als eigener Kernschritt erhalten.</div>
                 </div></section>
@@ -331,7 +333,7 @@
     const $ = (id) => document.getElementById(id)
     const views = ['overview','care','forms','pg26','sources']
     const titles = {overview:'Wissensbasis',care:'Versorgung',forms:'Formularregeln',pg26:'PG 26',sources:'Quellen'}
-    const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[]}
+    const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[]}
     const values = {}
     const himiByPg = {
       '04':['Badehilfe','Duschhilfe','Badewannenhilfe','Toilettennahe Bad-/Duschhilfe'],
@@ -417,7 +419,8 @@
 
       const defs=[
         ['kassen','kassen'],['produktgruppen','produktgruppen'],['formulare','formulare'],
-        ['formularfelder','formularfelder'],['quellen','quellen'],['pg26_positionen','pg26'],['pg26_kalkulation','kalk']
+        ['formularfelder','formularfelder'],['quellen','quellen'],['pg26_positionen','pg26'],['pg26_kalkulation','kalk'],
+        ['hilfsmittel_logik','himilogik'],['massfelder','massfelder'],['himi_formular_regeln','himiformularregeln']
       ]
       const responses=await Promise.all(defs.map(([table])=>supabase.from(table).select('*')))
       let firstError=''
@@ -438,14 +441,27 @@
       renderWizard()
     }
 
+    function selectedHimiId(){ return $('careHimi').value||values.himiId||'' }
+    function selectedHimiMeta(){ return data.himilogik.find(x=>x.Himi_ID===selectedHimiId()) || null }
+    function selectedHimi(){ return selectedHimiMeta()?.Bezeichnung || $('careHimi').selectedOptions?.[0]?.textContent || '' }
+
     function populateHimiOptions(){
       const pg=$('carePg').value
-      const options=himiByPg[pg]||[]
-      $('careHimi').innerHTML=options.length
-        ? '<option value="">Bitte Hilfsmittel wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
-        : '<option value="">Für diese PG noch keine Himi-Unterteilung hinterlegt</option>'
-      if(values.himi && options.includes(values.himi)) $('careHimi').value=values.himi
-      else values.himi=''
+      const dbOptions=data.himilogik.filter(x=>String(x.PG)===String(pg)&&x.Aktiv!==false).sort((a,b)=>(a.Sortierung||100)-(b.Sortierung||100))
+      if(dbOptions.length){
+        $('careHimi').innerHTML='<option value="">Bitte Hilfsmittel wählen</option>'+dbOptions.map(x=>'<option value="'+escapeHtml(x.Himi_ID)+'">'+escapeHtml(x.Bezeichnung)+'</option>').join('')
+        if(values.himiId && dbOptions.some(x=>x.Himi_ID===values.himiId)) $('careHimi').value=values.himiId
+        else values.himiId=''
+      }else{
+        const options=himiByPg[pg]||[]
+        $('careHimi').innerHTML=options.length
+          ? '<option value="">Bitte Hilfsmittel wählen</option>'+options.map(x=>'<option value="'+escapeHtml(x)+'">'+escapeHtml(x)+'</option>').join('')
+          : '<option value="">Für diese PG noch keine Himi-Unterteilung hinterlegt</option>'
+        if(values.himiId && options.includes(values.himiId)) $('careHimi').value=values.himiId
+        else values.himiId=''
+      }
+      syncSupplyTypeOptions()
+      renderMeasureFields()
     }
 
     function norm(value){
@@ -455,42 +471,90 @@
         .trim()
     }
 
-    function himiKeywords(himi){
-      const h=norm(himi)
-      const map=[
-        [/aktivlifter|aufstehlifter/,['aktivlifter','aufstehlifter']],
-        [/patientenlifter/,['patientenlifter','lifter']],
-        [/rampensystem/,['rampe']],
-        [/straßenverkehr|strassenverkehr|fahrzeuganpassung/,['straßenverkehr','strassenverkehr','fahrzeug']],
-        [/e rollstuhl/,['e-rollstuhl','elektrorollstuhl','antrieb']],
-        [/zusatzantrieb|schiebehilfe/,['antrieb','schiebehilfe']],
-        [/treppensteighilfe/,['treppensteig']],
-        [/manueller rollstuhl/,['rollstuhl']],
-        [/vor mittelfuß|vor mittelfuss/,['vor- und mittelfuß','vor- und mittelfuss','vor-/mittelfuß','vor-/mittelfuss']],
-        [/fußwurzel|fusswurzel|rückfuß|ruckfuss/,['fußwurzel','fusswurzel','rückfuß','ruckfuss']],
-        [/unterschenkel/,['unterschenkel']],
-        [/knie exartikulation/,['knie','exartikulation']],
-        [/oberschenkel/,['oberschenkel']],
-        [/hüft|huft|hemipelvis/,['hüft','huft','hemipelvis']],
-        [/untere extremität|untere extremitat/,['untere extremität','untere extremitat']],
-        [/obere extremität|obere extremitat/,['obere extremität','obere extremitat']],
-        [/korsett/,['korsett']],
-        [/mieder/,['mieder']],
-        [/sitzschale mit untergestell/,['untergestell','sitzschale']],
-        [/individuelle sitzschale/,['sitzschale']],
-        [/fremdkraftbetriebener bewegungstrainer/,['fremdkraft']],
-        [/eigenkraftbetriebener bewegungstrainer/,['eigenkraft']]
-      ]
-      for(const [rx,keys] of map) if(rx.test(h)) return keys
+    function himiKeywordsFromMeta(meta){
+      if(meta?.Suchbegriffe?.length) return meta.Suchbegriffe
+      const h=norm(selectedHimi())
       return h.split(' ').filter(x=>x.length>3)
     }
 
-    function formMatchesHimi(form,himi){
-      if(!himi) return true
+    function formMatchesHimi(form){
+      const meta=selectedHimiMeta()
+      if(!selectedHimiId()) return true
       const text=norm([form.Versorgungsart,form.Region_Vertrag,form.Beleg,form.Aktion_Versorgungsassistent].join(' '))
-      const keys=himiKeywords(himi).map(norm)
-      if(!keys.length) return true
-      return keys.some(k=>text.includes(k))
+      const keys=himiKeywordsFromMeta(meta).map(norm)
+      return !keys.length || keys.some(k=>text.includes(k))
+    }
+
+    function syncSupplyTypeOptions(){
+      const el=$('careSupplyType')
+      if(!el) return
+      const meta=selectedHimiMeta()
+      const current=values.supplyType||el.value
+      const fallback=['Post-OP','Interim','Definitiv','Folge','Wechsel','Reparatur','Änderung','Instandhaltung','Funktionsbauteilerprobung']
+      const options=(meta?.Versorgungsarten?.length?meta.Versorgungsarten:fallback)
+      el.innerHTML='<option value="">Bitte wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
+      if(options.includes(current)){el.value=current;values.supplyType=current}
+      else{el.value='';values.supplyType=''}
+    }
+
+    function createDynamicControl(f,keyPrefix){
+      let control
+      const type=String(f.Datentyp||'Text')
+      if(type.includes('Ja/Nein')){
+        control=document.createElement('select')
+        control.innerHTML='<option value="">Bitte wählen</option><option>Ja</option><option>Nein</option>'
+      }else if(type==='Datum'){
+        control=document.createElement('input');control.type='date'
+      }else if(type==='Zahl'){
+        control=document.createElement('input');control.type='number'
+      }else if(type==='Langtext'||type==='Messreihe'||type.includes('Langtext')){
+        control=document.createElement('textarea');control.rows=3
+      }else if(type==='Auswahl'){
+        control=document.createElement('select')
+        const raw=String(f.Einheit_Optionen||f.Bedingung_UI||'')
+        const options=raw.split('|').map(x=>x.trim()).filter(Boolean)
+        control.innerHTML='<option value="">Bitte wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
+      }else{
+        control=document.createElement('input')
+      }
+      const key=keyPrefix+f.Massfeld_ID
+      control.dataset.measureKey=key
+      control.dataset.required=String(f.Pflichtstatus).toLowerCase()==='ja'?'true':'false'
+      if(values[key]!==undefined) control.value=values[key]
+      const save=()=>{values[key]=control.value;showWizardError('');updateWizardStatus()}
+      control.addEventListener('input',save);control.addEventListener('change',save)
+      return control
+    }
+
+    function renderMeasureFields(){
+      const host=$('measureFieldList')
+      if(!host) return
+      const meta=selectedHimiMeta()
+      const fields=meta?.Massprofil_ID
+        ? data.massfelder.filter(x=>x.Massprofil_ID===meta.Massprofil_ID).sort((a,b)=>(a.Sortierung||100)-(b.Sortierung||100))
+        : []
+      host.innerHTML=''
+      const note=$('measureLogicNote')
+      if(!meta){
+        note.className='status-card open';note.innerHTML='<strong>Hilfsmittel wählen</strong>Die Maßlogik wird aus PG und Hilfsmittel bestimmt.'
+        return
+      }
+      const conditional=meta.Mass_Pflicht_bei||[]
+      const applicable=!!meta.Mass_erforderlich && (!conditional.length || conditional.includes(supplyType()))
+      if(!applicable){
+        note.className='status-card ready';note.innerHTML='<strong>Kein eigener Maßschritt erforderlich</strong>Für diese Auswahl ist im hinterlegten Regelwerk derzeit kein eigener Maßbogen aktiviert.'
+        return
+      }
+      note.className='status-card open'
+      note.innerHTML='<strong>'+escapeHtml(meta.Bezeichnung)+'</strong>'+escapeHtml(meta.Hinweis||'Passendes Maßprofil wurde geladen.')
+      fields.forEach(f=>{
+        const label=document.createElement('label');label.className='field'
+        const title=document.createElement('span')
+        title.innerHTML=escapeHtml(f.Feldbezeichnung)+(String(f.Pflichtstatus).toLowerCase()==='ja'?'<b>*</b>':'')+
+          '<small>'+escapeHtml([f.Abschnitt,f.Einheit_Optionen,f.Bedingung_UI].filter(Boolean).join(' · '))+'</small>'
+        label.append(title,createDynamicControl(f,'measure:'))
+        host.appendChild(label)
+      })
     }
 
     function populateSelectors(){
@@ -532,23 +596,45 @@
     function updateCare(){
       const kasse=$('careKasse').value
       const pg=$('carePg').value
-      const himi=$('careHimi').value
+      const himiId=selectedHimiId()
       const current=$('careForm').value
-      const exact=data.formulare.filter(f=>(!kasse||f.Kasse===kasse)&&(!pg||String(f.PG)===String(pg))&&formMatchesHimi(f,himi))
-      const broad=data.formulare.filter(f=>(!kasse||f.Kasse===kasse)&&(!pg||String(f.PG)===String(pg)))
-      const forms=exact.length?exact:broad
-      $('careForm').innerHTML='<option value="">Automatisch nach PG + Himi + Kasse</option>'+forms.map(f=>'<option value="'+escapeHtml(f.Formular_ID)+'">'+escapeHtml((f.Versorgungsart||f.Formular_ID)+' · '+(f.Status||''))+'</option>').join('')
-      if(forms.some(f=>f.Formular_ID===current)) $('careForm').value=current
-      else if(exact.length===1) $('careForm').value=exact[0].Formular_ID
+      const meta=selectedHimiMeta()
+      const rules=data.himiformularregeln
+        .filter(r=>r.Himi_ID===himiId && r.Kasse===kasse)
+        .sort((a,b)=>(a.Sortierung||100)-(b.Sortierung||100))
+      const ruleFormIds=[...new Set(rules.map(r=>r.Formular_ID).filter(Boolean))]
+      const exactForms=data.formulare.filter(f=>ruleFormIds.includes(f.Formular_ID))
+      const broad=data.formulare.filter(f=>(!kasse||f.Kasse===kasse)&&(!pg||String(f.PG)===String(pg))&&formMatchesHimi(f))
+      const byId=new Map()
+      exactForms.forEach(f=>byId.set(f.Formular_ID,f))
+      broad.forEach(f=>{if(!byId.has(f.Formular_ID))byId.set(f.Formular_ID,f)})
+      const forms=[...byId.values()]
+      const genericId=meta?.Generisches_Formular_ID||''
+      let html='<option value="">Automatisch nach PG + Himi + Kasse</option>'
+      rules.forEach(r=>{
+        if(r.Formular_ID) html+='<option value="'+escapeHtml(r.Formular_ID)+'">'+escapeHtml(r.Formularbezeichnung+' · '+(r.Status||''))+'</option>'
+      })
+      forms.filter(f=>!rules.some(r=>r.Formular_ID===f.Formular_ID)).forEach(f=>{
+        html+='<option value="'+escapeHtml(f.Formular_ID)+'">'+escapeHtml((f.Versorgungsart||f.Formular_ID)+' · '+(f.Status||''))+'</option>'
+      })
+      if(genericId && !forms.some(f=>f.Formular_ID===genericId)) html+='<option value="'+escapeHtml(genericId)+'">Generischer Erhebungsbogen · '+escapeHtml(selectedHimi())+'</option>'
+      $('careForm').innerHTML=html
+      if([...$('careForm').options].some(o=>o.value===current)) $('careForm').value=current
+      else if(rules.length===1 && rules[0].Formular_ID) $('careForm').value=rules[0].Formular_ID
+      else if(!rules.length && genericId) $('careForm').value=genericId
       updateCareFields()
+      syncSupplyTypeOptions()
+      renderMeasureFields()
     }
 
     function updateCareFields(){
       const pg=$('carePg').value
-      const himi=$('careHimi').value
+      const himi=selectedHimi()
+      const himiId=selectedHimiId()
+      const meta=selectedHimiMeta()
       const formId=$('careForm').value
       const selected=data.formulare.find(f=>f.Formular_ID===formId)
-      if(pg && !himi){
+      if(pg && !himiId){
         $('ruleBox').classList.remove('hidden')
         $('ruleBox').innerHTML='<div><strong>Hilfsmittel noch nicht festgelegt</strong><p>Die Formularlogik wird erst nach Auswahl des konkreten Hilfsmittels innerhalb der Produktgruppe freigegeben.</p></div><span class="pill warning">PG '+escapeHtml(pg)+'</span>'
         $('fieldInfo').textContent='Bitte zuerst das konkrete Hilfsmittel / den Versorgungsbereich auswählen.'
@@ -564,6 +650,7 @@
       if(formId) fields=data.formularfelder.filter(f=>f.Formular_ID===formId)
       const map={FORM_001:'BARMER_PG18_ANH4',FORM_002:'BARMER_PG22_ANHB'}
       if(!fields.length && map[formId]) fields=data.formularfelder.filter(f=>f.Formular_ID===map[formId])
+      if(!fields.length && meta?.Generisches_Formular_ID) fields=data.formularfelder.filter(f=>f.Formular_ID===meta.Generisches_Formular_ID)
       if(!fields.length && pg) fields=data.formularfelder.filter(f=>String(f.PG)===String(pg)&&f.Formular_Typ==='GENERISCH')
 
       $('fieldInfo').textContent=fields.length?fields.length+' Felder aus der hinterlegten Formularlogik':'Für diese Auswahl sind noch keine Felddefinitionen hinterlegt.'
@@ -632,7 +719,6 @@
 
     function isAokCase(){ return $('careKasse').value==='AOK Baden-Württemberg' }
     function supplyType(){ return values.supplyType||'' }
-    function selectedHimi(){ return $('careHimi').value||values.himi||'' }
     function syncPg24Level(){
       if($('carePg').value!=='24') return
       const h=selectedHimi()
@@ -652,14 +738,31 @@
     }
 
     function requiresProfile(){
+      const meta=selectedHimiMeta()
+      if(meta) return !!meta.Profil_erforderlich
       const s=supplyType()
       if(!s) return true
       if(isAokCase()) return ['Interim','Definitiv','Folge','Wechsel','Funktionsbauteilerprobung'].includes(s)
       return !['Post-OP','Reparatur','Änderung','Instandhaltung'].includes(s)
     }
-    function requiresMeasure(){ return ['Interim','Definitiv','Folge','Wechsel'].includes(supplyType()) }
-    function requiresCourse(){ return ['Interim','Definitiv','Folge','Wechsel'].includes(supplyType()) }
-    function requiresEvidence(){ return supplyType()==='Funktionsbauteilerprobung' || values.requiresTrialEvidence==='Ja' || values.evidenceRequired===true }
+    function requiresMeasure(){
+      const meta=selectedHimiMeta()
+      if(meta){
+        if(!meta.Mass_erforderlich) return false
+        const cond=meta.Mass_Pflicht_bei||[]
+        return !cond.length || cond.includes(supplyType())
+      }
+      return ['Interim','Definitiv','Folge','Wechsel'].includes(supplyType())
+    }
+    function requiresCourse(){
+      const meta=selectedHimiMeta()
+      if(meta) return !!meta.Verlauf_erforderlich
+      return ['Interim','Definitiv','Folge','Wechsel'].includes(supplyType())
+    }
+    function requiresEvidence(){
+      const meta=selectedHimiMeta()
+      return !!meta?.Erprobung_erforderlich || supplyType()==='Funktionsbauteilerprobung' || supplyType()==='Erprobung' || values.requiresTrialEvidence==='Ja' || values.evidenceRequired===true
+    }
     function stepApplicable(i){
       if(i===2) return requiresProfile()
       if(i===3) return requiresMeasure()
@@ -701,14 +804,19 @@
       if(i===0){
         if(!$('careKasse').value) missing.push('Krankenkasse')
         if(!$('carePg').value) missing.push('Produktgruppe')
-        if(!$('careHimi').value) missing.push('Hilfsmittel / Versorgungsbereich')
+        if(!selectedHimiId()) missing.push('Hilfsmittel / Versorgungsbereich')
         missing.push(...missingValues(['patientName','insuredNo']))
       } else if(i===1){
-        missing=missingValues(['supplyType','ampLevel','side'])
+        missing=missingValues(['supplyType','side'])
+        if($('carePg').value==='24') missing.push(...missingValues(['ampLevel']))
       } else if(i===2){
         return profileValidation()
       } else if(i===3){
-        missing=missingValues(['measureDate','measureValues'])
+        missing=missingValues(['measureDate'])
+        const measureControls=[...$('measureFieldList').querySelectorAll('[data-measure-key]')]
+        const required=measureControls.filter(x=>x.dataset.required==='true')
+        required.forEach(x=>{if(!String(x.value||'').trim()) missing.push(x.closest('label')?.querySelector('span')?.childNodes?.[0]?.textContent?.trim()||'Maßfeld')})
+        if(!measureControls.length && !String(values.measureValues||'').trim()) missing.push('Maßangaben')
       } else if(i===4){
         missing=missingValues(['planGoal'])
         if(!String(values.planShaft||'').trim() && !String(values.planParts||'').trim()) missing.push('Schaft-/Bettungskonzept oder geplante Komponenten')
@@ -773,7 +881,7 @@
       document.querySelectorAll('[data-case-field]').forEach(el=>{
         const key=el.dataset.caseField
         writeCaseField(el,values[key])
-        const save=()=>{values[key]=readCaseField(el);showWizardError('');updateWizardStatus()}
+        const save=()=>{values[key]=readCaseField(el);if(key==='supplyType')renderMeasureFields();showWizardError('');updateWizardStatus()}
         el.addEventListener('input',save)
         el.addEventListener('change',save)
       })
@@ -897,7 +1005,7 @@
       document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox')el.checked=false;else el.value=''})
       $('careKasse').value=''
       $('carePg').value=''
-      values.himi=''
+      values.himiId=''
       $('careHimi').innerHTML='<option value="">Bitte zuerst PG wählen</option>'
       $('careForm').innerHTML='<option value="">Automatisch nach PG + Himi + Kasse</option>'
       $('fieldList').innerHTML=''
@@ -939,8 +1047,8 @@
     $('formSearch').addEventListener('input',e=>renderForms(e.target.value))
     $('pg26Kasse').addEventListener('change',renderPg26)
     $('careKasse').addEventListener('change',()=>{updateCare();showWizardError('');renderWizard()})
-    $('carePg').addEventListener('change',()=>{values.himi='';populateHimiOptions();updateCare();showWizardError('');renderWizard()})
-    $('careHimi').addEventListener('change',()=>{values.himi=$('careHimi').value;syncPg24Level();updateCare();showWizardError('');renderWizard()})
+    $('carePg').addEventListener('change',()=>{values.himiId='';populateHimiOptions();updateCare();showWizardError('');renderWizard()})
+    $('careHimi').addEventListener('change',()=>{values.himiId=$('careHimi').value;syncPg24Level();updateCare();showWizardError('');renderWizard()})
     $('careForm').addEventListener('change',()=>{updateCareFields();showWizardError('');renderWizard()})
     $('printButton').addEventListener('click',()=>window.print())
     $('clearButton').addEventListener('click',resetWizard)
