@@ -33,6 +33,7 @@
     .form-grid{display:grid;gap:14px}.form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.rule-box{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-top:16px;padding:14px;border-radius:12px;background:#f7faf9;border:1px solid #e3ecea}.rule-box p{margin:5px 0 0;color:#667085}
     .field-list{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}.field{padding:12px 0;border-bottom:1px solid #eef2f2;grid-template-columns:minmax(180px,.9fr) 1.1fr;align-items:start}.field>span{font-weight:650}.field b{color:#b42318;margin-left:3px}.field small{display:block;margin-top:3px;font-weight:400;color:#98a2b3}
     .search{display:flex;align-items:center;gap:7px;border:1px solid #dde5e5;border-radius:10px;padding:0 10px;background:#fff}.search input{border:0;box-shadow:none;padding:8px 0;width:240px}.source-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.source{border:1px solid #e5ebeb;border-radius:12px;padding:15px;min-width:0}.source h4{font-size:.9rem;margin:8px 0;line-height:1.35}.source p{font-size:.8rem;color:#667085;word-break:break-word}.source small{color:#98a2b3}
+    .supply-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}.supply-overview-head h2{margin:0;font-size:1.3rem;color:#00157A}.supply-overview-head p{margin:6px 0 0;color:#667085;line-height:1.5}.supply-overview-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px}.supply-overview-toolbar .search{flex:1;min-width:240px}.supply-overview-toolbar .search input{width:100%}.supply-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:18px}.supply-status-card{background:#fff;border:1px solid #e0e7e7;border-radius:14px;padding:16px}.supply-status-card span{display:block;color:#667085;font-size:.8rem}.supply-status-card strong{display:block;margin-top:4px;font-size:1.45rem;color:#00157A}.supply-empty{padding:38px 22px;text-align:center;color:#667085}.supply-empty strong{display:block;color:#344054;margin-bottom:6px}.supply-empty small{display:block;max-width:680px;margin:0 auto;line-height:1.5}@media(max-width:900px){.supply-status-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.supply-status-grid{grid-template-columns:1fr}.supply-overview-head{display:block}}
     .alert{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:11px;margin-bottom:16px;font-size:.86rem}.alert p{margin:3px 0 0}.alert.error{background:#fef3f2;color:#b42318;border:1px solid #fecdca}.alert.warning{background:#fffaeb;color:#7a2e0e;border:1px solid #fedf89}.num{text-align:right;white-space:nowrap}.actions{display:flex;gap:10px;flex-wrap:wrap}
 
     /* V0.3.5: fallbezogener Schritt-für-Schritt-Versorgungsassistent */
@@ -97,6 +98,7 @@
       <div class="side-brand"><img class="side-logo" src="data:image/jpeg;base64,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" alt="brillinger ottobock.care" /><span class="hidden">Versorgungsassistent</span></div>
       <nav>
         <button data-view="care" class="active">✚ <span>Versorgung</span></button>
+        <button data-view="supplyOverview">▦ <span>Versorgungsübersicht</span></button>
         <button data-view="overview">◉ <span>Wissensbasis</span></button>
         <button data-view="forms">▤ <span>Formularregeln</span></button>
         <button data-view="pg26">∑ <span>PG 26</span></button>
@@ -112,6 +114,44 @@
       </header>
       <main class="content">
         <div id="appError" class="alert error hidden"></div>
+
+        <section id="supplyOverviewView" class="hidden">
+          <div class="page-grid">
+            <section class="card span2">
+              <div class="supply-overview-head">
+                <div>
+                  <h2>Versorgungsübersicht</h2>
+                  <p>Übersicht der laufenden beziehungsweise noch nicht abgeschlossenen Versorgungen.</p>
+                </div>
+                <button class="primary no-print" type="button" onclick="document.querySelector('[data-view=&quot;care&quot;]').click()">+ Neue Versorgung</button>
+              </div>
+              <div class="supply-overview-toolbar">
+                <div class="search"><span>⌕</span><input type="search" placeholder="Versorgung suchen …" aria-label="Versorgung suchen" disabled /></div>
+                <select aria-label="Status filtern" disabled><option>Alle offenen Status</option></select>
+                <select aria-label="Produktgruppe filtern" disabled><option>Alle Produktgruppen</option></select>
+              </div>
+              <div class="supply-status-grid">
+                <div class="supply-status-card"><span>Laufend</span><strong>–</strong></div>
+                <div class="supply-status-card"><span>Warten / Genehmigung</span><strong>–</strong></div>
+                <div class="supply-status-card"><span>Rückfrage / offen</span><strong>–</strong></div>
+                <div class="supply-status-card"><span>Abschluss offen</span><strong>–</strong></div>
+              </div>
+            </section>
+            <section class="card span2">
+              <div class="section-title">
+                <div><h3>Offene Versorgungen</h3><p>Für die spätere Fallliste ist hier bereits die Oberfläche vorgesehen.</p></div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Kunde / Vorgang</th><th>Kasse</th><th>PG / Hilfsmittel</th><th>Aktueller Schritt</th><th>Status</th><th>Letzte Änderung</th></tr></thead>
+                  <tbody>
+                    <tr><td colspan="6" class="supply-empty"><strong>Noch keine gespeicherten Versorgungen verfügbar.</strong><small>Die Darstellung ist vorbereitet. Eine persistente Fallliste würde eine fachliche Speicher- und Statuslogik benötigen und wird in diesem Layout-Chat nicht verändert.</small></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
 
         <section id="overviewView">
           <div class="page-grid">
@@ -331,8 +371,8 @@
     )
 
     const $ = (id) => document.getElementById(id)
-    const views = ['overview','care','forms','pg26','sources']
-    const titles = {overview:'Wissensbasis',care:'Versorgung',forms:'Formularregeln',pg26:'PG 26',sources:'Quellen'}
+    const views = ['overview','care','supplyOverview','forms','pg26','sources']
+    const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Versorgungsübersicht',forms:'Formularregeln',pg26:'PG 26',sources:'Quellen'}
     const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[]}
     const values = {}
     const himiByPg = {
