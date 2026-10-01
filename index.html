@@ -277,7 +277,7 @@
                 </div></section>
 
                 <section class="wizard-panel" data-panel="3"><div class="card">
-                  <h2>4. Maßaufnahme</h2><p class="lead">Das passende Maßblatt wird aus Produktgruppe, Amputationshöhe und Versorgungssituation ermittelt. Bei AOK Baden-Württemberg PG24 wird das Original-AOK-Maßblatt unverändert und direkt beschreibbar eingebunden.</p>
+                  <h2>4. Maßblatt</h2><p class="lead">Für PG24 werden die hinterlegten internen Maßblätter nach Amputationshöhe und Versorgungssituation geladen. Werteübersicht und Messverlauf ergänzen das Maßblatt, ohne dessen fachliche Reihenfolge zu verändern.</p>
                   <div class="mini-grid three">
                     <label>Messdatum<input type="date" data-case-field="measureDate" /></label>
                     <label>Techniker/in<input data-case-field="measureTech" /></label>
@@ -856,6 +856,7 @@
       const host=$('measureFieldList')
       if(!host) return
       host.className='field-list'
+      if($('carePg').value==='24' && renderPg24SourceMeasureSheet()) return
       if(renderAokPg24MeasureSheet()) return
       const meta=selectedHimiMeta()
       const fields=meta?.Massprofil_ID
@@ -1363,6 +1364,322 @@
       }
     }
 
+    function pg24SourceMeasureSchema(){
+      const level=values.ampLevel||''
+      if(level==='Unterschenkel') return {
+        code:'FMB02003',title:'Maßblatt Unterschenkelprothetik und Kosmetik',version:'Version 2.0 vom 11.03.2025',
+        heights:['0 (KS)','3','6','9','12','15','18','21','24','27'],
+        circCols:['physiol., Haut','über Liner','unbearb. Positiv','Differenz','bearb. Positiv','Kontrolle am','Schaft am'],
+        details:['Kniespalt (KS)-Stumpfende (Linerteller)','KS-Tibiaende','LW: M-L Suprakondylär','LW: M-L Kondylär','LW: A-P 3-er Ebene (locker gemessen)','Flexion Knie'],
+        detailCols:['Stumpfmaße','unbearb. Positiv','bearb. Positiv','Kontrolle am','Schaft am'],
+        summary:['Kniespalt (KS)-Stumpfende (Linerteller)','KS-Tibiaende','LW: M-L Suprakondylär','LW: M-L Kondylär','LW: A-P 3-er Ebene (locker gemessen)','Flexion Knie','Distales Umfangsmaß','KS – Boden','Fußlänge','Effektive Absatzhöhe','Höhe Oberkante Kniescheibe','Höhe Unterkante Kniescheibe','Y-Maß bei 90 °','Drehpunkt-Boden (def. Prothese)']
+      }
+      if(level==='Knie-Exartikulation') return {
+        code:'FMB02002',title:'Maßblatt Knieexprothetik und Kosmetik',version:'Version 2.0 vom 11.03.2025',
+        heights:['5','10','15','20','25','30','35','40','45'],
+        circCols:['physiol.','Zug 15 N mit Muskelsp.','unbearb. Positiv','Differenz','bearb. Positiv','Kontrolle am','Schaft am'],
+        details:['Mediale Höhe Schaftzuschnitt (vom distalen Stumpfende)','Laterale Höhe Schaftzuschnitt (vom distalen Stumpfende)','Höhe Oberkante Patella','Höhe suprakondyläre Einfassung medial','Höhe mediale Anlage (vom distalen Stumpfende bis Mitte Anlage)','M-L mediale Anlage','M-L Suprakondylär','M-L Kondylär','A-P Höhe mediale Anlage','A-P kondylär'],
+        detailCols:['Stumpfmaße','unbearb. Positiv','bearb. Positiv','Kontrolle am','Schaft am'],
+        summary:['Mediale Höhe Schaftzuschnitt (vom distalen Stumpfende)','Laterale Höhe Schaftzuschnitt (vom distalen Stumpfende)','Höhe Oberkante Patella','M-L Suprakondylär','M-L Kondylär','A-P kondylär','Flexionsstellung','Adduktionsstellung','Distales Umfangsmaß','Stumpfende – Boden','Drehpunkt – Boden','Tuber – Boden','Fußlänge','Effektive Absatzhöhe','Y-Maß bei 90 °']
+      }
+      if(level==='Oberschenkel') return {
+        code:'FMB02001',title:'Maßblatt Oberschenkelprothetik/PBSS und Kosmetik',version:'Version 2.0 vom 05.03.2025',
+        heights:['3','6','9','12','15','18','21','24'],
+        circCols:['Umfang physiol. mit Zugmaßband','Umfang Zug 15 N in Exten., aktive Muskulatur','Umfang Zug ohne Muskelsp.','unbearb. Positiv','bearb. Positiv','Kontrolle physiol.','Kontrolle Zug 15 N','Kontrolle ohne Muskelsp.','Schaft'],
+        details:['Tuber – Add.-Sehne mediales A-P (7,5–11 cm)','Tuber Rectus Femoris laterales A-P (11–15 cm)','Trochanterbreite','Diagonalmaß (13–18 cm)','Diagonalmaß weichteilig Muskelspan. 3-er Ebene','Vorderes skeletäres M-L (14–17 cm)','Ramus – Stumpfende','Ramus – Femurende','Ramuswinkel','Flexionswinkel (entlang Femur)','Ilio-femural Winkel','Add.-Winkel: Stumpfmitte','distales Umfangsmaß (4 cm oberhalb Stumpfende)'],
+        detailCols:['Stumpfmaße','unbearb. Positiv','bearb. Positiv','Kontrolle','Schaft'],
+        summary:['Tuber – Add.-Sehne mediales A-P (7,5–11 cm)','Tuber Rectus Femoris laterales A-P (11–15 cm)','Trochanterbreite','Diagonalmaß (13–18 cm)','Vorderes skeletäres M-L (14–17 cm)','Ramus – Stumpfende','Ramus – Femurende','Flexionswinkel (entlang Femur)','Ilio-femural Winkel','distales Umfangsmaß (4 cm oberhalb Stumpfende)','KS – Boden','Drehpunkt – Boden','Tuber – Boden','Fußlänge','Effektive Absatzhöhe','Y-Maß bei 90 °']
+      }
+      return null
+    }
+
+    function sourceMeasureKey(schema,id){return 'sourceMeasure:'+schema.code+':'+id}
+
+    function bindSourceMeasureControl(el,schema,id,label,prefill='',isMeasure=false,isSummary=false){
+      const key=sourceMeasureKey(schema,id)
+      if(values[key]===undefined && prefill!==undefined && prefill!==null && String(prefill)!=='') values[key]=prefill
+      if(el.type==='checkbox'){
+        const arr=Array.isArray(values[key])?values[key]:[]
+        el.checked=arr.includes(el.value)
+        el.addEventListener('change',()=>{
+          const all=[...document.querySelectorAll('[data-measure-key="'+CSS.escape(key)+'"]')].filter(x=>x.type==='checkbox')
+          values[key]=all.filter(x=>x.checked).map(x=>x.value)
+          renderSourceMeasureSummary()
+          updateWizardStatus()
+        })
+      }else{
+        el.value=values[key]??''
+        const save=()=>{values[key]=el.value;renderSourceMeasureSummary();updateWizardStatus()}
+        el.addEventListener('input',save);el.addEventListener('change',save)
+      }
+      el.dataset.measureKey=key
+      el.dataset.measureLabel=label
+      if(isMeasure) el.dataset.measureValue='true'
+      if(isSummary) el.dataset.measureSummary='true'
+      el.dataset.required='false'
+      return el
+    }
+
+    function sourceMeasureField(parent,schema,label,id,type='text',options=[],prefill='',isMeasure=false,isSummary=false,hint=''){
+      const box=document.createElement('label');box.className='source-measure-field'
+      const cap=document.createElement('span');cap.textContent=label;box.appendChild(cap)
+      let el
+      if(type==='textarea'){el=document.createElement('textarea');el.rows=3}
+      else if(type==='select'){el=document.createElement('select');el.innerHTML='<option value="">– bitte wählen –</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')}
+      else{el=document.createElement('input');el.type=type}
+      bindSourceMeasureControl(el,schema,id,label,prefill,isMeasure,isSummary)
+      box.appendChild(el)
+      if(hint){const s=document.createElement('small');s.textContent=hint;box.appendChild(s)}
+      parent.appendChild(box);return el
+    }
+
+    function sourceMeasureChecks(parent,schema,label,id,options,prefill=[],isSummary=false){
+      const box=document.createElement('div');box.className='source-measure-field'
+      const cap=document.createElement('span');cap.textContent=label;box.appendChild(cap)
+      const key=sourceMeasureKey(schema,id)
+      if(values[key]===undefined && prefill.length) values[key]=prefill
+      const opts=document.createElement('div');opts.className='source-measure-checks'
+      options.forEach(v=>{const l=document.createElement('label');const e=document.createElement('input');e.type='checkbox';e.value=v;bindSourceMeasureControl(e,schema,id,label,'',false,isSummary);l.append(e,document.createTextNode(v));opts.appendChild(l)})
+      box.appendChild(opts);parent.appendChild(box);return box
+    }
+
+    function sourceMeasureSection(body,title){
+      const sec=document.createElement('section');sec.className='source-measure-section'
+      const h=document.createElement('h4');h.textContent=title;sec.appendChild(h);body.appendChild(sec);return sec
+    }
+
+    function renderSourceMeasureCircumferences(body,schema){
+      const sec=sourceMeasureSection(body,'Stumpf / Positiv / Maßkontrolle')
+      const wrap=document.createElement('div');wrap.className='source-measure-table-wrap'
+      const table=document.createElement('table');table.className='source-measure-table'
+      const thead=document.createElement('thead');const hr=document.createElement('tr')
+      ;['Höhe'].concat(schema.circCols).forEach(x=>{const th=document.createElement('th');th.textContent=x;hr.appendChild(th)})
+      thead.appendChild(hr);table.appendChild(thead)
+      const tb=document.createElement('tbody')
+      schema.heights.forEach((height,ri)=>{
+        const tr=document.createElement('tr');const label=document.createElement('td');label.textContent=height;tr.appendChild(label)
+        schema.circCols.forEach((col,ci)=>{
+          const td=document.createElement('td');const input=document.createElement('input');input.type='text'
+          bindSourceMeasureControl(input,schema,'circ:'+ri+':'+ci,'Höhe '+height+' · '+col,'',true,false)
+          td.appendChild(input);tr.appendChild(td)
+        });tb.appendChild(tr)
+      })
+      table.appendChild(tb);wrap.appendChild(table);sec.appendChild(wrap)
+    }
+
+    function renderSourceMeasureDetails(body,schema){
+      const sec=sourceMeasureSection(body,'Stumpfmaße / Positiv / Maßkontrolle')
+      const wrap=document.createElement('div');wrap.className='source-measure-table-wrap'
+      const table=document.createElement('table');table.className='source-measure-table'
+      const thead=document.createElement('thead');const hr=document.createElement('tr')
+      ;['Maß'].concat(schema.detailCols).forEach(x=>{const th=document.createElement('th');th.textContent=x;hr.appendChild(th)})
+      thead.appendChild(hr);table.appendChild(thead)
+      const tb=document.createElement('tbody')
+      schema.details.forEach((label,ri)=>{
+        const tr=document.createElement('tr');const td0=document.createElement('td');td0.textContent=label;tr.appendChild(td0)
+        schema.detailCols.forEach((col,ci)=>{
+          const td=document.createElement('td');const input=document.createElement('input');input.type='text'
+          const summary=schema.summary.includes(label) && ci===0
+          bindSourceMeasureControl(input,schema,'detail:'+ri+':'+ci,label+(ci?(' · '+col):''),'',true,summary)
+          td.appendChild(input);tr.appendChild(td)
+        });tb.appendChild(tr)
+      })
+      table.appendChild(tb);wrap.appendChild(table);sec.appendChild(wrap)
+    }
+
+    function renderSourceMeasureHeader(body,schema){
+      const sec=sourceMeasureSection(body,'Stammdaten / Auftrag')
+      const grid=document.createElement('div');grid.className='source-measure-grid';sec.appendChild(grid)
+      sourceMeasureField(grid,schema,'Nachname','header:last','text',[],values.patientLastName||'')
+      sourceMeasureField(grid,schema,'Vorname','header:first','text',[],values.patientFirstName||'')
+      sourceMeasureField(grid,schema,'Datum','header:date','date',[],values.measureDate||'')
+      sourceMeasureField(grid,schema,'Vorgangsnummer','header:case','text',[],values.caseNumber||'')
+      sourceMeasureField(grid,schema,'NZ','header:nz')
+      sourceMeasureField(grid,schema,'Niederlassung','header:branch')
+      sourceMeasureField(grid,schema,'Pat.-Nr. / Geburtsdatum','header:patientRef')
+      sourceMeasureField(grid,schema,'Körpergewicht','header:weight','number',[],'',false,true)
+      sourceMeasureChecks(grid,schema,'Gewicht gemessen','header:weightMode',['mit HiMi','ohne HiMi'])
+      sourceMeasureField(grid,schema,'Körpergröße','header:height','number',[],'',false,true)
+      sourceMeasureChecks(grid,schema,'Seite','header:side',['Rechts','Links'],values.side==='rechts'?['Rechts']:values.side==='links'?['Links']:[])
+      sourceMeasureChecks(grid,schema,'Fotos','header:photos',['erhaltenes Bein / aktuelle Versorgung frontal, lateral und dorsal'])
+      sourceMeasureField(grid,schema,'Anprobetermin','header:trialDate','date')
+    }
+
+    function renderSourceMeasureClassification(body,schema){
+      const sec=sourceMeasureSection(body,'Versorgungsplanung / Stumpfklassifikation')
+      const grid=document.createElement('div');grid.className='source-measure-grid';sec.appendChild(grid)
+      if(schema.code==='FMB02003'){
+        sourceMeasureChecks(grid,schema,'Interfacematerial','class:interface',['Silikon','Copolymer/TPE','PU'])
+        sourceMeasureField(grid,schema,'Linerbezeichnung','class:linerName')
+        sourceMeasureField(grid,schema,'Linergröße','class:linerSize')
+        sourceMeasureField(grid,schema,'Linerlänge','class:linerLength')
+        sourceMeasureChecks(grid,schema,'Matrixlänge','class:matrix',['5 cm','10 cm','Individuell'])
+        sourceMeasureField(grid,schema,'Matrixlänge individuell (cm)','class:matrixCustom','number')
+        sourceMeasureChecks(grid,schema,'Schaftsystem','class:socket',['Distales Arretierungssystem','Kniekappensystem','Sealsystem','KBM-System','Oberhülse','Sonstiges'])
+        sourceMeasureChecks(grid,schema,'Positiverfassung','class:positive',['Symphony VC','Scan','Gipsabdruck'])
+        sourceMeasureChecks(grid,schema,'Gewebe','class:tissue',['weich','mw','mittel','mf','fest'])
+        sourceMeasureChecks(grid,schema,'Stumpflänge','class:stumpLength',['≤1/3','2/3','≥2/3'])
+        sourceMeasureChecks(grid,schema,'Stumpfform','class:stumpShape',['zylindrisch','konisch','birnenförmig'])
+      }else if(schema.code==='FMB02002'){
+        sourceMeasureChecks(grid,schema,'Schaftsystem','class:socket',['PBSS Knieex (Silikonhybridschaft)','Knieex (PE-Innenschaft)'])
+        sourceMeasureChecks(grid,schema,'Interface','class:interface',['Liner konfektioniert','Liner individuell','RTV-Silicon','HTV-Silicon','Distal Cup/Ausgleichsmanschette','WWL'])
+        sourceMeasureField(grid,schema,'Linergröße','class:linerSize')
+        sourceMeasureField(grid,schema,'Linerlänge','class:linerLength')
+        sourceMeasureField(grid,schema,'Konfektionsgröße Distal Cup','class:distalCupSize')
+        sourceMeasureChecks(grid,schema,'Positiverfassung','class:positive',['Symphony','Scan','Gipsabdruck'])
+        sourceMeasureChecks(grid,schema,'Gewebe','class:tissue',['weich','mw','mittel','mf','fest'])
+        sourceMeasureChecks(grid,schema,'Stumpfform','class:stumpShape',['knöchern','weichteilgedeckt'])
+      }else{
+        sourceMeasureChecks(grid,schema,'Schaftsystem','class:socket',['PBSS','PBSS short','Sonstige'])
+        sourceMeasureChecks(grid,schema,'Interfacematerial','class:interface',['Silikon','Copolymer/TPE'])
+        sourceMeasureField(grid,schema,'Linerbezeichnung','class:linerName')
+        sourceMeasureField(grid,schema,'Linergröße','class:linerSize')
+        sourceMeasureField(grid,schema,'Linerlänge','class:linerLength')
+        sourceMeasureChecks(grid,schema,'Positiverfassung','class:positive',['Scan','Gipsabdruck','Sonstige'])
+        sourceMeasureChecks(grid,schema,'Gewebe','class:tissue',['weich','mw','mittel','mf','fest'])
+        sourceMeasureChecks(grid,schema,'Stumpflänge','class:stumpLength',['≤1/3','2/3','≥2/3'])
+        sourceMeasureChecks(grid,schema,'Stumpfform','class:stumpShape',['zylindrisch','konisch','birnenförmig'])
+      }
+      sourceMeasureChecks(grid,schema,'Geschlecht','class:sex',['weiblich','männlich'])
+      sourceMeasureChecks(grid,schema,'Mob','class:mob',['0','1','2','3','4'])
+      sourceMeasureField(grid,schema,'Amputation am (Monat/Jahr)','class:ampWhen','month')
+      sourceMeasureChecks(grid,schema,'Weitere Hilfsmittel','class:aids',['Sitzkissen','Einlagen','Kompressionsstrumpf','Sonstiges'])
+      sourceMeasureField(grid,schema,'Versorgungsplan / Bemerkungen','class:plan','textarea')
+    }
+
+    function renderSourceMeasureFooter(body,schema){
+      const sec=sourceMeasureSection(body,'Aufbaumaße / Systeme / Zusatzmaße')
+      const grid=document.createElement('div');grid.className='source-measure-grid';sec.appendChild(grid)
+      const add=(label,id,type='text',opts=[])=>sourceMeasureField(grid,schema,label,'footer:'+id,type,opts,'',true,schema.summary.includes(label))
+      if(schema.code==='FMB02003'){
+        add('Frontalstellung Knie','frontal','select',['Varus','Valgus'])
+        add('Frontalstellung Knie (°)','frontalDeg','number')
+        add('Distales Umfangsmaß','distal','number')
+        add('KS – Boden','ksFloor','number')
+        add('Fußsystem','footSystem')
+        add('Fußlänge','footLength','number')
+        add('Effektive Absatzhöhe','heel','number')
+        add('Höhe Oberkante Kniescheibe','patellaTop','number')
+        add('Höhe Unterkante Kniescheibe','patellaBottom','number')
+        add('Y-Maß bei 90 °','y90','number')
+        add('Drehpunkt-Boden (def. Prothese)','pivotDef','number')
+      }else if(schema.code==='FMB02002'){
+        add('Flexionsstellung','flexion','number')
+        add('Adduktionsstellung','adduction','number')
+        add('Distales Umfangsmaß','distal','number')
+        add('Stumpfende – Boden','stumpFloor','number')
+        add('Drehpunkt – Boden','pivotFloor','number')
+        add('Tuber – Boden','tuberFloor','number')
+        add('Fußsystem','footSystem')
+        add('Kniesystem','kneeSystem')
+        add('Fußlänge','footLength','number')
+        add('Effektive Absatzhöhe','heel','number')
+        add('Höhe Oberkante Kniescheibe','patellaTop','number')
+        add('Höhe Unterkante Kniescheibe','patellaBottom','number')
+        add('Y-Maß bei 90 °','y90','number')
+        add('Drehpunkt-Boden (def. Prothese)','pivotDef','number')
+      }else{
+        add('KS – Boden','ksFloor','number')
+        add('Drehpunkt – Boden','pivotFloor','number')
+        add('Tuber – Boden','tuberFloor','number')
+        add('Fußsystem','footSystem')
+        add('Kniesystem','kneeSystem')
+        add('Fußlänge','footLength','number')
+        add('Effektive Absatzhöhe','heel','number')
+        add('Höhe Oberkante Kniescheibe','patellaTop','number')
+        add('Höhe Unterkante Kniescheibe','patellaBottom','number')
+        add('Y-Maß bei 90 °','y90','number')
+        add('Drehpunkt-Boden (def. Prothese)','pivotDef','number')
+      }
+    }
+
+    function renderSourceMeasureOptionalOs(body,schema){
+      if(schema.code!=='FMB02001') return
+      let sec=sourceMeasureSection(body,'Optional: Dynamometer Druckmessung im 6-er Maß (4 cm² Stempel)')
+      let grid=document.createElement('div');grid.className='source-measure-grid';sec.appendChild(grid)
+      ;['Medio-ventral','Medio-dorsal','Dorso-lateral','Ventro-lateral'].forEach((p,i)=>{
+        sourceMeasureField(grid,schema,p+' – entspannt','dyn:'+i+':relaxed','number',[],'',true,false)
+        sourceMeasureField(grid,schema,p+' – angespannt','dyn:'+i+':tense','number',[],'',true,false)
+      })
+      sec=sourceMeasureSection(body,'Optional: Sonographie Gewebemessung – 8 Quadranten pro Ebene (mm)')
+      const wrap=document.createElement('div');wrap.className='source-measure-table-wrap'
+      const table=document.createElement('table');table.className='source-measure-table'
+      const quadrants=['medial','medio-frontal','frontal','fronto-lateral','lateral','dorso-lateral','dorsal','dorso-medial']
+      const hr=document.createElement('tr');['Ebene'].concat(quadrants).forEach(x=>{const th=document.createElement('th');th.textContent=x;hr.appendChild(th)})
+      const thd=document.createElement('thead');thd.appendChild(hr);table.appendChild(thd)
+      const tb=document.createElement('tbody')
+      ;['3er','6er','9er','12er','15er','18er','21er'].forEach((lvl,ri)=>{
+        const tr=document.createElement('tr');const td0=document.createElement('td');td0.textContent=lvl;tr.appendChild(td0)
+        quadrants.forEach((q,ci)=>{const td=document.createElement('td');const input=document.createElement('input');input.type='number';bindSourceMeasureControl(input,schema,'sono:'+ri+':'+ci,lvl+' · '+q,'',true,false);td.appendChild(input);tr.appendChild(td)})
+        tb.appendChild(tr)
+      })
+      table.appendChild(tb);wrap.appendChild(table);sec.appendChild(wrap)
+    }
+
+    function renderSourceMeasureSummary(){
+      const host=$('measureSummaryList');if(!host) return
+      const controls=[...$('measureFieldList').querySelectorAll('[data-measure-summary="true"]')]
+      const seen=new Set(),rows=[]
+      controls.forEach(el=>{
+        const key=el.dataset.measureKey;if(seen.has(key)) return;seen.add(key)
+        let v=values[key]
+        if(Array.isArray(v)) v=v.join(', ')
+        if(v===undefined||v===null||String(v).trim()==='') return
+        rows.push({label:el.dataset.measureLabel||key,value:String(v)})
+      })
+      host.innerHTML=rows.length?rows.map(r=>'<div class="measure-summary-row"><strong>'+escapeHtml(r.label)+'</strong><span>'+escapeHtml(r.value)+'</span></div>').join(''):'<div class="measure-empty">Noch keine Werte erfasst.</div>'
+    }
+
+    function saveSourceMeasureSnapshot(schema){
+      const controls=[...$('measureFieldList').querySelectorAll('[data-measure-key]')]
+      const fields=[],seen=new Set()
+      controls.forEach(el=>{
+        const key=el.dataset.measureKey;if(seen.has(key)) return;seen.add(key)
+        let v=values[key];if(Array.isArray(v)) v=v.join(', ')
+        if(v===undefined||v===null||String(v).trim()==='') return
+        fields.push({key,label:el.dataset.measureLabel||key,value:String(v)})
+      })
+      if(!fields.length) return
+      const history=Array.isArray(values.measureHistory)?values.measureHistory:[]
+      history.unshift({id:Date.now(),schema:schema.code,title:schema.title,measureDate:values.measureDate||'',savedAt:new Date().toISOString(),fields})
+      values.measureHistory=history.slice(0,25)
+      renderSourceMeasureHistory(schema)
+      queueAutosaveSupply()
+    }
+
+    function renderSourceMeasureHistory(schema){
+      const host=$('measureHistoryList');if(!host) return
+      const history=(Array.isArray(values.measureHistory)?values.measureHistory:[]).filter(x=>x.schema===schema.code)
+      if(!history.length){host.innerHTML='<div class="measure-empty">Noch kein Messstand dokumentiert.</div>';return}
+      host.innerHTML=history.map(h=>{
+        const when=h.measureDate?new Date(h.measureDate+'T12:00:00').toLocaleDateString('de-DE'):new Date(h.savedAt).toLocaleString('de-DE')
+        const vals=(h.fields||[]).slice(0,80).map(f=>'<div class="measure-history-value"><span>'+escapeHtml(f.label)+'</span><strong>'+escapeHtml(f.value)+'</strong></div>').join('')
+        return '<details class="measure-history-item"><summary>'+escapeHtml(when)+' · '+(h.fields?.length||0)+' Werte</summary><div class="measure-history-values">'+vals+'</div></details>'
+      }).join('')
+    }
+
+    function renderPg24SourceMeasureSheet(){
+      const schema=pg24SourceMeasureSchema()
+      if(!schema || !requiresMeasure()) return false
+      values.measureSchema=schema.title
+      const schemaInput=document.querySelector('[data-case-field="measureSchema"]');if(schemaInput) schemaInput.value=schema.title
+      const note=$('measureLogicNote');note.className='status-card ready'
+      note.innerHTML='<strong>'+escapeHtml(schema.title)+'</strong>'+escapeHtml(schema.version)+' · Quelle '+escapeHtml(schema.code)+'. Werteübersicht und Verlaufsdokumentation werden fallbezogen ergänzt.'
+      const host=$('measureFieldList');host.className=''
+      host.innerHTML='<div class="pg24-measure-workspace"><div class="source-measure-sheet"><div class="source-measure-title"><span class="measure-source-badge">'+escapeHtml(schema.code)+'</span><h3>'+escapeHtml(schema.title)+'</h3><p>'+escapeHtml(schema.version)+'</p></div><div id="sourceMeasureBody" class="source-measure-body"></div></div><aside class="measure-side"><section class="measure-summary-card"><h3>Werteübersicht</h3><div id="measureSummaryList" class="measure-summary-list"></div></section><section class="measure-history-card"><h3>Verlaufsdokumentation der Maße</h3><div class="measure-history-actions"><button id="saveMeasureHistoryButton" type="button" class="secondary">Messstand speichern</button></div><div id="measureHistoryList" class="measure-history-list"></div></section></aside></div>'
+      const body=$('sourceMeasureBody')
+      renderSourceMeasureHeader(body,schema)
+      renderSourceMeasureClassification(body,schema)
+      renderSourceMeasureCircumferences(body,schema)
+      renderSourceMeasureDetails(body,schema)
+      renderSourceMeasureFooter(body,schema)
+      renderSourceMeasureOptionalOs(body,schema)
+      $('saveMeasureHistoryButton').addEventListener('click',()=>saveSourceMeasureSnapshot(schema))
+      renderSourceMeasureSummary()
+      renderSourceMeasureHistory(schema)
+      return true
+    }
+
     function aokPg24MeasureAsset(){
       if($('carePg').value!=='24'||!isAokCase()||!requiresMeasure()) return null
       const level=values.ampLevel||''
@@ -1618,6 +1935,12 @@
         return profileValidation()
       } else if(i===3){
         missing=missingValues(['measureDate'])
+        if($('carePg').value==='24' && pg24SourceMeasureSchema()){
+          const sourceMeasures=[...$('measureFieldList').querySelectorAll('[data-measure-value="true"]')]
+          const anySource=sourceMeasures.some(x=>x.type==='checkbox'?x.checked:String(x.value||'').trim())
+          if(!anySource) missing.push('mindestens ein Maßwert')
+          return {ok:missing.length===0,missing}
+        }
         if($('carePg').value==='24' && isAokCase() && aokPg24MeasureAsset()) return {ok:missing.length===0,missing}
         const measureControls=[...$('measureFieldList').querySelectorAll('[data-measure-key]')]
         const required=measureControls.filter(x=>x.dataset.required==='true')
