@@ -33,7 +33,7 @@
     .form-grid{display:grid;gap:14px}.form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.rule-box{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;margin-top:16px;padding:14px;border-radius:12px;background:#f7faf9;border:1px solid #e3ecea}.rule-box p{margin:5px 0 0;color:#667085}
     .field-list{display:grid;grid-template-columns:1fr 1fr;gap:0 22px}.field{padding:12px 0;border-bottom:1px solid #eef2f2;grid-template-columns:minmax(180px,.9fr) 1.1fr;align-items:start}.field>span{font-weight:650}.field b{color:#b42318;margin-left:3px}.field small{display:block;margin-top:3px;font-weight:400;color:#98a2b3}
     .search{display:flex;align-items:center;gap:7px;border:1px solid #dde5e5;border-radius:10px;padding:0 10px;background:#fff}.search input{border:0;box-shadow:none;padding:8px 0;width:240px}.source-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.source{border:1px solid #e5ebeb;border-radius:12px;padding:15px;min-width:0}.source h4{font-size:.9rem;margin:8px 0;line-height:1.35}.source p{font-size:.8rem;color:#667085;word-break:break-word}.source small{color:#98a2b3}
-    .supply-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}.supply-overview-head h2{margin:0;font-size:1.3rem;color:#00157A}.supply-overview-head p{margin:6px 0 0;color:#667085;line-height:1.5}.supply-overview-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px}.supply-overview-toolbar .search{flex:1;min-width:240px}.supply-overview-toolbar .search input{width:100%}.supply-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}.supply-status-card{background:linear-gradient(180deg,#fff,#f8f9ff);border:1px solid #dfe4f3;border-radius:14px;padding:14px 15px;min-height:92px;display:flex;flex-direction:column;justify-content:space-between}.supply-status-card span{display:block;color:#667085;font-size:.78rem;font-weight:700}.supply-status-card strong{display:block;margin-top:6px;font-size:1.55rem;line-height:1;color:#00157A}.supply-status-card small{display:block;margin-top:7px;color:#98a2b3;font-size:.72rem}.supply-list-card{padding:0;overflow:hidden}.supply-list-head{padding:18px 20px 14px;border-bottom:1px solid #edf0f5;background:#fff}.supply-list-head .section-title{margin-bottom:0}.supply-list-card .table-wrap{border:0;border-radius:0}.supply-list-card th{background:#f6f8fc;color:#475467}.supply-list-card td{padding-top:12px;padding-bottom:12px}.supply-empty{padding:38px 22px;text-align:center;color:#667085}.supply-empty strong{display:block;color:#344054;margin-bottom:6px}.supply-empty small{display:block;max-width:680px;margin:0 auto;line-height:1.5}@media(max-width:900px){.supply-status-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.supply-status-grid{grid-template-columns:1fr}.supply-overview-head{display:block}}
+    .supply-overview-head{display:flex;justify-content:space-between;align-items:flex-start;gap:18px}.supply-overview-head h2{margin:0;font-size:1.3rem;color:#00157A}.supply-overview-head p{margin:6px 0 0;color:#667085;line-height:1.5}.supply-overview-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px}.supply-overview-toolbar .search{flex:1;min-width:240px}.supply-overview-toolbar .search input{width:100%}.supply-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:18px}.supply-status-card{background:linear-gradient(180deg,#fff,#f8f9ff);border:1px solid #dfe4f3;border-radius:14px;padding:14px 15px;min-height:92px;display:flex;flex-direction:column;justify-content:space-between}.supply-status-card span{display:block;color:#667085;font-size:.78rem;font-weight:700}.supply-status-card strong{display:block;margin-top:6px;font-size:1.55rem;line-height:1;color:#00157A}.supply-status-card small{display:block;margin-top:7px;color:#98a2b3;font-size:.72rem}.supply-list-card{padding:0;overflow:hidden}.supply-list-head{padding:18px 20px 14px;border-bottom:1px solid #edf0f5;background:#fff}.supply-list-head .section-title{margin-bottom:0}.supply-list-card .table-wrap{border:0;border-radius:0}.supply-list-card th{background:#f6f8fc;color:#475467}.supply-list-card td{padding-top:12px;padding-bottom:12px}.supply-row{cursor:pointer}.supply-row:focus{outline:2px solid #00157A;outline-offset:-2px;background:#f6f8ff}.supply-empty{padding:38px 22px;text-align:center;color:#667085}.supply-empty strong{display:block;color:#344054;margin-bottom:6px}.supply-empty small{display:block;max-width:680px;margin:0 auto;line-height:1.5}@media(max-width:900px){.supply-status-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){.supply-status-grid{grid-template-columns:1fr}.supply-overview-head{display:block}}
     .alert{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:11px;margin-bottom:16px;font-size:.86rem}.alert p{margin:3px 0 0}.alert.error{background:#fef3f2;color:#b42318;border:1px solid #fecdca}.alert.warning{background:#fffaeb;color:#7a2e0e;border:1px solid #fedf89}.num{text-align:right;white-space:nowrap}.actions{display:flex;gap:10px;flex-wrap:wrap}
 
     /* V0.3.5: fallbezogener Schritt-für-Schritt-Versorgungsassistent */
@@ -126,15 +126,21 @@
                 <button class="primary no-print" type="button" onclick="document.querySelector('[data-view=&quot;care&quot;]').click()">+ Neue Versorgung</button>
               </div>
               <div class="supply-overview-toolbar">
-                <div class="search"><span>⌕</span><input type="search" placeholder="Versorgung suchen …" aria-label="Versorgung suchen" disabled /></div>
-                <select aria-label="Status filtern" disabled><option>Alle offenen Status</option></select>
-                <select aria-label="Produktgruppe filtern" disabled><option>Alle Produktgruppen</option></select>
+                <div class="search"><span>⌕</span><input id="supplySearch" type="search" placeholder="Patient, Vorgang, Kasse, PG oder Hilfsmittel …" aria-label="Versorgung suchen" /></div>
+                <select id="supplyStatusFilter" aria-label="Status filtern">
+                  <option value="">Alle offenen Status</option>
+                  <option value="Laufend">Laufend</option>
+                  <option value="Warten / Genehmigung">Warten / Genehmigung</option>
+                  <option value="Rückfrage / offen">Rückfrage / offen</option>
+                  <option value="Abschluss offen">Abschluss offen</option>
+                </select>
+                <select id="supplyPgFilter" aria-label="Produktgruppe filtern"><option value="">Alle Produktgruppen</option></select>
               </div>
               <div class="supply-status-grid">
-                <div class="supply-status-card"><span>Laufend</span><strong>–</strong><small>aktiv in Bearbeitung</small></div>
-                <div class="supply-status-card"><span>Warten / Genehmigung</span><strong>–</strong><small>externe Rückmeldung ausstehend</small></div>
-                <div class="supply-status-card"><span>Rückfrage / offen</span><strong>–</strong><small>Klärung erforderlich</small></div>
-                <div class="supply-status-card"><span>Abschluss offen</span><strong>–</strong><small>Abgabe / Abrechnung noch offen</small></div>
+                <div class="supply-status-card"><span>Laufend</span><strong id="supplyCountActive">0</strong><small>aktiv in Bearbeitung</small></div>
+                <div class="supply-status-card"><span>Warten / Genehmigung</span><strong id="supplyCountWaiting">0</strong><small>externe Rückmeldung ausstehend</small></div>
+                <div class="supply-status-card"><span>Rückfrage / offen</span><strong id="supplyCountQuery">0</strong><small>Klärung erforderlich</small></div>
+                <div class="supply-status-card"><span>Abschluss offen</span><strong id="supplyCountClose">0</strong><small>Abgabe / Abrechnung noch offen</small></div>
               </div>
             </section>
             <section class="card span2 supply-list-card">
@@ -144,8 +150,8 @@
               <div class="table-wrap">
                 <table>
                   <thead><tr><th>Kunde / Vorgang</th><th>Kasse</th><th>PG / Hilfsmittel</th><th>Aktueller Schritt</th><th>Status</th><th>Letzte Änderung</th></tr></thead>
-                  <tbody>
-                    <tr><td colspan="6" class="supply-empty"><strong>Noch keine gespeicherten Versorgungen verfügbar.</strong><small>Die Darstellung ist vorbereitet. Eine persistente Fallliste würde eine fachliche Speicher- und Statuslogik benötigen und wird in diesem Layout-Chat nicht verändert.</small></td></tr>
+                  <tbody id="supplyOverviewBody">
+                    <tr><td colspan="6" class="supply-empty"><strong>Noch keine zwischengespeicherten Versorgungen vorhanden.</strong><small>Sobald in einer neuen Versorgung eine Änderung erfolgt, wird der Vorgang automatisch zwischengespeichert und hier angezeigt.</small></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -375,6 +381,151 @@
     const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Versorgungsübersicht',forms:'Formularregeln',pg26:'PG 26',sources:'Quellen'}
     const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[]}
     const values = {}
+    let activeSupplyId = null
+    let draftSaveTimer = null
+
+    function supplyStorageKey(){
+      const uid=currentSession?.user?.id || 'anonymous'
+      return 'versorgungsassistent:drafts:'+uid
+    }
+
+    function readSupplyDrafts(){
+      try{
+        const raw=localStorage.getItem(supplyStorageKey())
+        const parsed=raw?JSON.parse(raw):[]
+        return Array.isArray(parsed)?parsed:[]
+      }catch(_){ return [] }
+    }
+
+    function writeSupplyDrafts(items){
+      try{ localStorage.setItem(supplyStorageKey(),JSON.stringify(items)) }catch(_){}
+    }
+
+    function currentSupplyStatus(snapshotValues=values,stepIndex=wizardIndex){
+      if(snapshotValues.approvalState==='Rückfrage' || snapshotValues.approvalState==='Abgelehnt') return 'Rückfrage / offen'
+      if(snapshotValues.approvalState==='Eingereicht') return 'Warten / Genehmigung'
+      if(snapshotValues.deliveryDate || snapshotValues.billingState || stepIndex>=9) return 'Abschluss offen'
+      return 'Laufend'
+    }
+
+    function ensureActiveSupplyId(){
+      if(activeSupplyId) return activeSupplyId
+      activeSupplyId=(crypto.randomUUID?crypto.randomUUID():'versorgung-'+Date.now()+'-'+Math.random().toString(16).slice(2))
+      return activeSupplyId
+    }
+
+    function autosaveSupplyDraft(){
+      const hasContent=Object.keys(values).some(k=>{
+        const v=values[k]
+        return typeof v==='boolean'?v:String(v??'').trim()!==''
+      }) || !!$('careKasse')?.value || !!$('carePg')?.value || !!$('careHimi')?.value
+      if(!hasContent || !currentSession) return
+
+      const id=ensureActiveSupplyId()
+      const now=new Date().toISOString()
+      const drafts=readSupplyDrafts()
+      const existing=drafts.find(x=>x.id===id)
+      const item={
+        id,
+        createdAt:existing?.createdAt||now,
+        updatedAt:now,
+        wizardIndex,
+        kasse:$('careKasse')?.value||'',
+        pg:$('carePg')?.value||'',
+        himiId:$('careHimi')?.value||values.himiId||'',
+        himi:selectedHimi()||'',
+        status:currentSupplyStatus(values,wizardIndex),
+        values:{...values}
+      }
+      const next=[item,...drafts.filter(x=>x.id!==id)].slice(0,250)
+      writeSupplyDrafts(next)
+      renderSupplyOverview()
+    }
+
+    function queueAutosaveSupply(){
+      clearTimeout(draftSaveTimer)
+      draftSaveTimer=setTimeout(autosaveSupplyDraft,220)
+    }
+
+    function formatDraftTime(iso){
+      if(!iso) return '—'
+      try{return new Intl.DateTimeFormat('de-DE',{dateStyle:'short',timeStyle:'short'}).format(new Date(iso))}catch(_){return iso}
+    }
+
+    function supplyStepLabel(item){
+      const i=Math.max(0,Math.min(Number(item.wizardIndex)||0,wizardSteps.length-1))
+      return (i+1)+'. '+wizardSteps[i].name
+    }
+
+    function renderSupplyOverview(){
+      const body=$('supplyOverviewBody')
+      if(!body) return
+      const drafts=readSupplyDrafts().filter(x=>x.status!=='Abgeschlossen')
+      const q=($('supplySearch')?.value||'').trim().toLowerCase()
+      const status=$('supplyStatusFilter')?.value||''
+      const pg=$('supplyPgFilter')?.value||''
+
+      const pgs=[...new Set(drafts.map(x=>String(x.pg||'')).filter(Boolean))].sort((a,b)=>Number(a)-Number(b))
+      if($('supplyPgFilter')){
+        const old=$('supplyPgFilter').value
+        $('supplyPgFilter').innerHTML='<option value="">Alle Produktgruppen</option>'+pgs.map(x=>'<option value="'+escapeHtml(x)+'">PG '+escapeHtml(x)+'</option>').join('')
+        if(pgs.includes(old)) $('supplyPgFilter').value=old
+      }
+
+      $('supplyCountActive').textContent=drafts.filter(x=>x.status==='Laufend').length
+      $('supplyCountWaiting').textContent=drafts.filter(x=>x.status==='Warten / Genehmigung').length
+      $('supplyCountQuery').textContent=drafts.filter(x=>x.status==='Rückfrage / offen').length
+      $('supplyCountClose').textContent=drafts.filter(x=>x.status==='Abschluss offen').length
+
+      const filtered=drafts.filter(x=>{
+        if(status && x.status!==status) return false
+        if(pg && String(x.pg)!==String(pg)) return false
+        if(q){
+          const hay=[x.values?.patientName,x.values?.caseNumber,x.kasse,x.pg,x.himi,x.values?.insuredNo].join(' ').toLowerCase()
+          if(!hay.includes(q)) return false
+        }
+        return true
+      })
+
+      if(!filtered.length){
+        body.innerHTML='<tr><td colspan="6" class="supply-empty"><strong>Keine passenden Versorgungen.</strong><small>Filter anpassen oder eine neue Versorgung beginnen. Änderungen werden automatisch zwischengespeichert.</small></td></tr>'
+        return
+      }
+
+      body.innerHTML=filtered.map(x=>{
+        const name=x.values?.patientName||'Patient noch nicht erfasst'
+        const caseNo=x.values?.caseNumber||x.id.slice(0,8)
+        const pgText=x.pg?'PG '+escapeHtml(x.pg):'PG offen'
+        return '<tr class="supply-row" data-supply-id="'+escapeHtml(x.id)+'" tabindex="0" title="Versorgung öffnen">'+
+          '<td><strong>'+escapeHtml(name)+'</strong><br><small>'+escapeHtml(caseNo)+'</small></td>'+
+          '<td>'+escapeHtml(x.kasse||'—')+'</td>'+
+          '<td>'+pgText+(x.himi?'<br><small>'+escapeHtml(x.himi)+'</small>':'')+'</td>'+
+          '<td>'+escapeHtml(supplyStepLabel(x))+'</td>'+
+          '<td><span class="pill '+(x.status==='Rückfrage / offen'?'warning':x.status==='Warten / Genehmigung'?'blue':'')+'">'+escapeHtml(x.status)+'</span></td>'+
+          '<td>'+escapeHtml(formatDraftTime(x.updatedAt))+'</td>'+
+        '</tr>'
+      }).join('')
+    }
+
+    function restoreSupplyDraft(id){
+      const item=readSupplyDrafts().find(x=>x.id===id)
+      if(!item) return
+      activeSupplyId=item.id
+      Object.keys(values).forEach(k=>delete values[k])
+      Object.assign(values,item.values||{})
+      wizardIndex=Math.max(0,Math.min(Number(item.wizardIndex)||0,wizardSteps.length-1))
+      $('careKasse').value=item.kasse||''
+      $('carePg').value=item.pg||''
+      values.himiId=item.himiId||values.himiId||''
+      populateHimiOptions()
+      if(values.himiId) $('careHimi').value=values.himiId
+      document.querySelectorAll('[data-case-field]').forEach(el=>writeCaseField(el,values[el.dataset.caseField]))
+      updateCare()
+      renderMeasureFields()
+      renderWizard()
+      setView('care')
+    }
+
     const himiByPg = {
       '04':['Badehilfe','Duschhilfe','Badewannenhilfe','Toilettennahe Bad-/Duschhilfe'],
       '05':['Bandage – obere Extremität','Bandage – untere Extremität','Bandage – Rumpf'],
@@ -479,6 +630,7 @@
       bindWizardInputs()
       setView('care')
       renderWizard()
+      renderSupplyOverview()
     }
 
     function selectedHimiId(){ return $('careHimi').value||values.himiId||'' }
@@ -745,6 +897,7 @@
     let wizardBound=false
 
     function setView(view){
+      if(view==='supplyOverview') renderSupplyOverview()
       document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view))
       views.forEach(v=>$(v+'View').classList.toggle('hidden',v!==view))
       $('pageTitle').textContent=titles[view]
@@ -1059,6 +1212,7 @@
           :'<strong>Für diesen Versorgungspfad nicht erforderlich</strong>Der Schritt wird im Ablauf automatisch übersprungen.'
       }
 
+      queueAutosaveSupply()
       if(rerender){
         document.querySelectorAll('.wizard-step').forEach((b,i)=>{
           const isApp=applicable[i]
@@ -1073,6 +1227,8 @@
     }
 
     function resetWizard(){
+      autosaveSupplyDraft()
+      activeSupplyId=null
       Object.keys(values).forEach(k=>delete values[k])
       document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox')el.checked=false;else el.value=''})
       $('careKasse').value=''
@@ -1124,6 +1280,11 @@
     $('careForm').addEventListener('change',()=>{updateCareFields();showWizardError('');renderWizard()})
     $('printButton').addEventListener('click',()=>window.print())
     $('clearButton').addEventListener('click',resetWizard)
+    $('supplySearch').addEventListener('input',renderSupplyOverview)
+    $('supplyStatusFilter').addEventListener('change',renderSupplyOverview)
+    $('supplyPgFilter').addEventListener('change',renderSupplyOverview)
+    $('supplyOverviewBody').addEventListener('click',e=>{const row=e.target.closest('[data-supply-id]');if(row)restoreSupplyDraft(row.dataset.supplyId)})
+    $('supplyOverviewBody').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-supply-id]')){e.preventDefault();restoreSupplyDraft(e.target.dataset.supplyId)}})
 
     document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)))
 
