@@ -44,9 +44,9 @@
     .wizard-progress{height:7px;border-radius:999px;background:#edf1f1;overflow:hidden;margin:4px 5px 12px}.wizard-progress i{display:block;height:100%;background:#0f766e;width:0;transition:.2s}
     .wizard-progress-text{font-size:.75rem;color:#7a8794;padding:0 5px 10px}
     .wizard-step{width:100%;border:0;background:transparent;text-align:left;display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;padding:9px;border-radius:10px;color:#596673}
-    .wizard-step:hover{background:#f5f8f8}.wizard-step.active{background:#ecfdf9;color:#0f625c}.wizard-step.done .step-no{background:#0f766e;color:#fff}.wizard-step.done .step-state:after{content:"✓";color:#067647;font-weight:800}
+    .wizard-step:hover:not(:disabled){background:#f5f8f8}.wizard-step.active{background:#ecfdf9;color:#0f625c}.wizard-step.done .step-no{background:#0f766e;color:#fff}.wizard-step.done .step-state:after{content:"✓";color:#067647;font-weight:800}.wizard-step:disabled{cursor:not-allowed;opacity:.46}.wizard-step.locked .step-state:after{content:"🔒";font-size:.72rem}.wizard-step.skipped{opacity:.58}.wizard-step.skipped .step-state:after{content:"–";color:#98a2b3;font-weight:800}.wizard-step.skipped .step-no{background:#f2f4f7;color:#98a2b3}
     .step-no{width:27px;height:27px;border-radius:999px;display:grid;place-items:center;background:#eef2f2;color:#667085;font-size:.75rem;font-weight:800}.wizard-step.active .step-no{background:#ccfbf1;color:#0f625c}
-    .step-label{font-size:.81rem;font-weight:700;line-height:1.22}.step-state{width:14px}
+    .step-label{font-size:.81rem;font-weight:700;line-height:1.22}.step-state{width:18px;text-align:center}.wizard-error{margin-top:14px}.wizard-error strong{display:block;margin-bottom:4px}
     .wizard-stage{min-width:0}.wizard-panel{display:none}.wizard-panel.active{display:block}
     .wizard-panel .card{padding:22px}.wizard-panel h2{margin:0;font-size:1.2rem}.wizard-panel .lead{margin:6px 0 18px;color:#667085;line-height:1.55}
     .wizard-actions{display:flex;justify-content:space-between;gap:12px;margin-top:16px;padding:14px 16px;background:#fff;border:1px solid #e0e7e7;border-radius:14px;position:sticky;bottom:12px;box-shadow:0 10px 30px rgba(15,23,42,.08);z-index:4}
@@ -69,7 +69,7 @@
 
   <main id="auth" class="auth-page hidden">
     <section class="auth-card">
-      <div class="brand-lockup"><div class="brand-icon">VA</div><div><h1>Versorgungsassistent</h1><p>Teststand v0.3.5</p></div></div>
+      <div class="brand-lockup"><div class="brand-icon">VA</div><div><h1>Versorgungsassistent</h1><p>Teststand v0.3.6</p></div></div>
       <div id="loginPane">
         <h2>Anmelden</h2>
         <p class="muted">Zugriff nur für freigegebene Tester. Nach dem Passwort ist die Authenticator-MFA erforderlich.</p>
@@ -115,7 +115,7 @@
 
         <section id="overviewView">
           <div class="page-grid">
-            <section class="hero"><div><span class="pill blue">Version 0.3.5</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
+            <section class="hero"><div><span class="pill blue">Version 0.3.6</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
             <section class="metrics">
               <div class="metric"><span>Krankenkassen</span><strong id="metricKassen">0</strong><small>Kassenmatrix</small></div>
               <div class="metric"><span>Formularregeln</span><strong id="metricForms">0</strong><small>Vertrags-/Formularlogik</small></div>
@@ -212,6 +212,7 @@
                     <label>Geplante Komponenten / Passteile<textarea data-case-field="planParts" rows="4"></textarea></label>
                     <label>Haftung / Liner / Verschlusssystem<textarea data-case-field="planSuspension" rows="4"></textarea></label>
                     <label>Zusätze / Besonderheiten<textarea data-case-field="planExtras" rows="4"></textarea></label>
+                    <label>Erprobungs-/Bild-/Videodokumentation erforderlich?<select data-case-field="requiresTrialEvidence"><option value="">Nein / nicht vorgesehen</option><option value="Ja">Ja</option></select></label>
                   </div>
                 </div></section>
 
@@ -236,7 +237,7 @@
                   </div>
                   <div class="mini-grid three" style="margin-top:14px">
                     <label>Einreichung / eKVA am<input type="date" data-case-field="ekvaSent" /></label>
-                    <label>Genehmigungsstatus<select data-case-field="approvalState"><option value="">Noch nicht eingereicht</option><option>Eingereicht</option><option>Rückfrage</option><option>Genehmigt</option><option>Abgelehnt</option></select></label>
+                    <label>Genehmigungsstatus<select data-case-field="approvalState"><option value="">Bitte wählen</option><option>Nicht genehmigungspflichtig</option><option>Noch nicht eingereicht</option><option>Eingereicht</option><option>Rückfrage</option><option>Genehmigt</option><option>Abgelehnt</option></select></label>
                     <label>Genehmigung am<input type="date" data-case-field="approvalDate" /></label>
                   </div>
                 </div></section>
@@ -288,11 +289,12 @@
                     <label>Tarif / Vertragskennzeichen<input data-case-field="billingTariff" /></label>
                     <label>Gesetzliche Zuzahlung (€)<input type="number" step="0.01" data-case-field="copay" /></label>
                     <label>Mehrkosten (€)<input type="number" step="0.01" data-case-field="moreCost" /></label>
-                    <label>Abrechnungsstatus<select data-case-field="billingState"><option value="">Offen</option><option>Vorbereitet</option><option>Eingereicht</option><option>Abgerechnet</option></select></label>
+                    <label>Abrechnungsstatus<select data-case-field="billingState"><option value="">Bitte wählen</option><option>Offen</option><option>Vorbereitet</option><option>Eingereicht</option><option>Abgerechnet</option></select></label>
                   </div>
                   <div id="finalStatusBox" class="status-card open" style="margin-top:16px"><strong>Arbeitsstand wird geprüft</strong>Die Anzeige bewertet nur den Bearbeitungsstand im Assistenten und ersetzt keine fachliche oder vertragliche Prüfung.</div>
                 </div></section>
 
+                <div id="wizardError" class="alert error wizard-error hidden"></div>
                 <div class="wizard-actions no-print"><button id="wizardBack" class="secondary">← Zurück</button><div class="right"><button id="wizardNext" class="primary">Weiter →</button></div></div>
               </div>
             </section>
@@ -513,6 +515,7 @@
     }
 
 
+
     const wizardSteps=[
       {name:'Auftrag & Rezept'}, {name:'Versorgungssituation'}, {name:'Profilerhebung / Befund'},
       {name:'Maßaufnahme'}, {name:'Versorgungsplanung'}, {name:'Vertrag & Kostenvoranschlag'},
@@ -538,68 +541,207 @@
       else if(value!==undefined && value!==null) el.value=value
     }
 
+    function isAokCase(){ return $('careKasse').value==='AOK Baden-Württemberg' }
+    function supplyType(){ return values.supplyType||'' }
+    function requiresProfile(){
+      const s=supplyType()
+      if(!s) return true
+      if(isAokCase()) return ['Interim','Definitiv','Folge','Wechsel','Funktionsbauteilerprobung'].includes(s)
+      return !['Post-OP','Reparatur','Änderung','Instandhaltung'].includes(s)
+    }
+    function requiresMeasure(){ return ['Interim','Definitiv','Folge','Wechsel'].includes(supplyType()) }
+    function requiresCourse(){ return ['Interim','Definitiv','Folge','Wechsel'].includes(supplyType()) }
+    function requiresEvidence(){ return supplyType()==='Funktionsbauteilerprobung' || values.requiresTrialEvidence==='Ja' || values.evidenceRequired===true }
+    function stepApplicable(i){
+      if(i===2) return requiresProfile()
+      if(i===3) return requiresMeasure()
+      if(i===7) return requiresCourse()
+      if(i===8) return requiresEvidence()
+      return true
+    }
+
+    function fieldLabel(key){
+      const el=document.querySelector('[data-case-field="'+key+'"]')
+      return el?.closest('label')?.childNodes?.[0]?.textContent?.trim() || key
+    }
+    function missingValues(keys){
+      return keys.filter(k=>{
+        const v=values[k]
+        return v===undefined || v===null || v===false || String(v).trim()===''
+      }).map(fieldLabel)
+    }
+
+    function profileValidation(){
+      const controls=[...$('fieldList').querySelectorAll('input,select,textarea')]
+      if(!controls.length) return {ok:false,missing:['passender Profilerhebungsbogen / Felddefinitionen']}
+      const required=controls.filter(x=>x.dataset.required==='true')
+      const relevant=required.length?required:controls
+      const empty=relevant.filter(x=>{
+        if(x.type==='checkbox') return !x.checked
+        return !String(x.value||'').trim()
+      })
+      if(required.length) {
+        return {ok:empty.length===0,missing:empty.slice(0,8).map(x=>x.closest('label')?.querySelector('span')?.childNodes?.[0]?.textContent?.trim()||'Pflichtfeld')}
+      }
+      const anyFilled=controls.some(x=>x.type==='checkbox'?x.checked:String(x.value||'').trim())
+      return {ok:anyFilled,missing:anyFilled?[]:['mindestens eine fachliche Angabe im Profilerhebungsbogen']}
+    }
+
+    function validateStep(i){
+      if(!stepApplicable(i)) return {ok:true,missing:[]}
+      let missing=[]
+      if(i===0){
+        if(!$('careKasse').value) missing.push('Krankenkasse')
+        if(!$('carePg').value) missing.push('Produktgruppe')
+        missing.push(...missingValues(['patientName','insuredNo']))
+      } else if(i===1){
+        missing=missingValues(['supplyType','ampLevel','side'])
+      } else if(i===2){
+        return profileValidation()
+      } else if(i===3){
+        missing=missingValues(['measureDate','measureValues'])
+      } else if(i===4){
+        missing=missingValues(['planGoal'])
+        if(!String(values.planShaft||'').trim() && !String(values.planParts||'').trim()) missing.push('Schaft-/Bettungskonzept oder geplante Komponenten')
+      } else if(i===5){
+        missing=missingValues(['quotePositions'])
+      } else if(i===6){
+        missing=missingValues(['approvalState'])
+        if(values.approvalState && values.approvalState!=='Nicht genehmigungspflichtig'){
+          if(!values.docQuote) missing.push('Kostenvoranschlag vollständig')
+          if(isAokCase() && !['Reparatur','Instandhaltung'].includes(supplyType()) && !values.docRx) missing.push('Verordnung geprüft')
+          if(requiresProfile() && !values.docProfile) missing.push('Profilerhebung vorhanden')
+          if(requiresMeasure() && !values.docMeasure) missing.push('Maßdokumentation vorhanden')
+          if(values.approvalState==='Genehmigt' && !values.approvalDate) missing.push('Genehmigungsdatum')
+        }
+      } else if(i===7){
+        if(!values.courseFormDate) missing.push('Datum Formerfassung')
+        if(!values.courseStaticDate && !values.courseDynamicDate) missing.push('mindestens eine statische oder dynamische Anprobe')
+      } else if(i===8){
+        if(!values.consentPresent) missing.push('Einwilligung vorhanden')
+        missing.push(...missingValues(['trialPeriod','functionalBenefit']))
+      } else if(i===9){
+        missing=missingValues(['deliveryDate'])
+        if(!values.deliveryUsable) missing.push('gebrauchsfähige Abgabe bestätigt')
+        if(!values.deliveryInstruction) missing.push('Gebrauchseinweisung bestätigt')
+        if(!values.deliveryReceipt) missing.push('Empfang bestätigt')
+      } else if(i===10){
+        missing=missingValues(['billingState'])
+        if(isAokCase() && values.billingState){
+          if(!values.billingPosition) missing.push('Abrechnungsposition')
+          if(!values.billingVwkz) missing.push('VWKZ')
+        }
+      }
+      return {ok:missing.length===0,missing}
+    }
+
+    function firstBlockingIndex(){
+      for(let i=0;i<wizardSteps.length;i++){
+        if(stepApplicable(i) && !validateStep(i).ok) return i
+      }
+      return wizardSteps.length-1
+    }
+
+    function nextApplicableIndex(from){
+      for(let i=from+1;i<wizardSteps.length;i++) if(stepApplicable(i)) return i
+      return from
+    }
+    function previousApplicableIndex(from){
+      for(let i=from-1;i>=0;i--) if(stepApplicable(i)) return i
+      return from
+    }
+
+    function showWizardError(message,missing=[]){
+      const el=$('wizardError')
+      if(!message){el.classList.add('hidden');el.innerHTML='';return}
+      el.classList.remove('hidden')
+      el.innerHTML='<strong>'+escapeHtml(message)+'</strong>'+(missing.length?escapeHtml(missing.join(' · ')):'')
+    }
+
     function bindWizardInputs(){
       if(wizardBound) return
       wizardBound=true
       document.querySelectorAll('[data-case-field]').forEach(el=>{
         const key=el.dataset.caseField
         writeCaseField(el,values[key])
-        const save=()=>{values[key]=readCaseField(el);updateWizardStatus()}
+        const save=()=>{values[key]=readCaseField(el);showWizardError('');updateWizardStatus()}
         el.addEventListener('input',save)
         el.addEventListener('change',save)
       })
-      document.querySelectorAll('.wizard-step').forEach(b=>b.addEventListener('click',()=>goWizard(Number(b.dataset.step))))
-      $('wizardBack').addEventListener('click',()=>goWizard(wizardIndex-1))
-      $('wizardNext').addEventListener('click',()=>{ if(wizardIndex<wizardSteps.length-1) goWizard(wizardIndex+1); else updateWizardStatus() })
+      document.querySelectorAll('.wizard-step').forEach(b=>b.addEventListener('click',()=>{
+        const target=Number(b.dataset.step)
+        const blocker=firstBlockingIndex()
+        if(!stepApplicable(target)) return
+        if(target>blocker){
+          showWizardError('Dieser Schritt ist noch gesperrt. Bitte zuerst abschließen:',[wizardSteps[blocker].name])
+          return
+        }
+        goWizard(target)
+      }))
+      $('wizardBack').addEventListener('click',()=>goWizard(previousApplicableIndex(wizardIndex)))
+      $('wizardNext').addEventListener('click',advanceWizard)
       $('newSupplyButton').addEventListener('click',resetWizard)
       $('rxFile').addEventListener('change',e=>{ const file=e.target.files?.[0]; $('rxFileName').textContent=file?file.name+' · nur lokal ausgewählt, nicht hochgeladen':'Datei wird in dieser Version nicht hochgeladen oder gespeichert.' })
     }
 
+    function advanceWizard(){
+      showWizardError('')
+      const result=validateStep(wizardIndex)
+      if(!result.ok){
+        showWizardError('Bitte diesen Arbeitsschritt zuerst vollständig bearbeiten:',result.missing)
+        return
+      }
+      const next=nextApplicableIndex(wizardIndex)
+      if(next===wizardIndex){updateWizardStatus();return}
+      goWizard(next)
+    }
+
     function goWizard(index){
-      wizardIndex=Math.max(0,Math.min(wizardSteps.length-1,index))
+      if(index<0||index>=wizardSteps.length) return
+      if(!stepApplicable(index)) return
+      const blocker=firstBlockingIndex()
+      if(index>blocker){
+        showWizardError('Dieser Schritt ist noch gesperrt. Bitte zuerst abschließen:',[wizardSteps[blocker].name])
+        return
+      }
+      wizardIndex=index
+      showWizardError('')
       renderWizard()
       window.scrollTo({top:0,behavior:'smooth'})
     }
 
     function renderWizard(){
-      document.querySelectorAll('.wizard-step').forEach((b,i)=>b.classList.toggle('active',i===wizardIndex))
-      document.querySelectorAll('.wizard-panel').forEach((p,i)=>p.classList.toggle('active',i===wizardIndex))
-      $('wizardBack').disabled=wizardIndex===0
-      $('wizardNext').textContent=wizardIndex===wizardSteps.length-1?'Status prüfen':'Weiter →'
-      updateWizardStatus()
-    }
-
-    function requiredProfileComplete(){
-      const controls=[...$('fieldList').querySelectorAll('input,select,textarea')]
-      if(!controls.length) return false
-      const required=controls.filter(x=>x.dataset.required==='true')
-      if(!required.length) return controls.some(x=>String(x.value||'').trim())
-      return required.every(x=>String(x.value||'').trim())
-    }
-
-    function stepDone(index){
-      switch(index){
-        case 0: return !!($('careKasse').value && $('carePg').value && (values.patientName||values.rxText||values.caseNumber))
-        case 1: return !!values.supplyType
-        case 2: return requiredProfileComplete()
-        case 3: return !!(values.measureDate||values.measureValues||values.measureNotes)
-        case 4: return !!(values.planGoal||values.planShaft||values.planParts)
-        case 5: return !!(values.quotePositions||values.quoteReason||$('careForm').value)
-        case 6: return !!(values.approvalState||values.ekvaSent)
-        case 7: return !!(values.courseFormDate||values.courseStaticDate||values.courseDynamicDate||values.courseResult)
-        case 8: return !!(values.evidenceRequired||values.consentPresent||values.trialPeriod||values.functionalBenefit)
-        case 9: return !!values.deliveryDate
-        case 10:return !!values.billingState
-        default:return false
+      if(!stepApplicable(wizardIndex)){
+        const n=nextApplicableIndex(wizardIndex)
+        wizardIndex=n!==wizardIndex?n:previousApplicableIndex(wizardIndex)
       }
+      const blocker=firstBlockingIndex()
+      document.querySelectorAll('.wizard-step').forEach((b,i)=>{
+        const applicable=stepApplicable(i)
+        const done=applicable && validateStep(i).ok && i<blocker
+        const locked=applicable && i>blocker
+        b.classList.toggle('active',i===wizardIndex)
+        b.classList.toggle('done',done)
+        b.classList.toggle('skipped',!applicable)
+        b.classList.toggle('locked',locked)
+        b.disabled=!applicable || locked
+        b.title=!applicable?'Für diese Versorgung nicht erforderlich':locked?'Zuerst '+wizardSteps[blocker].name+' abschließen':''
+      })
+      document.querySelectorAll('.wizard-panel').forEach((p,i)=>p.classList.toggle('active',i===wizardIndex))
+      $('wizardBack').disabled=previousApplicableIndex(wizardIndex)===wizardIndex
+      const next=nextApplicableIndex(wizardIndex)
+      $('wizardNext').textContent=next===wizardIndex?'Status prüfen':'Weiter →'
+      updateWizardStatus(false)
     }
 
-    function updateWizardStatus(){
-      const done=wizardSteps.map((_,i)=>stepDone(i))
-      document.querySelectorAll('.wizard-step').forEach((b,i)=>b.classList.toggle('done',done[i]))
-      const count=done.filter(Boolean).length
-      $('wizardProgressBar').style.width=Math.round(count/wizardSteps.length*100)+'%'
-      $('wizardProgressText').textContent=count+' von '+wizardSteps.length+' Arbeitsschritten bearbeitet'
+    function updateWizardStatus(rerender=true){
+      const blocker=firstBlockingIndex()
+      const applicable=wizardSteps.map((_,i)=>stepApplicable(i))
+      const complete=wizardSteps.map((_,i)=>applicable[i]&&validateStep(i).ok)
+      const total=applicable.filter(Boolean).length
+      const count=complete.filter(Boolean).length
+      $('wizardProgressBar').style.width=Math.round((count/Math.max(total,1))*100)+'%'
+      $('wizardProgressText').textContent=count+' von '+total+' relevanten Arbeitsschritten vollständig'
       const context=[]
       const patient=values.patientName||values.caseNumber
       if(patient) context.push('<span class="pill blue">'+escapeHtml(patient)+'</span>')
@@ -608,16 +750,35 @@
       if(values.supplyType) context.push('<span class="pill">'+escapeHtml(values.supplyType)+'</span>')
       $('wizardContext').innerHTML=context.length?context.join(''):'<span class="pill">Neuer Vorgang</span>'
 
-      const missing=wizardSteps.filter((_,i)=>!done[i]).map(x=>x.name)
+      const missing=wizardSteps.filter((_,i)=>applicable[i]&&!complete[i]).map(x=>x.name)
       const box=$('finalStatusBox')
       if(box){
         if(!missing.length){
           box.className='status-card ready'
-          box.innerHTML='<strong>Versorgung im Assistenten vollständig bearbeitet</strong>Alle 11 Arbeitsschritte enthalten Bearbeitungsdaten. Vor Einreichung oder Abrechnung bleibt die fachliche und vertragliche Prüfung erforderlich.'
+          box.innerHTML='<strong>Versorgung im Assistenten vollständig bearbeitet</strong>Alle für diesen Versorgungspfad relevanten Arbeitsschritte sind vollständig. Vor Einreichung oder Abrechnung bleibt die fachliche und vertragliche Prüfung erforderlich.'
         }else{
           box.className='status-card open'
-          box.innerHTML='<strong>Noch '+missing.length+' Arbeitsschritte offen</strong>'+escapeHtml(missing.slice(0,5).join(' · '))+(missing.length>5?' …':'')+'<br><small>Dies ist ein Bearbeitungsstatus, keine automatische Freigabe.</small>'
+          box.innerHTML='<strong>Noch '+missing.length+' relevante Arbeitsschritte offen</strong>'+escapeHtml(missing.slice(0,5).join(' · '))+(missing.length>5?' …':'')+'<br><small>Nicht erforderliche Schritte werden automatisch übersprungen.</small>'
         }
+      }
+
+      const ph=$('profileHint')
+      if(ph){
+        ph.innerHTML=requiresProfile()
+          ?'<strong>Profilerhebung erforderlich</strong>'+(isAokCase()?'Die AOK-/Vertragslogik wird verwendet; vorhandene Pflichtfelder müssen vollständig sein.':'Der hinterlegte PG-Erhebungsbogen muss bearbeitet werden.')
+          :'<strong>Für diesen Versorgungspfad nicht erforderlich</strong>Der Schritt wird im Ablauf automatisch übersprungen.'
+      }
+
+      if(rerender){
+        document.querySelectorAll('.wizard-step').forEach((b,i)=>{
+          const isApp=applicable[i]
+          const done=isApp&&complete[i]&&i<blocker
+          const locked=isApp&&i>blocker
+          b.classList.toggle('done',done)
+          b.classList.toggle('skipped',!isApp)
+          b.classList.toggle('locked',locked)
+          b.disabled=!isApp||locked
+        })
       }
     }
 
@@ -633,6 +794,7 @@
       $('rxFile').value=''
       $('rxFileName').textContent='Datei wird in dieser Version nicht hochgeladen oder gespeichert.'
       wizardIndex=0
+      showWizardError('')
       renderWizard()
     }
 
@@ -664,9 +826,9 @@
     $('logoutButton').addEventListener('click',async()=>{await supabase.auth.signOut(); location.reload()})
     $('formSearch').addEventListener('input',e=>renderForms(e.target.value))
     $('pg26Kasse').addEventListener('change',renderPg26)
-    $('careKasse').addEventListener('change',()=>{updateCare();updateWizardStatus()})
-    $('carePg').addEventListener('change',()=>{updateCare();updateWizardStatus()})
-    $('careForm').addEventListener('change',()=>{updateCareFields();updateWizardStatus()})
+    $('careKasse').addEventListener('change',()=>{updateCare();showWizardError('');renderWizard()})
+    $('carePg').addEventListener('change',()=>{updateCare();showWizardError('');renderWizard()})
+    $('careForm').addEventListener('change',()=>{updateCareFields();showWizardError('');renderWizard()})
     $('printButton').addEventListener('click',()=>window.print())
     $('clearButton').addEventListener('click',resetWizard)
 
