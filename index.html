@@ -69,7 +69,7 @@
 
   <main id="auth" class="auth-page hidden">
     <section class="auth-card">
-      <div class="brand-lockup"><div class="brand-icon">VA</div><div><h1>Versorgungsassistent</h1><p>Teststand v0.3.8</p></div></div>
+      <div class="brand-lockup"><div class="brand-icon">VA</div><div><h1>Versorgungsassistent</h1><p>Teststand v0.3.9</p></div></div>
       <div id="loginPane">
         <h2>Anmelden</h2>
         <p class="muted">Zugriff nur für freigegebene Tester. Nach dem Passwort ist die Authenticator-MFA erforderlich.</p>
@@ -115,7 +115,7 @@
 
         <section id="overviewView">
           <div class="page-grid">
-            <section class="hero"><div><span class="pill blue">Version 0.3.8</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
+            <section class="hero"><div><span class="pill blue">Version 0.3.9</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
             <section class="metrics">
               <div class="metric"><span>Krankenkassen</span><strong id="metricKassen">0</strong><small>Kassenmatrix</small></div>
               <div class="metric"><span>Formularregeln</span><strong id="metricForms">0</strong><small>Vertrags-/Formularlogik</small></div>
@@ -176,8 +176,8 @@
                   <h2>2. Versorgungssituation</h2><p class="lead">Hier wird festgelegt, in welchem Versorgungskontext gearbeitet wird. Diese Auswahl bestimmt später, welche Dokumente und Prüfschritte relevant sind.</p>
                   <div class="mini-grid three">
                     <label>Versorgungsart<select id="careSupplyType" data-case-field="supplyType"><option value="">Bitte wählen</option><option>Post-OP</option><option>Interim</option><option>Definitiv</option><option>Folge</option><option>Wechsel</option><option>Reparatur</option><option>Änderung</option><option>Instandhaltung</option><option>Funktionsbauteilerprobung</option></select></label>
-                    <label>Amputationshöhe / Versorgungsbereich<select data-case-field="ampLevel"><option value="">Bitte wählen</option><option>Vor-/Mittelfuß</option><option>Fuß/Fußwurzel/Rückfuß</option><option>Unterschenkel</option><option>Knie-Exartikulation</option><option>Oberschenkel</option><option>Hüft-Exartikulation / Hemipelvis</option><option>Sonstige</option></select></label>
-                    <label>Seite<select data-case-field="side"><option value="">Bitte wählen</option><option>rechts</option><option>links</option><option>beidseitig</option></select></label>
+                    <label id="careAmpLevelLabel"><span id="careAmpLevelText">Amputationshöhe / Versorgungsbereich</span><select id="careAmpLevel" data-case-field="ampLevel"><option value="">Bitte wählen</option><option>Vor-/Mittelfuß</option><option>Fuß/Fußwurzel/Rückfuß</option><option>Unterschenkel</option><option>Knie-Exartikulation</option><option>Oberschenkel</option><option>Hüft-Exartikulation / Hemipelvis</option><option>Sonstige</option></select></label>
+                    <label id="careSideLabel"><span>Seite</span><select id="careSide" data-case-field="side"><option value="">Bitte wählen</option><option>rechts</option><option>links</option><option>beidseitig</option></select></label>
                     <label>Versorgungsanlass<textarea data-case-field="serviceReason" rows="3"></textarea></label>
                     <label>Vorversorgung<textarea data-case-field="previousSupply" rows="3"></textarea></label>
                     <label>Besondere Rahmenbedingungen<textarea data-case-field="contextFactors" rows="3"></textarea></label>
@@ -461,6 +461,7 @@
         else values.himiId=''
       }
       syncSupplyTypeOptions()
+      syncSituationFields()
       renderMeasureFields()
     }
 
@@ -624,6 +625,7 @@
       else if(!rules.length && genericId) $('careForm').value=genericId
       updateCareFields()
       syncSupplyTypeOptions()
+      syncSituationFields()
       renderMeasureFields()
     }
 
@@ -652,6 +654,7 @@
       if(!fields.length && map[formId]) fields=data.formularfelder.filter(f=>f.Formular_ID===map[formId])
       if(!fields.length && meta?.Generisches_Formular_ID) fields=data.formularfelder.filter(f=>f.Formular_ID===meta.Generisches_Formular_ID)
       if(!fields.length && pg) fields=data.formularfelder.filter(f=>String(f.PG)===String(pg)&&f.Formular_Typ==='GENERISCH')
+      if(meta?.Massprofil_ID) fields=fields.filter(f=>!['maße','masse'].includes(norm(f.Abschnitt)))
 
       $('fieldInfo').textContent=fields.length?fields.length+' Felder aus der hinterlegten Formularlogik':'Für diese Auswahl sind noch keine Felddefinitionen hinterlegt.'
       $('fieldList').innerHTML=''
@@ -737,6 +740,34 @@
       }
     }
 
+    function requiresSide(){
+      const pg=$('carePg').value
+      const id=selectedHimiId()
+      return pg==='24' || pg==='05' || pg==='08' || ['PG23_UE','PG23_OE'].includes(id)
+    }
+
+    function syncSituationFields(){
+      const pg=$('carePg').value
+      const amp=$('careAmpLevelLabel')
+      const side=$('careSideLabel')
+      if(amp){
+        const show=pg==='24'
+        amp.classList.toggle('hidden',!show)
+        if(!show){
+          values.ampLevel=''
+          if($('careAmpLevel')) $('careAmpLevel').value=''
+        }
+      }
+      if(side){
+        const show=requiresSide()
+        side.classList.toggle('hidden',!show)
+        if(!show){
+          values.side=''
+          if($('careSide')) $('careSide').value=''
+        }
+      }
+    }
+
     function requiresProfile(){
       const meta=selectedHimiMeta()
       if(meta) return !!meta.Profil_erforderlich
@@ -807,7 +838,8 @@
         if(!selectedHimiId()) missing.push('Hilfsmittel / Versorgungsbereich')
         missing.push(...missingValues(['patientName','insuredNo']))
       } else if(i===1){
-        missing=missingValues(['supplyType','side'])
+        missing=missingValues(['supplyType'])
+        if(requiresSide()) missing.push(...missingValues(['side']))
         if($('carePg').value==='24') missing.push(...missingValues(['ampLevel']))
       } else if(i===2){
         return profileValidation()
@@ -881,7 +913,7 @@
       document.querySelectorAll('[data-case-field]').forEach(el=>{
         const key=el.dataset.caseField
         writeCaseField(el,values[key])
-        const save=()=>{values[key]=readCaseField(el);if(key==='supplyType')renderMeasureFields();showWizardError('');updateWizardStatus()}
+        const save=()=>{values[key]=readCaseField(el);if(key==='supplyType'){syncSituationFields();renderMeasureFields()}showWizardError('');updateWizardStatus()}
         el.addEventListener('input',save)
         el.addEventListener('change',save)
       })
@@ -1048,7 +1080,7 @@
     $('pg26Kasse').addEventListener('change',renderPg26)
     $('careKasse').addEventListener('change',()=>{updateCare();showWizardError('');renderWizard()})
     $('carePg').addEventListener('change',()=>{values.himiId='';populateHimiOptions();updateCare();showWizardError('');renderWizard()})
-    $('careHimi').addEventListener('change',()=>{values.himiId=$('careHimi').value;syncPg24Level();updateCare();showWizardError('');renderWizard()})
+    $('careHimi').addEventListener('change',()=>{values.himiId=$('careHimi').value;syncPg24Level();syncSituationFields();updateCare();showWizardError('');renderWizard()})
     $('careForm').addEventListener('change',()=>{updateCareFields();showWizardError('');renderWizard()})
     $('printButton').addEventListener('click',()=>window.print())
     $('clearButton').addEventListener('click',resetWizard)
