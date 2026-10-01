@@ -411,22 +411,86 @@
     const values = {}
     let activeSupplyId = null
     let draftSaveTimer = null
+    let supplyDraftCache = []
+    let autosaveInFlight = Promise.resolve()
 
-    function supplyStorageKey(){
+    function legacySupplyStorageKey(){
       const uid=currentSession?.user?.id || 'anonymous'
       return 'versorgungsassistent:drafts:'+uid
     }
 
     function readSupplyDrafts(){
-      try{
-        const raw=localStorage.getItem(supplyStorageKey())
-        const parsed=raw?JSON.parse(raw):[]
-        return Array.isArray(parsed)?parsed:[]
-      }catch(_){ return [] }
+      return supplyDraftCache
     }
 
-    function writeSupplyDrafts(items){
-      try{ localStorage.setItem(supplyStorageKey(),JSON.stringify(items)) }catch(_){}
+    function mapCareCaseRow(row){
+      return {
+        id:row.id,
+        createdAt:row.created_at,
+        updatedAt:row.updated_at,
+        wizardIndex:row.wizard_index,
+        kasse:row.insurer||'',
+        pg:row.product_group||'',
+        himiId:row.himi_id||'',
+        himi:row.himi||'',
+        status:row.status||'Laufend',
+        values:row.payload||{}
+      }
+    }
+
+    async function loadSupplyDrafts(){
+      const response=await supabase
+        .from('care_cases')
+        .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,payload,schema_version')
+        .order('updated_at',{ascending:false})
+        .limit(250)
+      if(response.error){
+        showError('appError','Versorgungsdaten konnten nicht geladen werden: '+response.error.message)
+        supplyDraftCache=[]
+        return false
+      }
+      supplyDraftCache=(response.data||[]).map(mapCareCaseRow)
+      renderSupplyOverview()
+      return true
+    }
+
+    function normalizedLegacyId(id){
+      const s=String(id||'')
+      if(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s)) return s
+      return crypto.randomUUID()
+    }
+
+    async function migrateLegacySupplyDrafts(){
+      let legacy=[]
+      try{
+        const raw=localStorage.getItem(legacySupplyStorageKey())
+        const parsed=raw?JSON.parse(raw):[]
+        legacy=Array.isArray(parsed)?parsed:[]
+      }catch(_){ legacy=[] }
+      if(!legacy.length) return true
+
+      const now=new Date().toISOString()
+      const rows=legacy.slice(0,250).map(item=>({
+        id:normalizedLegacyId(item.id),
+        owner_user_id:currentSession.user.id,
+        created_at:item.createdAt||now,
+        updated_at:item.updatedAt||now,
+        wizard_index:Number(item.wizardIndex)||0,
+        insurer:item.kasse||'',
+        product_group:String(item.pg||''),
+        himi_id:item.himiId||'',
+        himi:item.himi||'',
+        status:item.status||'Laufend',
+        payload:item.values||{},
+        schema_version:1
+      }))
+      const response=await supabase.from('care_cases').upsert(rows,{onConflict:'id'})
+      if(response.error){
+        showError('appError','Lokale Alt-Entwürfe konnten noch nicht sicher übernommen werden: '+response.error.message)
+        return false
+      }
+      try{ localStorage.removeItem(legacySupplyStorageKey()) }catch(_){}
+      return true
     }
 
     function currentSupplyStatus(snapshotValues=values,stepIndex=wizardIndex){
@@ -438,11 +502,11 @@
 
     function ensureActiveSupplyId(){
       if(activeSupplyId) return activeSupplyId
-      activeSupplyId=(crypto.randomUUID?crypto.randomUUID():'versorgung-'+Date.now()+'-'+Math.random().toString(16).slice(2))
+      activeSupplyId=crypto.randomUUID()
       return activeSupplyId
     }
 
-    function autosaveSupplyDraft(){
+    async function autosaveSupplyDraft(){
       const hasContent=Object.keys(values).some(k=>{
         const v=values[k]
         return typeof v==='boolean'?v:String(v??'').trim()!==''
@@ -451,8 +515,7 @@
 
       const id=ensureActiveSupplyId()
       const now=new Date().toISOString()
-      const drafts=readSupplyDrafts()
-      const existing=drafts.find(x=>x.id===id)
+      const existing=supplyDraftCache.find(x=>x.id===id)
       const item={
         id,
         createdAt:existing?.createdAt||now,
@@ -465,14 +528,37 @@
         status:currentSupplyStatus(values,wizardIndex),
         values:{...values}
       }
-      const next=[item,...drafts.filter(x=>x.id!==id)].slice(0,250)
-      writeSupplyDrafts(next)
+      supplyDraftCache=[item,...supplyDraftCache.filter(x=>x.id!==id)].slice(0,250)
       renderSupplyOverview()
+
+      const response=await supabase.from('care_cases').upsert({
+        id:item.id,
+        owner_user_id:currentSession.user.id,
+        created_at:item.createdAt,
+        updated_at:item.updatedAt,
+        wizard_index:item.wizardIndex,
+        insurer:item.kasse,
+        product_group:String(item.pg||''),
+        himi_id:item.himiId,
+        himi:item.himi,
+        status:item.status,
+        payload:item.values,
+        schema_version:1
+      },{onConflict:'id'})
+      if(response.error){
+        showError('appError','Autosave fehlgeschlagen: '+response.error.message)
+        return false
+      }
+      return true
     }
 
     function queueAutosaveSupply(){
       clearTimeout(draftSaveTimer)
-      draftSaveTimer=setTimeout(autosaveSupplyDraft,220)
+      draftSaveTimer=setTimeout(()=>{
+        autosaveInFlight=autosaveInFlight
+          .then(()=>autosaveSupplyDraft())
+          .catch(err=>showError('appError','Autosave fehlgeschlagen: '+(err?.message||String(err))))
+      },350)
     }
 
     function formatDraftTime(iso){
@@ -652,6 +738,9 @@
         if(response.error && !firstError) firstError=response.error.message
       })
       showError('appError',firstError)
+
+      await migrateLegacySupplyDrafts()
+      await loadSupplyDrafts()
 
       $('currentUser').textContent=friendlyUser(session.user.email)
       $('auth').classList.add('hidden'); $('app').classList.remove('hidden')
@@ -1658,7 +1747,7 @@
     }
 
     function resetWizard(){
-      autosaveSupplyDraft()
+      void autosaveSupplyDraft()
       activeSupplyId=null
       Object.keys(values).forEach(k=>delete values[k])
       document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox')el.checked=false;else el.value=''})
