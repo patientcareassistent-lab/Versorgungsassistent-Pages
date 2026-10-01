@@ -1188,6 +1188,329 @@
       box.append(cap,pad,hint);parent.appendChild(box);return pad
     }
 
+    let profileAiRecorder=null
+    let profileAiStream=null
+    let profileAiChunks=[]
+    let profileAsrPromise=null
+    let profileGuidedTarget=null
+    let profileGuidedIndex=-1
+    let profileAiSuggestionState=[]
+
+    function profileAiSetStatus(text,state=''){
+      const el=$('profileAiStatus')
+      if(!el) return
+      el.textContent=text
+      el.className='profile-ai-status'+(state?' '+state:'')
+    }
+
+    async function getProfileAsr(){
+      if(!profileAsrPromise){
+        profileAiSetStatus('Lokales KI-Sprachmodell wird geladen … Beim ersten Mal kann das etwas dauern.')
+        profileAsrPromise=import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0').then(async mod=>{
+          if(mod.env) mod.env.useBrowserCache=true
+          return mod.pipeline('automatic-speech-recognition','onnx-community/whisper-tiny',{device:'wasm'})
+        }).catch(err=>{profileAsrPromise=null;throw err})
+      }
+      return profileAsrPromise
+    }
+
+    async function audioBlobToMono16k(blob){
+      const AudioCtx=window.AudioContext||window.webkitAudioContext
+      if(!AudioCtx) throw new Error('AudioContext wird von diesem Browser nicht unterstützt.')
+      const ctx=new AudioCtx()
+      try{
+        const arr=await blob.arrayBuffer()
+        const buf=await ctx.decodeAudioData(arr.slice(0))
+        const len=buf.length
+        const mono=new Float32Array(len)
+        for(let ch=0;ch<buf.numberOfChannels;ch++){
+          const d=buf.getChannelData(ch)
+          for(let i=0;i<len;i++) mono[i]+=d[i]/buf.numberOfChannels
+        }
+        if(buf.sampleRate===16000) return mono
+        const ratio=buf.sampleRate/16000
+        const outLen=Math.max(1,Math.round(mono.length/ratio))
+        const out=new Float32Array(outLen)
+        for(let i=0;i<outLen;i++){
+          const p=i*ratio,lo=Math.floor(p),hi=Math.min(mono.length-1,lo+1),t=p-lo
+          out[i]=mono[lo]*(1-t)+mono[hi]*t
+        }
+        return out
+      }finally{ try{await ctx.close()}catch(_){} }
+    }
+
+    async function transcribeProfileAudio(blob){
+      const audio=await audioBlobToMono16k(blob)
+      const asr=await getProfileAsr()
+      profileAiSetStatus('KI-Transkription läuft lokal im Browser …')
+      const result=await asr(audio,{language:'german',task:'transcribe',chunk_length_s:30,stride_length_s:5})
+      return String(result?.text||'').trim()
+    }
+
+    function profileControlLabel(el){
+      if(!el) return 'Profilerhebungsfeld'
+      if(el.dataset.aiLabel && !/^Text\\d+$/.test(el.dataset.aiLabel)) return el.dataset.aiLabel
+      const tech=el.closest('.tech-profile-field')
+      const techLabel=tech?.querySelector(':scope > span')?.textContent?.trim()
+      if(techLabel) return techLabel
+      const label=el.closest('label')?.querySelector('span')?.textContent?.trim()
+      return label||el.getAttribute('aria-label')||el.dataset.techKey||el.dataset.profileKey||'Profilerhebungsfeld'
+    }
+
+    function profileGuideCatalog(){
+      const host=$('fieldList')
+      if(!host) return []
+      const controls=[...host.querySelectorAll('[data-tech-key],[data-profile-key]')].filter(el=>{
+        if(el.matches('[data-signature-key],.aok-plusm-option,.aok-plusm-side-option')) return false
+        if(el.readOnly||el.disabled) return false
+        if(el.type==='checkbox'||el.type==='radio') return false
+        if(el.dataset.profileKey==='aokProfilePdf:Text24'||el.dataset.profileKey==='aokProfilePdf:Text25') return false
+        return ['INPUT','TEXTAREA','SELECT'].includes(el.tagName)
+      })
+      return controls.map(el=>({el,label:profileControlLabel(el)})).filter(x=>x.label)
+    }
+
+    function profileControlIsEmpty(el){
+      return !String(el?.value||'').trim()
+    }
+
+    function selectProfileGuidedQuestion(forceNext=true){
+      const catalog=profileGuideCatalog()
+      if(!catalog.length){
+        profileGuidedTarget=null
+        $('profileAiQuestion').innerHTML='<strong>Keine offene Abfrage gefunden</strong><span>Der aktuell geladene Bogen enthält keine sprachlich befüllbaren offenen Felder.</span>'
+        return null
+      }
+      let start=forceNext?profileGuidedIndex+1:Math.max(profileGuidedIndex,0)
+      let found=-1
+      for(let pass=0;pass<2&&found<0;pass++){
+        for(let i=pass?0:start;i<catalog.length;i++){
+          if(profileControlIsEmpty(catalog[i].el)){found=i;break}
+        }
+      }
+      if(found<0) found=Math.min(Math.max(start,0),catalog.length-1)
+      profileGuidedIndex=found
+      profileGuidedTarget=catalog[found]
+      const q=$('profileAiQuestion')
+      q.innerHTML='<strong>Geführte Frage '+(found+1)+' / '+catalog.length+'</strong><span>'+escapeHtml(catalog[found].label)+'</span>'
+      catalog[found].el.scrollIntoView({behavior:'smooth',block:'center'})
+      try{catalog[found].el.focus({preventScroll:true})}catch(_){}
+      return profileGuidedTarget
+    }
+
+    function normalizeSpokenChoice(text){
+      return norm(text).replace(/\\b(ich|habe|bin|ist|es|der|die|das|bitte|ja)\\b/g,' ').replace(/\\s+/g,' ').trim()
+    }
+
+    function valueForControlFromSpeech(el,text){
+      const raw=String(text||'').trim()
+      if(!el||!raw) return ''
+      if(el.tagName==='SELECT'){
+        const n=normalizeSpokenChoice(raw)
+        const options=[...el.options].filter(o=>o.value)
+        let match=options.find(o=>n.includes(norm(o.textContent))||norm(o.textContent).includes(n))
+        if(!match && /\\bja\\b/i.test(raw)) match=options.find(o=>norm(o.textContent)==='ja')
+        if(!match && /\\bnein\\b/i.test(raw)) match=options.find(o=>norm(o.textContent)==='nein')
+        return match?.value||''
+      }
+      if(el.type==='number'){
+        const m=raw.replace(',','.').match(/-?\\d+(?:\\.\\d+)?/)
+        return m?m[0]:''
+      }
+      if(el.type==='date'){
+        return normalizeRxDate(raw)
+      }
+      return raw.replace(/^\\s*(antwort|antwort ist|das ist)\\s*[:,-]?\\s*/i,'').trim()
+    }
+
+    function setProfileAssistantControl(el,value){
+      if(!el||value===undefined||value===null||String(value).trim()==='') return false
+      if(el.tagName==='SELECT'){
+        const opts=[...el.options]
+        const exact=opts.find(o=>String(o.value)===String(value))||opts.find(o=>norm(o.textContent)===norm(value))
+        if(!exact) return false
+        el.value=exact.value
+      }else el.value=String(value)
+      el.dispatchEvent(new Event('input',{bubbles:true}))
+      el.dispatchEvent(new Event('change',{bubbles:true}))
+      return true
+    }
+
+    function findProfileSemanticControl(keys,labels=[]){
+      for(const key of keys||[]){
+        const el=document.querySelector('[data-tech-key="'+CSS.escape(key)+'"],[data-profile-key="'+CSS.escape(key)+'"]')
+        if(el) return el
+      }
+      const catalog=profileGuideCatalog()
+      const wanted=(labels||[]).map(norm)
+      return catalog.find(item=>{
+        const l=norm(item.label)
+        return wanted.some(w=>w && (l.includes(w)||w.includes(l)))
+      })?.el||null
+    }
+
+    function addProfileSuggestion(out,el,value,reason){
+      if(!el||value===undefined||value===null||String(value).trim()==='') return
+      if(out.some(x=>x.el===el)) return
+      out.push({el,value:String(value).trim(),label:profileControlLabel(el),reason})
+    }
+
+    function extractProfileSuggestions(text){
+      const raw=String(text||'').trim(),n=norm(raw),out=[]
+      if(!raw) return out
+      let m
+
+      m=raw.match(/(?:gewicht|wiegt|wiege)\\D{0,18}(\\d{2,3}(?:[,.]\\d+)?)\\s*(?:kg|kilo)/i)
+      if(m) addProfileSuggestion(out,findProfileSemanticControl(['tech:weight'],['gewicht','körpergewicht']),m[1].replace(',','.'),'explizite Gewichtsangabe')
+
+      m=raw.match(/(?:größe|groesse|groß|gross|bin)\\D{0,18}(\\d{2,3})\\s*(?:cm|zentimeter)/i)
+      if(m) addProfileSuggestion(out,findProfileSemanticControl(['tech:height'],['größe','körpergröße']),m[1],'explizite Größenangabe')
+
+      const ampContext=/amput|stumpf/i.test(raw)
+      if(ampContext){
+        if(/\\bbeidseitig\\b/i.test(raw)) addProfileSuggestion(out,findProfileSemanticControl(['tech:side'],['amputationsseite','seite']),'Beidseitig','explizite Seitenangabe')
+        else if(/\\brechts\\b/i.test(raw)) addProfileSuggestion(out,findProfileSemanticControl(['tech:side'],['amputationsseite','seite']),'Rechts','explizite Seitenangabe')
+        else if(/\\blinks\\b/i.test(raw)) addProfileSuggestion(out,findProfileSemanticControl(['tech:side'],['amputationsseite','seite']),'Links','explizite Seitenangabe')
+        const levels=[['Hemipelvektomie','hemipelvekt'],['Hüftexartikulation','hüftex'],['Oberschenkel','oberschenkel'],['Knieexartikulation','knieex'],['Unterschenkel','unterschenkel'],['Teilfußamputation','teilfuß'],['Fuß','fuß']]
+        for(const [val,token] of levels){if(n.includes(norm(token))){addProfileSuggestion(out,findProfileSemanticControl(['tech:ampLevel'],['amputationshöhe']),val,'explizite Amputationshöhe');break}}
+      }
+
+      const shapes=[['zylindrisch','zylindr'],['konisch','konisch'],['birnenförmig','birnen']]
+      for(const [val,token] of shapes){if(n.includes(token)){addProfileSuggestion(out,findProfileSemanticControl(['tech:stumpShape'],['stumpfform']),val,'explizite Stumpfform');break}}
+
+      if(/wundheilung.*abgeschlossen|wunde.*verheilt|narbe.*verheilt/i.test(raw)) addProfileSuggestion(out,findProfileSemanticControl(['tech:woundHealed'],['wundheilung abgeschlossen']),'Ja','explizite Aussage zur Wundheilung')
+      if(/wundheilung.*nicht abgeschlossen|wunde.*nicht verheilt/i.test(raw)) addProfileSuggestion(out,findProfileSemanticControl(['tech:woundHealed'],['wundheilung abgeschlossen']),'Nein','explizite Aussage zur Wundheilung')
+
+      if(/volumenschwank/i.test(raw)){
+        const v=/keine|nein|nicht/i.test(raw.match(/.{0,40}volumenschwank.{0,60}/i)?.[0]||'')?'Nein':'Ja'
+        addProfileSuggestion(out,findProfileSemanticControl(['tech:volumeChange'],['volumenschwank']),v,'explizite Aussage zu Volumenschwankungen')
+      }
+
+      if(/physiotherap/i.test(raw)){
+        const seg=raw.match(/.{0,40}physiotherap.{0,60}/i)?.[0]||''
+        const v=/keine|nicht|nein/i.test(seg)?'Nein':'Ja'
+        addProfileSuggestion(out,findProfileSemanticControl(['tech:physio'],['physiotherapeutischer behandlung']),v,'explizite Aussage zur Physiotherapie')
+      }
+
+      if(/rehabilitation|reha(?:maßnahme)?/i.test(raw)){
+        const seg=raw.match(/.{0,35}(?:rehabilitation|reha).{0,70}/i)?.[0]||''
+        const v=/keine|nicht|nein/i.test(seg)?'Nein':'Ja'
+        addProfileSuggestion(out,findProfileSemanticControl(['tech:rehabDone'],['rehabilitationsmaßnahme']),v,'explizite Aussage zur Rehabilitation')
+      }
+
+      m=raw.match(/(?:beruf|beruflich|arbeitet als|tätig als)\\s*(?:ist|:|als)?\\s*([^,.\\n]{3,60})/i)
+      if(m) addProfileSuggestion(out,findProfileSemanticControl(['tech:profession'],['ausgeübten beruf','beruf']),m[1].trim(),'explizite Berufsangabe')
+
+      m=raw.match(/(?:amputationsgrund|ursache(?: der amputation)?)[\\s:,-]+([^,.\\n]{3,100})/i)
+      if(m) addProfileSuggestion(out,findProfileSemanticControl(['tech:ampReason'],['amputationsgrund','ursache']),m[1].trim(),'explizit genannter Amputationsgrund')
+
+      m=raw.match(/(?:amputation|amputiert)\\D{0,40}((?:0?[1-9]|[12]\\d|3[01])[.\\/-](?:0?[1-9]|1[0-2])[.\\/-](?:\\d{2}|\\d{4}))/i)
+      if(m){
+        const d=normalizeRxDate(m[1])
+        if(d) addProfileSuggestion(out,findProfileSemanticControl(['tech:ampDate'],['datum der amputation','amputation seit']),d,'explizites Amputationsdatum')
+      }
+
+      if(/endbelast/i.test(raw)){
+        const seg=norm(raw.match(/.{0,30}endbelast.{0,60}/i)?.[0]||'')
+        const v=seg.includes('voll')?'voll':seg.includes('teil')?'teilweise':seg.includes('keine')||seg.includes('nicht')?'nicht':''
+        if(v) addProfileSuggestion(out,findProfileSemanticControl(['tech:endLoad'],['endbelastung']),v,'explizite Endbelastungsangabe')
+      }
+
+      if(/muskelkraft/i.test(raw)){
+        const seg=norm(raw.match(/.{0,30}muskelkraft.{0,50}/i)?.[0]||'')
+        const v=seg.includes('aufgehoben')?'aufgehoben':seg.includes('reduziert')?'reduziert':seg.includes('voll')?'voll':''
+        if(v) addProfileSuggestion(out,findProfileSemanticControl(['tech:muscleStrength'],['muskelkraft']),v,'explizite Muskelkraftangabe')
+      }
+
+      return out
+    }
+
+    function renderProfileAiSuggestions(list){
+      profileAiSuggestionState=list||[]
+      const host=$('profileAiSuggestions')
+      if(!host) return
+      if(!list?.length){
+        host.innerHTML='<div class="profile-ai-empty">Keine eindeutig zuordenbaren Angaben erkannt. Transkript prüfen oder geführte Abfrage verwenden.</div>'
+        return
+      }
+      host.innerHTML=list.map((s,i)=>'<label class="profile-ai-suggestion"><input type="checkbox" data-profile-ai-suggestion="'+i+'" checked><strong>'+escapeHtml(s.label)+'</strong><span>'+escapeHtml(s.value)+'</span></label>').join('')
+    }
+
+    function analyzeProfileAiTranscript(){
+      const text=$('profileAiTranscript').value.trim()
+      if(!text){profileAiSetStatus('Kein Transkript vorhanden.');renderProfileAiSuggestions([]);return}
+      if($('profileAiMode').value==='guided'){
+        if(!profileGuidedTarget || !document.contains(profileGuidedTarget.el)) selectProfileGuidedQuestion(false)
+        if(!profileGuidedTarget){renderProfileAiSuggestions([]);return}
+        const value=valueForControlFromSpeech(profileGuidedTarget.el,text)
+        renderProfileAiSuggestions(value?[{el:profileGuidedTarget.el,value,label:profileGuidedTarget.label,reason:'Antwort auf geführte Frage'}]:[])
+        profileAiSetStatus(value?'Antwort erkannt. Bitte Vorschlag prüfen und übernehmen.':'Antwort konnte nicht passend zum Feld interpretiert werden.')
+      }else{
+        const suggestions=extractProfileSuggestions(text)
+        renderProfileAiSuggestions(suggestions)
+        profileAiSetStatus(suggestions.length?suggestions.length+' eindeutige Feldvorschläge erkannt. Bitte prüfen und übernehmen.':'Keine eindeutigen Feldvorschläge erkannt.')
+      }
+    }
+
+    function applyProfileAiSuggestions(){
+      const host=$('profileAiSuggestions')
+      let applied=0
+      profileAiSuggestionState.forEach((s,i)=>{
+        const checked=host?.querySelector('[data-profile-ai-suggestion="'+i+'"]')?.checked
+        if(checked && setProfileAssistantControl(s.el,s.value)) applied++
+      })
+      queueAutosaveSupply();updateWizardStatus()
+      profileAiSetStatus(applied?applied+' Feld'+(applied===1?'':'er')+' übernommen.':'Keine Vorschläge übernommen.',applied?'ready':'')
+      if(applied && $('profileAiMode').value==='guided'){
+        $('profileAiTranscript').value=''
+        renderProfileAiSuggestions([])
+        selectProfileGuidedQuestion(true)
+      }
+    }
+
+    async function startProfileAiRecording(){
+      if(profileAiRecorder?.state==='recording') return
+      if(!navigator.mediaDevices?.getUserMedia){profileAiSetStatus('Mikrofonzugriff wird von diesem Browser nicht unterstützt.');return}
+      if($('profileAiMode').value==='guided' && (!profileGuidedTarget||!document.contains(profileGuidedTarget.el))) selectProfileGuidedQuestion(false)
+      try{
+        profileAiStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})
+        profileAiChunks=[]
+        profileAiRecorder=new MediaRecorder(profileAiStream)
+        profileAiRecorder.ondataavailable=e=>{if(e.data?.size) profileAiChunks.push(e.data)}
+        profileAiRecorder.onstop=async()=>{
+          try{
+            const blob=new Blob(profileAiChunks,{type:profileAiRecorder.mimeType||'audio/webm'})
+            profileAiSetStatus('Aufnahme beendet. Lokale KI-Transkription wird vorbereitet …')
+            const text=await transcribeProfileAudio(blob)
+            $('profileAiTranscript').value=text
+            profileAiSetStatus(text?'Transkription abgeschlossen. Bitte Text prüfen.':'Keine Sprache erkannt.',text?'ready':'')
+            if(text) analyzeProfileAiTranscript()
+          }catch(err){
+            console.error(err);profileAiSetStatus('Transkription fehlgeschlagen: '+(err?.message||'unbekannter Fehler'))
+          }finally{
+            profileAiStream?.getTracks().forEach(t=>t.stop());profileAiStream=null
+            $('profileAiStart').disabled=false;$('profileAiStop').disabled=true
+          }
+        }
+        profileAiRecorder.start()
+        $('profileAiStart').disabled=true;$('profileAiStop').disabled=false
+        profileAiSetStatus('Aufnahme läuft … Sprechen Sie normal und deutlich.','recording')
+      }catch(err){profileAiSetStatus('Mikrofon konnte nicht gestartet werden: '+(err?.message||'Zugriff verweigert'))}
+    }
+
+    function stopProfileAiRecording(){
+      if(profileAiRecorder?.state==='recording') profileAiRecorder.stop()
+    }
+
+    function resetProfileAiUi(){
+      profileGuidedTarget=null;profileGuidedIndex=-1;profileAiSuggestionState=[]
+      if($('profileAiTranscript')) $('profileAiTranscript').value=''
+      renderProfileAiSuggestions([])
+      const q=$('profileAiQuestion')
+      if(q) q.innerHTML='<strong>Geführte Abfrage</strong><span>„Nächste offene Frage“ auswählen oder auf „Aufnahme starten“ klicken.</span>'
+      profileAiSetStatus('Bereit. Beim ersten Einsatz wird das lokale Sprachmodell einmalig in den Browser geladen.')
+    }
+
     function profilePdfPrefill(){
       const fullName=[values.patientFirstName,values.patientLastName].filter(Boolean).join(' ')
       const doctor=[values.rxDoctor,values.rxPracticeAddress].filter(Boolean).join(' · ')
@@ -1301,6 +1624,20 @@
           const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height)
           pageBox.appendChild(canvas);host.appendChild(pageBox)
           await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise
+          const textContent=await page.getTextContent()
+          const aiTextItems=(textContent.items||[]).map(item=>{
+            const tx=pdfjs.Util.transform(viewport.transform,item.transform)
+            return {text:String(item.str||'').trim(),x:tx[4],y:tx[5],w:(Number(item.width)||0)*viewport.scale}
+          }).filter(x=>x.text)
+          const inferAiLabel=(left,top,width,height)=>{
+            const cy=top+height/2
+            const same=aiTextItems.filter(t=>Math.abs(t.y-cy)<18 && t.x<left+width && (left-(t.x+t.w))<260)
+              .sort((a,b)=>(left-(b.x+b.w))-(left-(a.x+a.w)))
+            const above=aiTextItems.filter(t=>t.y<top+4 && (top-t.y)<34 && Math.abs(t.x-left)<240)
+              .sort((a,b)=>(top-b.y)-(top-a.y))
+            const parts=(same.length?same:above).slice(0,3).map(x=>x.text).filter(Boolean)
+            return parts.join(' ').replace(/\s+/g,' ').trim()
+          }
           const anns=await page.getAnnotations({intent:'display'})
           anns.filter(a=>a.subtype==='Widget').forEach((ann,index)=>{
             const vr=viewport.convertToViewportRectangle(ann.rect)
@@ -1346,7 +1683,9 @@
             }
             el.dataset.profileKey=key
             el.dataset.required='false'
-            el.setAttribute('aria-label',ann.alternativeText||fieldName||'Profilerhebungsfeld')
+            const aiLabel=inferAiLabel(left,top,width,height)||ann.alternativeText||fieldName||'Profilerhebungsfeld'
+            el.dataset.aiLabel=aiLabel
+            el.setAttribute('aria-label',aiLabel)
             el.style.left=(left/viewport.width*100)+'%'
             el.style.top=(top/viewport.height*100)+'%'
             el.style.width=Math.max(width/viewport.width*100,1.2)+'%'
@@ -3109,6 +3448,18 @@
     $('careForm').addEventListener('change',()=>{updateCareFields();showWizardError('');renderWizard()})
     $('printButton').addEventListener('click',()=>window.print())
     $('clearButton').addEventListener('click',clearCurrentSupplyInputs)
+    $('profileAiMode').addEventListener('change',()=>{
+      profileGuidedTarget=null;profileGuidedIndex=-1;renderProfileAiSuggestions([])
+      const guided=$('profileAiMode').value==='guided'
+      $('profileAiNext').disabled=!guided
+      $('profileAiQuestion').innerHTML=guided?'<strong>Geführte Abfrage</strong><span>„Nächste offene Frage“ wählen.</span>':'<strong>Freies Gespräch</strong><span>Gespräch aufnehmen oder vorhandenes Transkript einfügen. Eindeutige Angaben werden anschließend als Vorschläge angezeigt.</span>'
+    })
+    $('profileAiNext').addEventListener('click',()=>selectProfileGuidedQuestion(true))
+    $('profileAiStart').addEventListener('click',startProfileAiRecording)
+    $('profileAiStop').addEventListener('click',stopProfileAiRecording)
+    $('profileAiAnalyze').addEventListener('click',analyzeProfileAiTranscript)
+    $('profileAiApply').addEventListener('click',applyProfileAiSuggestions)
+    $('profileAiClear').addEventListener('click',resetProfileAiUi)
     $('supplySearch').addEventListener('input',renderSupplyOverview)
     $('supplyStatusFilter').addEventListener('change',renderSupplyOverview)
     $('supplyPgFilter').addEventListener('change',renderSupplyOverview)
