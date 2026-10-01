@@ -2381,7 +2381,13 @@
       })
       try{
         const result=await worker.recognize(source)
-        return result?.data?.text||''
+        const data=result?.data||{}
+        return {
+          text:data.text||'',
+          words:Array.isArray(data.words)?data.words:[],
+          width:Number(data.imageSize?.width)||Number(source?.width)||0,
+          height:Number(data.imageSize?.height)||Number(source?.height)||0
+        }
       }finally{
         await worker.terminate()
       }
@@ -2399,6 +2405,17 @@
       canvas.height=Math.ceil(viewport.height)
       const ctx=canvas.getContext('2d',{willReadFrequently:true})
       await page.render({canvasContext:ctx,viewport}).promise
+      return canvas
+    }
+
+    async function imageFileToCanvas(file){
+      const bmp=await createImageBitmap(file)
+      const canvas=document.createElement('canvas')
+      canvas.width=bmp.width
+      canvas.height=bmp.height
+      const ctx=canvas.getContext('2d',{willReadFrequently:true})
+      ctx.drawImage(bmp,0,0)
+      bmp.close?.()
       return canvas
     }
 
@@ -2423,33 +2440,148 @@
       return m?m[1]:''
     }
 
-    function parsePrescriptionOcr(text){
-      const clean=String(text||'').replace(/\r/g,'')
-      const lines=clean.split('\n').map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean)
+    function rxWordCenter(word){
+      const b=word?.bbox||{}
+      const x0=Number(b.x0)||0,y0=Number(b.y0)||0,x1=Number(b.x1)||0,y1=Number(b.y1)||0
+      return {x:(x0+x1)/2,y:(y0+y1)/2}
+    }
+
+    function rxWordsInRegion(ocr,x0,y0,x1,y1){
+      const w=Math.max(Number(ocr?.width)||1,1),h=Math.max(Number(ocr?.height)||1,1)
+      return (ocr?.words||[]).filter(word=>{
+        const p=rxWordCenter(word)
+        const nx=p.x/w,ny=p.y/h
+        return nx>=x0&&nx<=x1&&ny>=y0&&ny<=y1
+      }).sort((a,b)=>{
+        const ay=rxWordCenter(a).y,by=rxWordCenter(b).y
+        if(Math.abs(ay-by)>12) return ay-by
+        return rxWordCenter(a).x-rxWordCenter(b).x
+      })
+    }
+
+    function rxRegionText(ocr,x0,y0,x1,y1){
+      const words=rxWordsInRegion(ocr,x0,y0,x1,y1)
+      if(!words.length) return ''
+      let out='',lastY=null
+      words.forEach(word=>{
+        const y=rxWordCenter(word).y
+        if(lastY!==null && Math.abs(y-lastY)>14) out+='\n'
+        else if(out && !out.endsWith('\n')) out+=' '
+        out+=String(word.text||'')
+        lastY=y
+      })
+      return out.replace(/[ \t]+\n/g,'\n').trim()
+    }
+
+    function digitsOnly(value){ return String(value||'').replace(/\D/g,'') }
+
+    function findNineDigitNumber(text){
+      const compact=String(text||'').replace(/[OQ]/gi,'0').replace(/[Il|]/g,'1')
+      const m=compact.match(/(?:\d[\s.-]?){9}/)
+      if(!m) return ''
+      const d=digitsOnly(m[0])
+      return d.length===9?d:''
+    }
+
+    function findKvnr(text){
+      const compact=String(text||'').toUpperCase().replace(/\s+/g,' ')
+      const m=compact.match(/\b[A-Z]\s*\d(?:[\s.-]?\d){8}\b/)
+      if(!m) return ''
+      return m[0].replace(/[\s.-]/g,'')
+    }
+
+    function cleanDoctorBlock(text){
+      return String(text||'')
+        .split('\n').map(x=>x.replace(/\s+/g,' ').trim())
+        .filter(Boolean)
+        .filter(x=>!/^(Betriebsstätten|Arzt[- ]?Nr|Datum|BSNR|LANR)$/i.test(x))
+    }
+
+    function parsePrescriptionByGeometry(ocr){
       const result={}
-      result.bsnr=extractAfterLabel(clean,'BSNR','\\d{9}')
-      result.lanr=extractAfterLabel(clean,'LANR','\\d{9}')
-      const kvnr=(clean.toUpperCase().match(/\b[A-Z]\d{9}\b/)||[])[0]||''
-      result.insuredNo=kvnr
-      const labelledDate=clean.match(/(?:Ausstellungsdatum|Verordnungsdatum|Rezeptdatum|Datum)\D{0,20}((?:0?[1-9]|[12]\d|3[01])[.\/-](?:0?[1-9]|1[0-2])[.\/-](?:\d{2}|\d{4}))/i)
-      const anyDate=clean.match(/\b(?:0?[1-9]|[12]\d|3[01])[.\/-](?:0?[1-9]|1[0-2])[.\/-](?:\d{2}|\d{4})\b/)
-      result.date=normalizeRxDate(labelledDate?.[1]||anyDate?.[0]||'')
-      const hmvs=[...clean.matchAll(/\b\d{2}\.\d{2}\.\d{2}\.\d{3,4}\b/g)].map(m=>m[0])
-      result.hmv=[...new Set(hmvs)].join(', ')
-      result.doctor=lines.find(l=>/(?:\bDr\.?\b|Praxis|MVZ|Arzt|Ärztin|Ärzte)/i.test(l) && l.length<120)||''
-      result.address=lines.find(l=>/\b\d{5}\s+[A-Za-zÄÖÜäöüß-]{2,}/.test(l) || /(straße|str\.|weg|platz|allee|gasse)\b/i.test(l))||''
-      const rxIndex=lines.findIndex(l=>/(Verordnung|Hilfsmittel|Hilfsmitteltext|Bezeichnung des Hilfsmittels)/i.test(l))
-      if(rxIndex>=0){
-        result.rxText=lines.slice(rxIndex,Math.min(lines.length,rxIndex+5))
-          .filter(l=>!/(BSNR|LANR|Versichert|Krankenkasse|Geburtsdatum)/i.test(l)).join('\n')
+      if(!ocr?.words?.length || !ocr.width || !ocr.height) return result
+
+      // Layout based on the provided Musterrezept (Muster 16-like structure):
+      // insured block left/middle, identifier row in middle, doctor stamp lower right, free Rx text below OP.
+      const insuredBlock=rxRegionText(ocr,0.03,0.16,0.58,0.54)
+      const idRow=rxRegionText(ocr,0.02,0.45,0.80,0.67)
+      const bsnrBlock=rxRegionText(ocr,0.28,0.47,0.46,0.66)
+      const lanrBlock=rxRegionText(ocr,0.45,0.47,0.63,0.66)
+      const dateBlock=rxRegionText(ocr,0.62,0.47,0.79,0.66)
+      const doctorBlock=rxRegionText(ocr,0.68,0.55,0.99,0.99)
+      const rxTextBlock=rxRegionText(ocr,0.03,0.57,0.67,0.97)
+
+      result.insuredNo=findKvnr(insuredBlock) || findKvnr(idRow)
+
+      // Explicit spatial priority: BSNR left of Arzt-Nr.; LANR is Arzt-Nr.
+      result.bsnr=findNineDigitNumber(bsnrBlock)
+      result.lanr=findNineDigitNumber(lanrBlock)
+
+      // Date sits next to Arzt-Nr. in the middle identifier row.
+      const dm=dateBlock.match(/\b(?:0?[1-9]|[12]\d|3[01])[.\/-](?:0?[1-9]|1[0-2])[.\/-](?:\d{2}|\d{4})\b/)
+      result.date=normalizeRxDate(dm?.[0]||'')
+
+      // Doctor/practice details are read from the lower-right stamp/signature area.
+      const doctorLines=cleanDoctorBlock(doctorBlock)
+      if(doctorLines.length){
+        const addressLines=doctorLines.filter(l=>/\b\d{5}\b/.test(l)||/(straße|str\.|weg|platz|allee|gasse|chaussee|ring)\b/i.test(l))
+        const doctorLinesOnly=doctorLines.filter(l=>!addressLines.includes(l))
+        result.doctor=doctorLinesOnly.slice(0,3).join(' · ')
+        result.address=addressLines.slice(0,3).join(' · ')
       }
-      if(!result.rxText) result.rxText=clean
+
+      // Prescription text is typically the large free-text field below "OP".
+      let rxLines=String(rxTextBlock||'').split('\n').map(x=>x.trim()).filter(Boolean)
+      const opIndex=rxLines.findIndex(l=>/^OP\b|\bOP\b/i.test(l))
+      if(opIndex>=0) rxLines=rxLines.slice(opIndex+1)
+      rxLines=rxLines.filter(l=>!/(Krankenkasse|Versicherten|Betriebsstätten|Arzt[- ]?Nr|Datum|Status|Geb\.?\s*am)/i.test(l))
+      result.rxText=rxLines.join('\n').trim()
+
       return result
     }
 
-    function applyPrescriptionOcr(text){
-      const parsed=parsePrescriptionOcr(text)
-      values.rxOcrRaw=String(text||'')
+    function parsePrescriptionOcr(ocr){
+      const text=typeof ocr==='string'?ocr:String(ocr?.text||'')
+      const clean=text.replace(/\r/g,'')
+      const lines=clean.split('\n').map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean)
+      const result=parsePrescriptionByGeometry(typeof ocr==='string'?null:ocr)
+
+      result.bsnr=result.bsnr||extractAfterLabel(clean,'(?:BSNR|Betriebsstätten(?:-?Nr\.?|nummer)?)','\\d{9}')
+      result.lanr=result.lanr||extractAfterLabel(clean,'(?:LANR|Arzt[- ]?Nr\.?|Arztnummer)','\\d{9}')
+      result.insuredNo=result.insuredNo||findKvnr(clean)
+
+      if(!result.date){
+        const labelledDate=clean.match(/(?:Ausstellungsdatum|Verordnungsdatum|Rezeptdatum|Datum)\D{0,20}((?:0?[1-9]|[12]\d|3[01])[.\/-](?:0?[1-9]|1[0-2])[.\/-](?:\d{2}|\d{4}))/i)
+        const anyDate=clean.match(/\b(?:0?[1-9]|[12]\d|3[01])[.\/-](?:0?[1-9]|1[0-2])[.\/-](?:\d{2}|\d{4})\b/)
+        result.date=normalizeRxDate(labelledDate?.[1]||anyDate?.[0]||'')
+      }
+
+      const hmvs=[...clean.matchAll(/\b\d{2}\.\d{2}\.\d{2}\.\d{3,4}\b/g)].map(m=>m[0])
+      result.hmv=[...new Set(hmvs)].join(', ')
+
+      if(!result.doctor) result.doctor=lines.find(l=>/(?:\bDr\.?\b|Praxis|MVZ|Arzt|Ärztin|Ärzte)/i.test(l) && l.length<120)||''
+      if(!result.address) result.address=lines.find(l=>/\b\d{5}\s+[A-Za-zÄÖÜäöüß-]{2,}/.test(l) || /(straße|str\.|weg|platz|allee|gasse|chaussee|ring)\b/i.test(l))||''
+
+      if(!result.rxText){
+        const opIndex=lines.findIndex(l=>/^OP\b|\bOP\b/i.test(l))
+        if(opIndex>=0){
+          result.rxText=lines.slice(opIndex+1,Math.min(lines.length,opIndex+9))
+            .filter(l=>!/(BSNR|LANR|Versichert|Krankenkasse|Geburtsdatum|Arzt[- ]?Nr|Betriebsstätten)/i.test(l)).join('\n')
+        }
+      }
+      if(!result.rxText){
+        const rxIndex=lines.findIndex(l=>/(Verordnung|Hilfsmittel|Hilfsmitteltext|Bezeichnung des Hilfsmittels)/i.test(l))
+        if(rxIndex>=0) result.rxText=lines.slice(rxIndex,Math.min(lines.length,rxIndex+6))
+          .filter(l=>!/(BSNR|LANR|Versichert|Krankenkasse|Geburtsdatum)/i.test(l)).join('\n')
+      }
+
+      return result
+    }
+
+    function applyPrescriptionOcr(ocr){
+      const text=typeof ocr==='string'?ocr:String(ocr?.text||'')
+      const parsed=parsePrescriptionOcr(ocr)
+      values.rxOcrRaw=text
       const raw=$('rxOcrRaw'); if(raw) raw.value=values.rxOcrRaw
       setRecognizedField('rxDoctor',parsed.doctor)
       setRecognizedField('rxPracticeAddress',parsed.address)
@@ -2479,15 +2611,16 @@
       try{
         if(file.size>15*1024*1024) throw new Error('Datei ist größer als 15 MB.')
         if(file.type && file.type!=='application/pdf' && !file.type.startsWith('image/')) throw new Error('Nicht unterstützter Dateityp.')
-        const source=file.type==='application/pdf'?await pdfFirstPageToCanvas(file):file
-        const text=(await recognizeImageSource(source)).trim()
+        const source=file.type==='application/pdf'?await pdfFirstPageToCanvas(file):await imageFileToCanvas(file)
+        const ocr=await recognizeImageSource(source)
+        const text=String(ocr?.text||'').trim()
         values.rxFileCaptured=true
         values.rxFileName=file.name||'Kameraaufnahme'
         values.rxFileType=file.type||'image/*'
         values.rxOcrAt=new Date().toISOString()
-        applyPrescriptionOcr(text)
+        applyPrescriptionOcr(ocr)
         $('ocrStatus').className=text?'status-card ready':'status-card open'
-        $('ocrStatus').textContent=text?'OCR abgeschlossen. Erkannte Verordnungsdaten wurden automatisch übernommen. Bitte Felder fachlich prüfen und bei Bedarf korrigieren.':'OCR abgeschlossen, aber kein Text erkannt. Bitte Verordnungsdaten manuell erfassen.'
+        $('ocrStatus').textContent=text?'OCR abgeschlossen. Rezeptbereiche wurden positionsbezogen ausgewertet: Versichertennummer, BSNR, LANR/Arztnummer, Verordnungsdatum, Arzt/Praxis und Verordnungstext wurden soweit erkennbar übernommen. Bitte fachlich prüfen.':'OCR abgeschlossen, aber kein Text erkannt. Bitte Verordnungsdaten manuell erfassen.'
         updateWizardStatus()
       }catch(err){
         console.error('OCR error',err)
