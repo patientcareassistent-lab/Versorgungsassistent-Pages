@@ -219,9 +219,12 @@
                     </div>
                     <div id="rxYesPanel" class="hidden">
                       <div class="mini-grid" style="margin-top:14px">
-                        <label>Rezept per Foto oder Datei
-                          <input type="file" id="rxFile" accept="image/*,application/pdf" capture="environment" />
-                          <small id="rxFileName" class="muted">Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.</small>
+                        <label>Rezept erfassen
+                          <span class="actions">
+                            <span style="flex:1"><small class="muted">Kamera / Foto</small><input type="file" id="rxCameraFile" accept="image/*" capture="environment" /></span>
+                            <span style="flex:1"><small class="muted">Datei-Upload</small><input type="file" id="rxFile" accept="image/*,application/pdf" /></span>
+                          </span>
+                          <small id="rxFileName" class="muted">Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.</small>
                         </label>
                         <label>OCR-Status
                           <div id="ocrStatus" class="status-card open">Noch keine Rezeptdatei ausgewählt.</div>
@@ -1152,6 +1155,7 @@
       $('wizardNext').addEventListener('click',advanceWizard)
       $('newSupplyButton').addEventListener('click',resetWizard)
       $('rxFile').addEventListener('change',handleRxFile)
+      $('rxCameraFile').addEventListener('change',handleRxFile)
       syncRxPresence()
     }
 
@@ -1201,7 +1205,7 @@
     async function handleRxFile(e){
       const file=e.target.files?.[0]
       if(!file){
-        $('rxFileName').textContent='Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
+        $('rxFileName').textContent='Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
         return
       }
       $('rxFileName').textContent=file.name+' · '+Math.max(1,Math.round(file.size/1024))+' KB · lokale OCR'
@@ -1336,7 +1340,8 @@
       $('fieldInfo').textContent='Kasse und Produktgruppe auswählen, um den passenden Erhebungsbogen aus der hinterlegten Formularlogik zu laden.'
       $('ruleBox').classList.add('hidden')
       $('rxFile').value=''
-      $('rxFileName').textContent='Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
+      $('rxCameraFile').value=''
+      $('rxFileName').textContent='Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
       $('ocrStatus').className='status-card open'
       $('ocrStatus').textContent='Noch keine Rezeptdatei ausgewählt.'
       syncRxPresence()
