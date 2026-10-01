@@ -70,7 +70,7 @@
 
   <main id="auth" class="auth-page hidden">
     <section class="auth-card">
-      <div class="brand-lockup"><img class="brand-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" /><div><h1>Versorgungsassistent</h1><p>Teststand v0.3.9</p></div></div>
+      <div class="brand-lockup"><img class="brand-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" /><div><h1>Versorgungsassistent</h1><p>Teststand v0.4.0</p></div></div>
       <div id="loginPane">
         <h2>Anmelden</h2>
         <p class="muted">Zugriff nur für freigegebene Tester. Nach dem Passwort ist die Authenticator-MFA erforderlich.</p>
@@ -202,20 +202,42 @@
 
               <div class="wizard-stage">
                 <section class="wizard-panel active" data-panel="0"><div class="card">
-                  <h2>1. Auftrag & Rezept</h2><p class="lead">Vorgang anlegen und die Ausgangsdaten erfassen. Rezeptdaten bilden den Einstieg; OCR kann später wieder direkt an dieser Stelle angebunden werden.</p>
+                  <h2>1. Auftrag & Rezept</h2><p class="lead">Vorgang anlegen und die Ausgangsdaten erfassen. Eine vorhandene Verordnung kann per Foto oder Datei lokal eingelesen und per OCR erkannt werden; der erkannte Text bleibt manuell korrigierbar.</p>
                   <div class="step-section"><h4>Vorgang / Patient</h4><div class="mini-grid three">
                     <label>Vorgangsnummer<input data-case-field="caseNumber" placeholder="z. B. 2026-001" /></label>
-                    <label>Patient / Versicherte Person<input data-case-field="patientName" placeholder="Name" /></label>
+                    <label>Vorname<input data-case-field="patientFirstName" autocomplete="given-name" placeholder="Vorname" /></label>
+                    <label>Nachname<input data-case-field="patientLastName" autocomplete="family-name" placeholder="Nachname" /></label>
                     <label>Versichertennummer<input data-case-field="insuredNo" /></label>
                     <label>Krankenkasse<select id="careKasse"><option value="">Bitte wählen</option></select></label>
                     <label>Produktgruppe<select id="carePg"><option value="">Bitte wählen</option></select></label>
                     <label>Hilfsmittel / Versorgungsbereich<select id="careHimi"><option value="">Bitte zuerst PG wählen</option></select></label>
-                    <label>Rezeptdatum<input type="date" data-case-field="rxDate" /></label>
                   </div></div>
-                  <div class="step-section"><h4>Verordnung</h4><div class="mini-grid">
-                    <label>Verordnungstext<textarea data-case-field="rxText" rows="4" placeholder="Hilfsmittel / Diagnose / ärztliche Angaben"></textarea></label>
-                    <label>Rezeptdatei<input type="file" id="rxFile" accept="image/*,application/pdf" /><small id="rxFileName" class="muted">Datei wird in dieser Version nicht hochgeladen oder gespeichert.</small></label>
-                  </div></div>
+                  <div class="step-section"><h4>Verordnung</h4>
+                    <div class="mini-grid">
+                      <label>Verordnung vorhanden?<select id="rxPresent" data-case-field="rxPresent"><option value="">Bitte wählen</option><option value="Ja">Ja</option><option value="Nein">Nein</option></select></label>
+                      <label id="rxDateLabel" class="hidden">Rezeptdatum<input type="date" data-case-field="rxDate" /></label>
+                    </div>
+                    <div id="rxYesPanel" class="hidden">
+                      <div class="mini-grid" style="margin-top:14px">
+                        <label>Rezept per Foto oder Datei
+                          <input type="file" id="rxFile" accept="image/*,application/pdf" capture="environment" />
+                          <small id="rxFileName" class="muted">Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.</small>
+                        </label>
+                        <label>OCR-Status
+                          <div id="ocrStatus" class="status-card open">Noch keine Rezeptdatei ausgewählt.</div>
+                        </label>
+                      </div>
+                      <label style="margin-top:14px">Erkannter Verordnungstext
+                        <textarea id="rxOcrText" data-case-field="rxText" rows="6" placeholder="OCR-Ergebnis erscheint hier und kann anschließend korrigiert werden."></textarea>
+                      </label>
+                    </div>
+                    <div id="rxNoPanel" class="hidden" style="margin-top:14px">
+                      <label>Verordnungstext / benötigter Rezepttext
+                        <textarea id="rxNeededText" data-case-field="rxNeededText" rows="6" placeholder="Benötigten Rezepttext vollständig erfassen."></textarea>
+                        <small class="muted">Pflichtangabe, solange keine Verordnung vorhanden ist.</small>
+                      </label>
+                    </div>
+                  </div>
                 </div></section>
 
                 <section class="wizard-panel" data-panel="1"><div class="card">
@@ -481,7 +503,7 @@
         if(status && x.status!==status) return false
         if(pg && String(x.pg)!==String(pg)) return false
         if(q){
-          const hay=[x.values?.patientName,x.values?.caseNumber,x.kasse,x.pg,x.himi,x.values?.insuredNo].join(' ').toLowerCase()
+          const hay=[x.values?.patientFirstName,x.values?.patientLastName,x.values?.patientName,x.values?.caseNumber,x.kasse,x.pg,x.himi,x.values?.insuredNo].join(' ').toLowerCase()
           if(!hay.includes(q)) return false
         }
         return true
@@ -493,7 +515,7 @@
       }
 
       body.innerHTML=filtered.map(x=>{
-        const name=x.values?.patientName||'Patient noch nicht erfasst'
+        const name=([x.values?.patientFirstName,x.values?.patientLastName].filter(Boolean).join(' ')||x.values?.patientName||'Patient noch nicht erfasst')
         const caseNo=x.values?.caseNumber||x.id.slice(0,8)
         const pgText=x.pg?'PG '+escapeHtml(x.pg):'PG offen'
         return '<tr class="supply-row" data-supply-id="'+escapeHtml(x.id)+'" tabindex="0" title="Versorgung öffnen">'+
@@ -522,6 +544,7 @@
       document.querySelectorAll('[data-case-field]').forEach(el=>writeCaseField(el,values[el.dataset.caseField]))
       updateCare()
       renderMeasureFields()
+      syncRxPresence()
       renderWizard()
       setView('care')
     }
@@ -1029,7 +1052,12 @@
         if(!$('careKasse').value) missing.push('Krankenkasse')
         if(!$('carePg').value) missing.push('Produktgruppe')
         if(!selectedHimiId()) missing.push('Hilfsmittel / Versorgungsbereich')
-        missing.push(...missingValues(['patientName','insuredNo']))
+        missing.push(...missingValues(['patientFirstName','patientLastName','insuredNo','rxPresent']))
+        if(values.rxPresent==='Ja'){
+          if(!String(values.rxText||'').trim()) missing.push('erkannter / korrigierter Verordnungstext')
+        }else if(values.rxPresent==='Nein'){
+          if(!String(values.rxNeededText||'').trim()) missing.push('Verordnungstext / benötigter Rezepttext')
+        }
       } else if(i===1){
         missing=missingValues(['supplyType'])
         if(requiresSide()) missing.push(...missingValues(['side']))
@@ -1106,7 +1134,7 @@
       document.querySelectorAll('[data-case-field]').forEach(el=>{
         const key=el.dataset.caseField
         writeCaseField(el,values[key])
-        const save=()=>{values[key]=readCaseField(el);if(key==='supplyType'){syncSituationFields();renderMeasureFields()}showWizardError('');updateWizardStatus()}
+        const save=()=>{values[key]=readCaseField(el);if(key==='supplyType'){syncSituationFields();renderMeasureFields()}if(key==='rxPresent')syncRxPresence();showWizardError('');updateWizardStatus()}
         el.addEventListener('input',save)
         el.addEventListener('change',save)
       })
@@ -1123,7 +1151,75 @@
       $('wizardBack').addEventListener('click',()=>goWizard(previousApplicableIndex(wizardIndex)))
       $('wizardNext').addEventListener('click',advanceWizard)
       $('newSupplyButton').addEventListener('click',resetWizard)
-      $('rxFile').addEventListener('change',e=>{ const file=e.target.files?.[0]; $('rxFileName').textContent=file?file.name+' · nur lokal ausgewählt, nicht hochgeladen':'Datei wird in dieser Version nicht hochgeladen oder gespeichert.' })
+      $('rxFile').addEventListener('change',handleRxFile)
+      syncRxPresence()
+    }
+
+    function syncRxPresence(){
+      const present=values.rxPresent || $('rxPresent')?.value || ''
+      const yes=present==='Ja'
+      const no=present==='Nein'
+      $('rxYesPanel')?.classList.toggle('hidden',!yes)
+      $('rxNoPanel')?.classList.toggle('hidden',!no)
+      $('rxDateLabel')?.classList.toggle('hidden',!yes)
+      if(yes) values.rxNeededText=''
+      if(no) values.rxText=''
+    }
+
+    async function recognizeImageSource(source){
+      const {createWorker}=await import('https://esm.sh/tesseract.js@5.1.1')
+      const worker=await createWorker('deu',1,{
+        logger:m=>{
+          if(m.status==='recognizing text' && $('ocrStatus')){
+            $('ocrStatus').textContent='OCR läuft … '+Math.round((m.progress||0)*100)+' %'
+          }
+        }
+      })
+      try{
+        const result=await worker.recognize(source)
+        return result?.data?.text||''
+      }finally{
+        await worker.terminate()
+      }
+    }
+
+    async function pdfFirstPageToCanvas(file){
+      const pdfjs=await import('https://esm.sh/pdfjs-dist@4.8.69/build/pdf.mjs')
+      pdfjs.GlobalWorkerOptions.workerSrc='https://esm.sh/pdfjs-dist@4.8.69/build/pdf.worker.mjs'
+      const bytes=new Uint8Array(await file.arrayBuffer())
+      const pdf=await pdfjs.getDocument({data:bytes}).promise
+      const page=await pdf.getPage(1)
+      const viewport=page.getViewport({scale:2})
+      const canvas=document.createElement('canvas')
+      canvas.width=Math.ceil(viewport.width)
+      canvas.height=Math.ceil(viewport.height)
+      const ctx=canvas.getContext('2d',{willReadFrequently:true})
+      await page.render({canvasContext:ctx,viewport}).promise
+      return canvas
+    }
+
+    async function handleRxFile(e){
+      const file=e.target.files?.[0]
+      if(!file){
+        $('rxFileName').textContent='Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
+        return
+      }
+      $('rxFileName').textContent=file.name+' · '+Math.max(1,Math.round(file.size/1024))+' KB · lokale OCR'
+      $('ocrStatus').className='status-card open'
+      $('ocrStatus').textContent='OCR wird vorbereitet …'
+      try{
+        const source=file.type==='application/pdf'?await pdfFirstPageToCanvas(file):file
+        const text=(await recognizeImageSource(source)).trim()
+        values.rxText=text
+        $('rxOcrText').value=text
+        $('ocrStatus').className=text?'status-card ready':'status-card open'
+        $('ocrStatus').textContent=text?'OCR abgeschlossen. Bitte erkannten Text prüfen und bei Bedarf korrigieren.':'OCR abgeschlossen, aber kein Text erkannt. Bitte Text manuell erfassen.'
+        updateWizardStatus()
+      }catch(err){
+        console.error('OCR error',err)
+        $('ocrStatus').className='status-card open'
+        $('ocrStatus').textContent='OCR konnte nicht abgeschlossen werden. Bitte Rezepttext manuell erfassen.'
+      }
     }
 
     function advanceWizard(){
@@ -1185,7 +1281,7 @@
       $('wizardProgressBar').style.width=Math.round((count/Math.max(total,1))*100)+'%'
       $('wizardProgressText').textContent=count+' von '+total+' relevanten Arbeitsschritten vollständig'
       const context=[]
-      const patient=values.patientName||values.caseNumber
+      const patient=([values.patientFirstName,values.patientLastName].filter(Boolean).join(' ')||values.patientName||values.caseNumber)
       if(patient) context.push('<span class="pill blue">'+escapeHtml(patient)+'</span>')
       if($('careKasse').value) context.push('<span class="pill">'+escapeHtml($('careKasse').value)+'</span>')
       if($('carePg').value) context.push('<span class="pill">PG '+escapeHtml($('carePg').value)+'</span>')
@@ -1240,7 +1336,10 @@
       $('fieldInfo').textContent='Kasse und Produktgruppe auswählen, um den passenden Erhebungsbogen aus der hinterlegten Formularlogik zu laden.'
       $('ruleBox').classList.add('hidden')
       $('rxFile').value=''
-      $('rxFileName').textContent='Datei wird in dieser Version nicht hochgeladen oder gespeichert.'
+      $('rxFileName').textContent='Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
+      $('ocrStatus').className='status-card open'
+      $('ocrStatus').textContent='Noch keine Rezeptdatei ausgewählt.'
+      syncRxPresence()
       wizardIndex=0
       showWizardError('')
       renderWizard()
