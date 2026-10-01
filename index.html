@@ -58,7 +58,7 @@
     .status-card{padding:16px;border-radius:13px;background:#f7faf9;border:1px solid #e3ecea}.status-card strong{display:block;margin-bottom:5px}.status-card.ready{background:#ecfdf3;border-color:#abefc6;color:#067647}.status-card.open{background:#fffaeb;border-color:#fedf89;color:#7a2e0e}
     .source-note{margin-top:12px;font-size:.78rem;color:#667085;line-height:1.5}
     .aok-profile{display:grid;gap:16px;grid-template-columns:1fr!important}.aok-profile-section{border:1px solid #dfe4ef;border-radius:13px;padding:16px;background:#fff}.aok-profile-section h4{margin:0 0 13px;color:#00157A}.aok-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.aok-profile-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.aok-profile-field{display:grid;gap:6px;font-size:.84rem;font-weight:650}.aok-profile-field small{font-weight:400;color:#667085}.aok-profile-options{display:flex;gap:9px 14px;flex-wrap:wrap;padding:9px 10px;border:1px solid #d7e0e0;border-radius:10px;background:#fff}.aok-profile-options label{display:flex;grid-template-columns:auto 1fr;align-items:center;gap:6px;font-size:.8rem;font-weight:500}.aok-profile-options input{width:auto}.plusm-wrap{overflow:auto;border:1px solid #e4e8ee;border-radius:10px}.plusm-table{min-width:930px}.plusm-table th{text-transform:none;letter-spacing:0;white-space:normal}.plusm-table td:first-child{min-width:390px}.plusm-table select{min-width:220px}
-    .aok-measure-frame-wrap{margin-top:14px;border:1px solid #d9deea;border-radius:13px;overflow:hidden;background:#eef1f6}.aok-measure-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 13px;background:#fff;border-bottom:1px solid #dfe4ef;flex-wrap:wrap}.aok-measure-toolbar strong{color:#00157A}.aok-measure-frame{display:block;width:100%;height:min(1120px,82vh);border:0;background:#fff}.aok-measure-open{font-size:.82rem}.aok-source-badge{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#00157A;font-size:.73rem;font-weight:750}
+    .aok-measure-frame-wrap{margin-top:14px;border:1px solid #d9deea;border-radius:13px;overflow:hidden;background:#eef1f6}.aok-measure-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 13px;background:#fff;border-bottom:1px solid #dfe4ef;flex-wrap:wrap}.aok-measure-toolbar strong{color:#00157A}.aok-measure-frame{display:block;width:100%;height:min(1120px,82vh);border:0;background:#fff}.aok-pdf-pages{display:grid;gap:14px;padding:12px;background:#eef1f6}.aok-pdf-page{position:relative;margin:0 auto;width:min(100%,980px);background:#fff;box-shadow:0 1px 5px rgba(15,23,42,.12)}.aok-pdf-page canvas{display:block;width:100%;height:auto}.aok-pdf-input{position:absolute;margin:0!important;padding:0 2px!important;border:0!important;border-radius:2px!important;background:rgba(255,255,255,.12)!important;box-shadow:none!important;color:#111827!important;min-width:0!important;line-height:1!important;z-index:2}.aok-pdf-input:hover{background:rgba(238,242,255,.35)!important;outline:1px dashed rgba(0,21,122,.35)}.aok-pdf-input:focus{background:rgba(255,255,255,.88)!important;outline:2px solid #00157A}.aok-pdf-check{accent-color:#00157A}.aok-pdf-loading{padding:30px;text-align:center;color:#667085;background:#fff}.aok-measure-open{font-size:.82rem}.aok-source-badge{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#00157A;font-size:.73rem;font-weight:750}
     @media(max-width:760px){.aok-profile-grid,.aok-profile-grid.three{grid-template-columns:1fr}.aok-measure-frame{height:72vh}}
     @media(max-width:1050px){.wizard-shell{grid-template-columns:1fr}.wizard-rail{position:static;display:flex;overflow:auto;gap:5px}.wizard-progress,.wizard-progress-text{display:none}.wizard-step{min-width:150px;grid-template-columns:28px 1fr}.wizard-step .step-state{display:none}}
     @media(max-width:760px){.mini-grid,.mini-grid.three,.check-grid,.course-grid{grid-template-columns:1fr}.course-grid>div{display:block}.wizard-top{display:block}.wizard-top .actions{margin-top:12px}.wizard-actions{position:static}.wizard-actions .right{margin-left:auto}}
@@ -927,7 +927,8 @@
       aokProfileField(g,'Amputationshöhe – spezifisch','aok24:ampHeightSpecific','text')
       aokProfileField(g,'Ursache','aok24:ampCause','select',['pAVK (ohne Diabetes)','andere Zirkulationsstörung','Diabetes','Infektion (ohne Diabetes)','Trauma','Tumor','Sonstiges'])
       aokProfileField(g,'Ursache – spezifisch','aok24:ampCauseSpecific','text')
-      aokProfileField(g,'Nachamputationen / Revisionen','aok24:revisions','select',['nein','ja – weichteilig','ja – knöchern'])
+      aokProfileField(g,'Nachamputationen / Revisionen','aok24:revisions','select',['nein','ja'])
+      aokProfileMulti(g,'Bei ja','aok24:revisionType',['weichteilig','knöchern'])
       aokProfileField(g,'Klinik / Ort','aok24:revisionClinic','text')
       aokProfileField(g,'Monat / Jahr','aok24:revisionWhen','month')
 
@@ -984,7 +985,9 @@
       g=aokProfileSection(host,'Aktivitätsniveau (PMS)',2)
       const activity=['0','1','1+','2','2+','3','3+','4']
       aokProfileField(g,'Aktuell','aok24:activityCurrent','select',activity)
+      aokProfileField(g,'Aktuell – spezifisch (Fähigkeiten, Aktivitäten)','aok24:activityCurrentSpecific','textarea')
       aokProfileField(g,'Erwartet','aok24:activityExpected','select',activity)
+      aokProfileField(g,'Erwartet – spezifisch (Fähigkeiten, Aktivitäten)','aok24:activityExpectedSpecific','textarea')
 
       g=aokProfileSection(host,'Geplante Versorgung (Grobplanung)',2)
       aokProfileField(g,'Versorgung','aok24:plannedCare','select',['Post OP Versorgung','Interimsprothese','Definitivprothese','Wechselprothese','keine (z. B. Sport, Wasserfest)'])
@@ -1042,6 +1045,83 @@
       aokProfileField(g,'Tägliche Laufleistung (km)','aok24:dailyKm','number')
       aokProfileField(g,'Am Stück ohne Pause (Meter)','aok24:continuousMeters','number')
       aokProfileField(g,'Am Stück ohne Pause (Minuten)','aok24:continuousMinutes','number')
+
+      g=aokProfileSection(host,'Bestätigung',2)
+      aokProfileField(g,'Datum – Versicherte/r bzw. Bevollmächtigte/r','aok24:insuredSignatureDate','date')
+      aokProfileField(g,'Unterschrift Versicherte/r bzw. Bevollmächtigte/r','aok24:insuredSignature','text')
+      aokProfileField(g,'Datum – Hilfsmittelanbieter','aok24:providerSignatureDate','date')
+      aokProfileField(g,'Unterschrift / Stempel Hilfsmittelanbieter','aok24:providerSignature','text')
+      const privacy=document.createElement('div')
+      privacy.className='source-note'
+      privacy.style.gridColumn='1/-1'
+      privacy.textContent='Datenschutzhinweis gemäß AOK-Anlage 4: Die erhobenen Daten dienen der Prüfung der beantragten Prothesenversorgung; die im Originalformular enthaltenen Hinweise zur Datenverarbeitung und Schweigepflichtentbindung sind zu beachten.'
+      g.appendChild(privacy)
+    }
+
+    let pdfJsLoader=null
+    function loadPdfJs(){
+      if(!pdfJsLoader){
+        pdfJsLoader=import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs').then(pdfjs=>{
+          pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs'
+          return pdfjs
+        })
+      }
+      return pdfJsLoader
+    }
+
+    function aokMeasureValueKey(asset,pageNo,ann,index){
+      const name=ann.fieldName||ann.id||('feld'+index)
+      return 'aokMeasure:'+asset.file+':p'+pageNo+':'+name
+    }
+
+    async function renderEditableAokPdf(url,asset,host){
+      try{
+        const pdfjs=await loadPdfJs()
+        const pdf=await pdfjs.getDocument(url).promise
+        host.innerHTML=''
+        for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
+          const page=await pdf.getPage(pageNo)
+          const viewport=page.getViewport({scale:1.65})
+          const pageBox=document.createElement('div');pageBox.className='aok-pdf-page'
+          const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height)
+          pageBox.appendChild(canvas);host.appendChild(pageBox)
+          await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise
+          const anns=await page.getAnnotations({intent:'display'})
+          anns.filter(a=>a.subtype==='Widget').forEach((ann,index)=>{
+            const vr=viewport.convertToViewportRectangle(ann.rect)
+            const left=Math.min(vr[0],vr[2]),top=Math.min(vr[1],vr[3])
+            const width=Math.abs(vr[2]-vr[0]),height=Math.abs(vr[3]-vr[1])
+            const key=aokMeasureValueKey(asset,pageNo,ann,index)
+            let el
+            if(ann.fieldType==='Btn'){
+              el=document.createElement('input');el.type='checkbox';el.className='aok-pdf-input aok-pdf-check'
+              const stored=values[key]
+              el.checked=stored===true || stored==='Ja' || stored===ann.exportValue
+              el.addEventListener('change',()=>{values[key]=el.checked;queueAutosaveSupply();updateWizardStatus()})
+            }else{
+              el=ann.multiLine?document.createElement('textarea'):document.createElement('input')
+              if(el.tagName==='TEXTAREA') el.rows=1
+              else el.type='text'
+              el.className='aok-pdf-input'
+              const stored=values[key]
+              el.value=stored!==undefined&&stored!==null?stored:(ann.fieldValue||'')
+              if(stored===undefined && el.value) values[key]=el.value
+              const save=()=>{values[key]=el.value;queueAutosaveSupply();updateWizardStatus()}
+              el.addEventListener('input',save);el.addEventListener('change',save)
+            }
+            el.dataset.measureKey=key
+            el.setAttribute('aria-label',ann.alternativeText||ann.fieldName||'Maßblattfeld')
+            el.style.left=(left/viewport.width*100)+'%'
+            el.style.top=(top/viewport.height*100)+'%'
+            el.style.width=Math.max(width/viewport.width*100,1.2)+'%'
+            el.style.height=Math.max(height/viewport.height*100,1.1)+'%'
+            el.style.fontSize=Math.max(8,Math.min(14,height*.55))+'px'
+            pageBox.appendChild(el)
+          })
+        }
+      }catch(err){
+        host.innerHTML='<div class="aok-pdf-loading">Das Originalmaßblatt konnte nicht als beschreibbare Ansicht geladen werden. <a target="_blank" rel="noopener" href="'+url+'">Original-PDF öffnen ↗</a></div><iframe class="aok-measure-frame" title="'+escapeHtml(asset.name)+'" src="'+url+'#view=FitH"></iframe>'
+      }
     }
 
     function aokPg24MeasureAsset(){
@@ -1064,7 +1144,8 @@
       $('measureLogicNote').className='status-card ready'
       $('measureLogicNote').innerHTML='<strong>'+escapeHtml(asset.name)+'</strong>Original-AOK-Maßblatt für '+escapeHtml(supplyType()||'die ausgewählte Versorgung')+'. Das Layout bleibt unverändert; die PDF-Formularfelder können direkt beschrieben werden.'
       host.className=''
-      host.innerHTML='<div class="aok-measure-frame-wrap"><div class="aok-measure-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>'+escapeHtml(asset.name)+'</strong></div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Originalmaßblatt öffnen ↗</a></div><iframe class="aok-measure-frame" title="'+escapeHtml(asset.name)+'" src="'+url+'#view=FitH"></iframe></div>'
+      host.innerHTML='<div class="aok-measure-frame-wrap"><div class="aok-measure-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>'+escapeHtml(asset.name)+'</strong></div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Originalmaßblatt öffnen ↗</a></div><div id="aokPdfMeasurePages" class="aok-pdf-pages"><div class="aok-pdf-loading">Originalmaßblatt wird geladen …</div></div></div>'
+      renderEditableAokPdf(url,asset,$('aokPdfMeasurePages'))
       return true
     }
 
