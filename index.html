@@ -538,6 +538,9 @@
       activeSupplyId=item.id
       Object.keys(values).forEach(k=>delete values[k])
       Object.assign(values,item.values||{})
+      if(values.patientName && !values.patientFirstName && !values.patientLastName){
+        values.patientLastName=values.patientName
+      }
       wizardIndex=Math.max(0,Math.min(Number(item.wizardIndex)||0,wizardSteps.length-1))
       $('careKasse').value=item.kasse||''
       $('carePg').value=item.pg||''
@@ -1057,6 +1060,7 @@
         if(!selectedHimiId()) missing.push('Hilfsmittel / Versorgungsbereich')
         missing.push(...missingValues(['patientFirstName','patientLastName','insuredNo','rxPresent']))
         if(values.rxPresent==='Ja'){
+          if(!values.rxFileCaptured) missing.push('Rezeptfoto / Rezeptdatei')
           if(!String(values.rxText||'').trim()) missing.push('erkannter / korrigierter Verordnungstext')
         }else if(values.rxPresent==='Nein'){
           if(!String(values.rxNeededText||'').trim()) missing.push('Verordnungstext / benötigter Rezepttext')
@@ -1167,7 +1171,18 @@
       $('rxNoPanel')?.classList.toggle('hidden',!no)
       $('rxDateLabel')?.classList.toggle('hidden',!yes)
       if(yes) values.rxNeededText=''
-      if(no) values.rxText=''
+      if(no){
+        values.rxText=''
+        values.rxFileCaptured=false
+        values.rxFileName=''
+        values.rxFileType=''
+        values.rxOcrAt=''
+      }
+      if(yes && values.rxFileCaptured && $('ocrStatus')){
+        $('ocrStatus').className='status-card ready'
+        $('ocrStatus').textContent='Rezept wurde erfasst'+(values.rxFileName?' ('+values.rxFileName+')':'')+'. OCR-Text bitte fachlich prüfen.'
+        $('rxFileName').textContent=(values.rxFileName||'Rezeptdatei')+' · Datei selbst wird nicht im Browser-Autosave gespeichert.'
+      }
     }
 
     async function recognizeImageSource(source){
@@ -1212,8 +1227,14 @@
       $('ocrStatus').className='status-card open'
       $('ocrStatus').textContent='OCR wird vorbereitet …'
       try{
+        if(file.size>15*1024*1024) throw new Error('Datei ist größer als 15 MB.')
+        if(file.type && file.type!=='application/pdf' && !file.type.startsWith('image/')) throw new Error('Nicht unterstützter Dateityp.')
         const source=file.type==='application/pdf'?await pdfFirstPageToCanvas(file):file
         const text=(await recognizeImageSource(source)).trim()
+        values.rxFileCaptured=true
+        values.rxFileName=file.name||'Kameraaufnahme'
+        values.rxFileType=file.type||'image/*'
+        values.rxOcrAt=new Date().toISOString()
         values.rxText=text
         $('rxOcrText').value=text
         $('ocrStatus').className=text?'status-card ready':'status-card open'
@@ -1222,7 +1243,12 @@
       }catch(err){
         console.error('OCR error',err)
         $('ocrStatus').className='status-card open'
-        $('ocrStatus').textContent='OCR konnte nicht abgeschlossen werden. Bitte Rezepttext manuell erfassen.'
+        values.rxFileCaptured=true
+        values.rxFileName=file.name||'Kameraaufnahme'
+        values.rxFileType=file.type||''
+        values.rxOcrAt=new Date().toISOString()
+        $('ocrStatus').textContent=(err?.message||'OCR konnte nicht abgeschlossen werden.')+' Bitte Rezepttext manuell erfassen und prüfen.'
+        updateWizardStatus()
       }
     }
 
@@ -1344,6 +1370,10 @@
       $('rxFileName').textContent='Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
       $('ocrStatus').className='status-card open'
       $('ocrStatus').textContent='Noch keine Rezeptdatei ausgewählt.'
+      values.rxFileCaptured=false
+      values.rxFileName=''
+      values.rxFileType=''
+      values.rxOcrAt=''
       syncRxPresence()
       wizardIndex=0
       showWizardError('')
