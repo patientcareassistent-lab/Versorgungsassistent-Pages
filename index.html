@@ -1003,160 +1003,298 @@
       section.append(h,grid);host.appendChild(section);return grid
     }
 
+    function profilePdfPrefill(){
+      const fullName=[values.patientFirstName,values.patientLastName].filter(Boolean).join(' ')
+      const doctor=[values.rxDoctor,values.rxPracticeAddress].filter(Boolean).join(' · ')
+      return {
+        Text1: values.serviceReason||'',
+        Text2: fullName,
+        Text3: values['tech:height']||'',
+        Text4: values['tech:weight']||'',
+        Text5: doctor,
+        Text6: values.rxDoctorSpecialty||''
+      }
+    }
+
+    async function renderEditableProfilePdf(url,host){
+      try{
+        const pdfjs=await loadPdfJs()
+        const pdf=await pdfjs.getDocument(url).promise
+        const prefill=profilePdfPrefill()
+        host.innerHTML=''
+        for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
+          const page=await pdf.getPage(pageNo)
+          const viewport=page.getViewport({scale:1.65})
+          const pageBox=document.createElement('div');pageBox.className='aok-pdf-page'
+          const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height)
+          pageBox.appendChild(canvas);host.appendChild(pageBox)
+          await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise
+          const anns=await page.getAnnotations({intent:'display'})
+          anns.filter(a=>a.subtype==='Widget').forEach((ann,index)=>{
+            const vr=viewport.convertToViewportRectangle(ann.rect)
+            const left=Math.min(vr[0],vr[2]),top=Math.min(vr[1],vr[3])
+            const width=Math.abs(vr[2]-vr[0]),height=Math.abs(vr[3]-vr[1])
+            const fieldName=ann.fieldName||ann.id||('feld'+index)
+            const key='aokProfilePdf:'+fieldName
+            let el
+            if(ann.fieldType==='Btn'){
+              el=document.createElement('input');el.type='checkbox';el.className='aok-pdf-input aok-pdf-check'
+              el.checked=values[key]===true
+              el.addEventListener('change',()=>{values[key]=el.checked;queueAutosaveSupply();updateWizardStatus()})
+            }else{
+              el=ann.multiLine?document.createElement('textarea'):document.createElement('input')
+              if(el.tagName==='TEXTAREA') el.rows=1
+              else el.type='text'
+              el.className='aok-pdf-input'
+              const initial=values[key]!==undefined?values[key]:(prefill[fieldName]||ann.fieldValue||'')
+              el.value=initial
+              if(values[key]===undefined && initial) values[key]=initial
+              const save=()=>{values[key]=el.value;queueAutosaveSupply();updateWizardStatus()}
+              el.addEventListener('input',save);el.addEventListener('change',save)
+            }
+            el.dataset.profileKey=key
+            el.dataset.required='false'
+            el.setAttribute('aria-label',ann.alternativeText||fieldName||'Profilerhebungsfeld')
+            el.style.left=(left/viewport.width*100)+'%'
+            el.style.top=(top/viewport.height*100)+'%'
+            el.style.width=Math.max(width/viewport.width*100,1.2)+'%'
+            el.style.height=Math.max(height/viewport.height*100,1.1)+'%'
+            el.style.fontSize=Math.max(8,Math.min(14,height*.55))+'px'
+            pageBox.appendChild(el)
+          })
+        }
+        updateWizardStatus()
+      }catch(err){
+        host.innerHTML='<div class="aok-pdf-loading">Der Original-AOK-Profilerhebungsbogen konnte nicht als beschreibbare Ansicht geladen werden. <a target="_blank" rel="noopener" href="'+url+'">Original-PDF öffnen ↗</a></div>'
+      }
+    }
+
     function renderAokPg24Profile(){
-      const host=$('fieldList');host.innerHTML='';host.className='aok-profile'
-      $('fieldInfo').textContent='AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen · Stand 01.09.2026. Es werden ausschließlich Felder der AOK-Vorgabe angezeigt.'
-      const hint=$('profileHint');hint.className='status-card ready';hint.innerHTML='<strong>AOK-Profilerhebungsbogen aktiv</strong>Keine Felder des allgemeinen PG24-Bogens werden zugemischt.'
+      const host=$('fieldList')
+      host.className=''
+      $('fieldInfo').textContent='AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen. Feldbezeichnungen und Reihenfolge entsprechen dem Originalbogen.'
+      const hint=$('profileHint')
+      hint.className='status-card ready'
+      hint.innerHTML='<strong>AOK-Vertragsbogen aktiv</strong>Ausschließlich der AOK-Profilerhebungsbogen wird angezeigt. Stammdaten werden nur dort vorbelegt, wo die Zuordnung eindeutig ist.'
+      const url='assets/aok-pg24/anlage-4-profilerhebungsbogen.pdf'
+      host.innerHTML='<div class="profile-original-wrap"><div class="profile-original-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>Anlage 4 · Profilerhebungsbogen PG24</strong></div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Original öffnen ↗</a></div><div id="aokProfilePdfPages" class="aok-pdf-pages"><div class="aok-pdf-loading">AOK-Profilerhebungsbogen wird geladen …</div></div></div>'
+      renderEditableProfilePdf(url,$('aokProfilePdfPages'))
+    }
 
-      let g=aokProfileSection(host,'Angaben zur Person',2)
-      const person=aokProfileField(g,'Vorname, Name, Geburtsdatum bzw. Adressaufkleber','aok24:person','textarea')
-      if(!values['aok24:person'] && (values.patientFirstName||values.patientLastName)){person.value=[values.patientFirstName,values.patientLastName].filter(Boolean).join(' ');values['aok24:person']=person.value}
-      aokProfileField(g,'Grund der Vorstellung','aok24:reason','textarea')
-      aokProfileField(g,'Vorstellung','aok24:presentation','select',['Erstvorsteller','Wiedervorsteller'])
-      aokProfileField(g,'Versorgungsart','aok24:careType','select',['Interimsversorgung','Definitivversorgung','Folgeversorgung'])
-      aokProfileField(g,'Größe (m)','aok24:height','number')
-      aokProfileField(g,'Gewicht (kg)','aok24:weight','number')
-      aokProfileField(g,'Gewichtsangabe','aok24:weightWith','select',['ohne Prothese','mit Prothese'])
-      aokProfileField(g,'Verordnende Arztpraxis (Name, Anschrift)','aok24:doctor','textarea')
-      aokProfileField(g,'Fachpraxis','aok24:specialist','text')
+    function bindTechProfileControl(el,key,prefill='',readonly=false){
+      if(values[key]===undefined && prefill!==undefined && prefill!==null && String(prefill)!=='') values[key]=prefill
+      if(el.type==='checkbox'){
+        const arr=Array.isArray(values[key])?values[key]:[]
+        el.checked=arr.includes(el.value)
+        el.addEventListener('change',()=>{
+          const all=[...document.querySelectorAll('[data-tech-key="'+CSS.escape(key)+'"]')].filter(x=>x.type==='checkbox')
+          values[key]=all.filter(x=>x.checked).map(x=>x.value)
+          updateWizardStatus()
+        })
+      }else{
+        el.value=values[key]??''
+        if(readonly){el.readOnly=true;el.classList.add('tech-profile-readonly')}
+        const save=()=>{values[key]=el.value;updateWizardStatus()}
+        if(!readonly){el.addEventListener('input',save);el.addEventListener('change',save)}
+      }
+      el.dataset.techKey=key
+      el.dataset.required='false'
+      return el
+    }
 
-      g=aokProfileSection(host,'Angaben zur Amputation',2)
-      aokProfileMulti(g,'Beidseitige Amputation','aok24:bilateral',['beidseitig'])
-      aokProfileField(g,'Amputation seit','aok24:ampSince','date')
-      aokProfileField(g,'Seite','aok24:ampSide','select',['rechts','links'])
-      aokProfileField(g,'Amputationshöhe','aok24:ampHeight','select',['US','OS','Knieex','Hüftex','Hemipelvis','Fuß','Sonstiges'])
-      aokProfileField(g,'Amputationshöhe – spezifisch','aok24:ampHeightSpecific','text')
-      aokProfileField(g,'Ursache','aok24:ampCause','select',['pAVK (ohne Diabetes)','andere Zirkulationsstörung','Diabetes','Infektion (ohne Diabetes)','Trauma','Tumor','Sonstiges'])
-      aokProfileField(g,'Ursache – spezifisch','aok24:ampCauseSpecific','text')
-      aokProfileField(g,'Nachamputationen / Revisionen','aok24:revisions','select',['nein','ja'])
-      aokProfileMulti(g,'Bei ja','aok24:revisionType',['weichteilig','knöchern'])
-      aokProfileField(g,'Klinik / Ort','aok24:revisionClinic','text')
-      aokProfileField(g,'Monat / Jahr','aok24:revisionWhen','month')
+    function techProfileField(parent,label,key,type='text',options=[],prefill='',readonly=false){
+      const box=document.createElement('label');box.className='tech-profile-field'
+      const cap=document.createElement('span');cap.textContent=label;box.appendChild(cap)
+      let el
+      if(type==='textarea'){el=document.createElement('textarea');el.rows=3}
+      else if(type==='select'){
+        el=document.createElement('select')
+        el.innerHTML='<option value="">Bitte wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
+      }else{el=document.createElement('input');el.type=type}
+      bindTechProfileControl(el,key,prefill,readonly)
+      box.appendChild(el);parent.appendChild(box);return el
+    }
 
-      g=aokProfileSection(host,'Stumpfverhältnisse',2)
-      aokProfileField(g,'Stumpfform','aok24:stumpShape','select',['zylindrisch','konisch','birnenförmig','typisch (gemäß Amputationshöhe, z. B. Knieex, Chopart)','a-typisch'])
-      aokProfileField(g,'Stumpfform – spezifisch','aok24:stumpShapeSpecific','text')
-      aokProfileField(g,'Stumpflänge relativ zur Gegenseite','aok24:stumpLengthClass','select',['ultrakurz','kurz','mittel','lang','typisch'])
-      aokProfileField(g,'Stumpflänge knöchern (cm)','aok24:stumpLengthBone','number')
-      aokProfileField(g,'Stumpflänge weichteilig (cm)','aok24:stumpLengthSoft','number')
-      aokProfileField(g,'Stumpfendbelastungsfähigkeit','aok24:endLoad','select',['voll','teilweise','keine'])
-      aokProfileField(g,'Weichteildeckung','aok24:softCover','select',['gering','adäquat','übermäßig'])
-      aokProfileField(g,'Weichteilzustand','aok24:softState','select',['muskulös','normal','weich','atrophiert'])
-      aokProfileField(g,'Ödem','aok24:edema','select',['nein','ja leicht','ja ausgeprägt'])
-      aokProfileField(g,'Volumenschwankungen','aok24:volumeChange','select',['nein','ja'])
-      aokProfileField(g,'Volumenschwankungen – spezifisch','aok24:volumeChangeSpecific','text')
-      aokProfileMulti(g,'Amputationsnarbe','aok24:scar',['verheilt','eingezogen','verschieblich','mit Knochen verwachsen','nicht verheilt','instabil','verdichtetes Narbengewebe (Narbenplatte)'])
-      aokProfileField(g,'Hautzustand','aok24:skin','select',['unauffällig','auffällig'])
-      aokProfileField(g,'Hautzustand – spezifisch','aok24:skinSpecific','text')
-      aokProfileField(g,'Sensibilität','aok24:sensitivity','select',['unauffällig','vermehrt','vermindert'])
-      aokProfileField(g,'Sensibilität – spezifisch','aok24:sensitivitySpecific','text')
-      aokProfileMulti(g,'Weitere Auffälligkeiten','aok24:findings',['keine','Rötung','Druckstellen','Scheuerstelle','Ulcus','Randknoten','Polödem','Fistel','Neurom','Infekt','Exostosen','Sonstiges'])
-      aokProfileField(g,'Beschreibung / Lokalisation / Ursache','aok24:findingsDescription','textarea')
+    function techProfileChecks(parent,label,key,options,prefill=[]){
+      const box=document.createElement('div');box.className='tech-profile-field'
+      const cap=document.createElement('span');cap.textContent=label;box.appendChild(cap)
+      if(values[key]===undefined && prefill.length) values[key]=prefill
+      const opts=document.createElement('div');opts.className='tech-checks'
+      options.forEach(v=>{const l=document.createElement('label');const e=document.createElement('input');e.type='checkbox';e.value=v;bindTechProfileControl(e,key);l.append(e,document.createTextNode(v));opts.appendChild(l)})
+      box.appendChild(opts);parent.appendChild(box);return box
+    }
 
-      const plus=aokProfileSection(host,'PLUS-M™ 12-Fragen Kurzformular (v1.2)',1)
-      const wrap=document.createElement('div');wrap.className='plusm-wrap';const table=document.createElement('table');table.className='plusm-table'
-      table.innerHTML='<thead><tr><th>Frage</th><th>Antwort</th></tr></thead><tbody></tbody>';const tb=table.querySelector('tbody')
-      const qs=[
-        'Sind Sie in der Lage, in Ihrem Zuhause eine kurze Strecke zu Fuß zurückzulegen?',
-        'Sind Sie in der Lage, Bordsteine hinauf und herab zu steigen?',
-        'Sind Sie in der Lage, über einen Parkplatz zu gehen?',
-        'Sind Sie in der Lage, über Kies- oder Rollsplitt-Oberflächen zu gehen?',
-        'Sind Sie in der Lage, einen Stuhl von einem Raum zum anderen zu transportieren?',
-        'Sind Sie in der Lage zu gehen während Sie einen Einkaufskorb in der Hand tragen?',
-        'Sind Sie in der Lage weiterzugehen, wenn Sie angerempelt werden?',
-        'Sind Sie in der Lage, auf einer unbeleuchteten Straße oder einem unbeleuchteten Bürgersteig zu gehen?',
-        'Sind Sie in der Lage, mit Anderen Schritt zu halten, wenn Sie gehen?',
-        'Sind Sie in der Lage, über einen rutschigen Fußboden zu gehen?',
-        'Sind Sie in der Lage, eine steile Schotter-Auffahrt hinunter zu gehen?',
-        'Sind Sie in der Lage, etwa 3 Kilometer auf unebenen Wegen und durch hügeliges Gelände zu wandern?'
-      ]
-      const answers=['Ohne jede Schwierigkeiten (5)','Mit geringen Schwierigkeiten (4)','Mit einigen Schwierigkeiten (3)','Mit großen Schwierigkeiten (2)','Nicht dazu in der Lage (1)']
-      qs.forEach((q,i)=>{const tr=document.createElement('tr');const tdq=document.createElement('td');tdq.textContent=(i+1)+'. '+q;const tda=document.createElement('td');const sel=document.createElement('select');sel.innerHTML='<option value="">Bitte wählen</option>'+answers.map(x=>'<option>'+escapeHtml(x)+'</option>').join('');bindAokProfileControl(sel,'aok24:plusm'+(i+1));tda.appendChild(sel);tr.append(tdq,tda);tb.appendChild(tr)})
-      wrap.appendChild(table);plus.appendChild(wrap)
-      aokProfileField(plus,'Rohwert','aok24:plusRaw','number');aokProfileField(plus,'T-Score','aok24:plusT','number')
-      aokProfileField(plus,'Primär verwendete Gehhilfe','aok24:walkingAid','text')
-      aokProfileField(plus,'Gehhilfe – Seite','aok24:walkingAidSide','select',['rechts','links','beidseitig'])
+    function techProfileSection(host,title,cols=2){
+      const section=document.createElement('section');section.className='tech-profile-section'
+      const h=document.createElement('h4');h.textContent=title
+      const grid=document.createElement('div');grid.className='tech-profile-grid'+(cols===3?' three':'')
+      section.append(h,grid);host.appendChild(section);return grid
+    }
 
-      g=aokProfileSection(host,'Gangbildbeobachtung (optional)',2)
-      aokProfileField(g,'Auffälligkeiten in Koordination / Balance – spezifisch','aok24:gaitCoordination','textarea')
-      aokProfileField(g,'Videodokumentation','aok24:gaitVideo','select',['nein','ja'])
-      aokProfileMulti(g,'Beobachtung auf','aok24:gaitSurface',['Ebene','Rampe','Treppe','unebener Untergrund'])
-      aokProfileField(g,'Sonstiges','aok24:gaitOther','text')
+    function techMobilityBlock(host,grade,title,questions){
+      const details=document.createElement('details');details.className='mobility-block'
+      const summary=document.createElement('summary');summary.textContent='Mobilitätsgrad '+grade+' · '+title
+      const list=document.createElement('div');list.className='mobility-list'
+      questions.forEach((q,i)=>{
+        const row=document.createElement('div');row.className='mobility-row'
+        const span=document.createElement('span');span.textContent=q
+        const sel=document.createElement('select')
+        sel.innerHTML='<option value="">Bitte wählen</option><option>Weniger</option><option>Trifft zu</option><option>Mehr</option><option>Entfällt</option>'
+        bindTechProfileControl(sel,'tech:mob:'+grade+':'+i)
+        row.append(span,sel);list.appendChild(row)
+      })
+      details.append(summary,list);host.appendChild(details)
+    }
 
-      g=aokProfileSection(host,'Aktivitätsniveau (PMS)',2)
-      const activity=['0','1','1+','2','2+','3','3+','4']
-      aokProfileField(g,'Aktuell','aok24:activityCurrent','select',activity)
-      aokProfileField(g,'Aktuell – spezifisch (Fähigkeiten, Aktivitäten)','aok24:activityCurrentSpecific','textarea')
-      aokProfileField(g,'Erwartet','aok24:activityExpected','select',activity)
-      aokProfileField(g,'Erwartet – spezifisch (Fähigkeiten, Aktivitäten)','aok24:activityExpectedSpecific','textarea')
+    function renderTechnikerPg24Profile(){
+      const host=$('fieldList');host.innerHTML='';host.className='tech-profile'
+      $('fieldInfo').textContent='PG24 · FO_PG24_Anamnesebogen Techniker / allgemeiner Techniker-Profilerhebungsbogen. Stammdaten werden automatisch übernommen und müssen nicht doppelt erfasst werden.'
+      const hint=$('profileHint');hint.className='status-card ready'
+      hint.innerHTML='<strong>Allgemeiner PG24-Technikerbogen aktiv</strong>Für diesen Kostenträger wird kein AOK-BW-Vertragsbogen verwendet. Es werden nur die Felder dieses PG24-Erhebungsbogens angezeigt.'
 
-      g=aokProfileSection(host,'Geplante Versorgung (Grobplanung)',2)
-      aokProfileField(g,'Versorgung','aok24:plannedCare','select',['Post OP Versorgung','Interimsprothese','Definitivprothese','Wechselprothese','keine (z. B. Sport, Wasserfest)'])
-      aokProfileField(g,'Schaftsystem','aok24:socketSystem','text')
-      aokProfileField(g,'Halte-/Haftmechanismen','aok24:suspension','text')
-      aokProfileField(g,'Stumpfformung / Lymphmanagement','aok24:lymph','select',['nein','ja'])
-      aokProfileField(g,'Stumpfformung / Lymphmanagement – spezifisch','aok24:lymphSpecific','text')
-      aokProfileField(g,'Liner','aok24:liner','select',['nein','ja','Post OP Liner'])
-      aokProfileField(g,'Linergröße','aok24:linerSize','text')
-      aokProfileField(g,'Liner – spezifisch','aok24:linerSpecific','text')
-      aokProfileField(g,'Liner – Sonstiges','aok24:linerOther','text')
-      aokProfileField(g,'Stumpfstrümpfe','aok24:stumpSocks','select',['nein','ja'])
-      aokProfileField(g,'Stumpfstrümpfe – wann? / Anzahl / Art / Größe','aok24:stumpSocksSpecific','textarea')
-      aokProfileField(g,'Endkontakt','aok24:endContact','select',['voll','teilweise','kein'])
-      aokProfileField(g,'Endkontakt – spezifisch','aok24:endContactSpecific','text')
-      aokProfileField(g,'Fußpassteil','aok24:footPart','text')
-      aokProfileField(g,'Fußpassteil – Größe / Kat.','aok24:footPartSize','text')
-      aokProfileField(g,'Hüftpassteil','aok24:hipPart','text')
-      aokProfileField(g,'Kniepassteil','aok24:kneePart','text')
-      aokProfileField(g,'Kniepassteil – ggf. Modus','aok24:kneeMode','text')
-      aokProfileField(g,'Funktionelle Zusätze (z. B. Drehadapter)','aok24:functionalExtras','textarea')
-      aokProfileField(g,'Formausgleich','aok24:shapeComp','select',['nein','ja'])
-      aokProfileField(g,'Formausgleich – spezifisch','aok24:shapeCompSpecific','text')
-      aokProfileField(g,'Bemerkung / Sonstiges','aok24:planningNote','textarea')
+      const sideMap={rechts:'Rechts',links:'Links',beidseitig:'Beidseitig'}
+      const ampMap={'Vor-/Mittelfuß':'Teilfußamputation','Fuß/Fußwurzel/Rückfuß':'Fuß','Unterschenkel':'Unterschenkel','Knie-Exartikulation':'Knieexartikulation','Oberschenkel':'Oberschenkel','Hüft-Exartikulation / Hemipelvis':'Hüftexartikulation / Hemipelvektomie'}
+      const supply=['Folge','Wechsel','Reparatur','Änderung','Instandhaltung'].includes(values.supplyType)?'Folgeversorgung':'Erstversorgung'
 
-      g=aokProfileSection(host,'Zusammenfassende Beurteilung',2)
-      aokProfileField(g,'Prothesenversorgung möglich?','aok24:prosthesisPossible','select',['ja','nein'])
-      aokProfileField(g,'Prothesenversorgung – spezifisch','aok24:prosthesisPossibleSpecific','textarea')
-      aokProfileField(g,'Daten erhoben – Datum','aok24:assessmentDate','date')
-      aokProfileField(g,'Daten erhoben – Name','aok24:assessmentName','text')
+      let g=techProfileSection(host,'Angaben zur Person',3)
+      techProfileField(g,'Nachname','tech:lastName','text',[],values.patientLastName||'')
+      techProfileField(g,'Vorname','tech:firstName','text',[],values.patientFirstName||'')
+      techProfileField(g,'Geburtsdatum','tech:dob','date')
+      techProfileField(g,'Straße','tech:street')
+      techProfileField(g,'Ort','tech:city')
+      techProfileField(g,'Telefon','tech:phone','tel')
+      techProfileField(g,'Versichertennummer','tech:insuranceNo','text',[],values.insuredNo||'',true)
+      techProfileField(g,'Geschlecht','tech:sex','select',['Männlich','Weiblich'])
+      techProfileField(g,'Gewicht (kg)','tech:weight','number')
+      techProfileField(g,'Größe (cm)','tech:height','number')
 
-      g=aokProfileSection(host,'Wohnsituation',2)
-      aokProfileField(g,'Wohnlage','aok24:floor','select',['Parterre','Etage'])
-      aokProfileField(g,'Etage – welche?','aok24:floorWhich','text')
-      aokProfileField(g,'Anzahl Stufen','aok24:stairs','number')
-      aokProfileField(g,'Aufzug','aok24:elevator','select',['ja','nein'])
-      aokProfileField(g,'Wohnumfeld','aok24:environment','select',['flach','bergig'])
-      aokProfileField(g,'Wohnform','aok24:livingFacility','select',['Altenheim','Pflegeheim','Wohnheim'])
+      g=techProfileSection(host,'Angaben zur Amputation',3)
+      techProfileField(g,'Amputationsseite','tech:side','select',['Links','Rechts','Beidseitig'],sideMap[values.side]||'')
+      techProfileField(g,'Versorgung','tech:supplyKind','select',['Erstversorgung','Folgeversorgung'],supply)
+      techProfileField(g,'Bezeichnung des ausgeübten Berufs','tech:profession')
+      techProfileField(g,'Amputationsgrund','tech:ampReason','textarea')
+      techProfileField(g,'Datum der Amputation','tech:ampDate','date')
+      techProfileField(g,'Wo wurde die Amputation durchgeführt','tech:ampPlace')
+      techProfileField(g,'Nachamputation','tech:reamputation','select',['Ja','Nein'])
+      techProfileField(g,'Datum Nachamputation','tech:reamputationDate','date')
+      techProfileField(g,'Akutbehandlung stationär beendet','tech:acuteDone','select',['Ja','Nein'])
+      techProfileField(g,'Rehabilitationsmaßnahme erfolgt','tech:rehabDone','select',['Ja','Nein'])
+      techProfileField(g,'In physiotherapeutischer Behandlung','tech:physio','select',['Ja','Nein'])
+      techProfileField(g,'Amputationshöhe','tech:ampLevel','select',['Hemipelvektomie','Hüftexartikulation','Oberschenkel','Knieexartikulation','Unterschenkel','Fuß','Teilfußamputation'],ampMap[values.ampLevel]||'')
+      techProfileField(g,'Art der Fußamputation','tech:footAmpType')
 
-      g=aokProfileSection(host,'Derzeitige Versorgung',2)
-      aokProfileField(g,'Versorgungsart','aok24:currentCare','select',['Definitivversorgung','Interimsversorgung','Testversorgung','Sonstiges'])
-      aokProfileField(g,'Seit','aok24:currentSince','text')
-      aokProfileField(g,'Bauart des Schaftes','aok24:currentSocket','text')
-      aokProfileField(g,'Liner','aok24:currentLiner','select',['nein','ja'])
-      aokProfileField(g,'Linergröße','aok24:currentLinerSize','text')
-      aokProfileField(g,'Welcher Fuß mit welchen Funktionen','aok24:currentFoot','textarea')
-      aokProfileField(g,'Welches Hüftgelenk mit welchen Funktionen','aok24:currentHip','textarea')
-      aokProfileField(g,'Weitere Funktionspassteile','aok24:currentParts1','text')
-      aokProfileField(g,'Weitere Funktionspassteile (2)','aok24:currentParts2','text')
-      aokProfileField(g,'Welche Prothesenverkleidung','aok24:currentCover','text')
-      aokProfileField(g,'Gewicht der Prothese','aok24:currentWeight','number')
-      aokProfileField(g,'Versorgung ausreichend und zweckmäßig?','aok24:adequate','select',['ja','nein'])
-      aokProfileField(g,'Wenn nein: welche Änderungen','aok24:adequateChanges','textarea')
-      aokProfileField(g,'Tägliche Tragezeit (Stunden)','aok24:wearHours','number')
-      aokProfileField(g,'Tägliche Laufleistung (km)','aok24:dailyKm','number')
-      aokProfileField(g,'Am Stück ohne Pause (Meter)','aok24:continuousMeters','number')
-      aokProfileField(g,'Am Stück ohne Pause (Minuten)','aok24:continuousMinutes','number')
+      g=techProfileSection(host,'Versorgungsrelevante Erkrankungen, Behinderungen und Therapien',2)
+      techProfileField(g,'Allgemeine Erkrankungen mit Auswirkungen auf das Tragen der Prothese','tech:generalDiseases','textarea')
+      techProfileField(g,'Hauterkrankungen','tech:skinDiseases','textarea')
+      techProfileField(g,'Weitere Hinweise (z. B. Implantate, Endoprothesen)','tech:medicalNotes','textarea')
 
-      g=aokProfileSection(host,'Bestätigung',2)
-      aokProfileField(g,'Datum – Versicherte/r bzw. Bevollmächtigte/r','aok24:insuredSignatureDate','date')
-      aokProfileField(g,'Unterschrift Versicherte/r bzw. Bevollmächtigte/r','aok24:insuredSignature','text')
-      aokProfileField(g,'Datum – Hilfsmittelanbieter','aok24:providerSignatureDate','date')
-      aokProfileField(g,'Unterschrift / Stempel Hilfsmittelanbieter','aok24:providerSignature','text')
-      const privacy=document.createElement('div')
-      privacy.className='source-note'
-      privacy.style.gridColumn='1/-1'
-      privacy.textContent='Datenschutzhinweis gemäß AOK-Anlage 4: Die erhobenen Daten dienen der Prüfung der beantragten Prothesenversorgung; die im Originalformular enthaltenen Hinweise zur Datenverarbeitung und Schweigepflichtentbindung sind zu beachten.'
-      g.appendChild(privacy)
+      g=techProfileSection(host,'Angaben zur Vorversorgung',2)
+      techProfileField(g,'Datum der Versorgung','tech:previousDate','date')
+      techProfileField(g,'Wer führte die Vorversorgung durch','tech:previousProvider')
+      techProfileField(g,'Ist diese ausreichend und zweckmäßig','tech:previousAdequate','select',['Ja','Nein'])
+      techProfileField(g,'Wenn nein, welche Änderungen sind erforderlich','tech:previousChanges','textarea')
+      techProfileField(g,'Bauart des Schaftes','tech:previousSocket')
+      techProfileField(g,'Welcher Fuß mit welchen Funktionen','tech:previousFoot','textarea')
+      techProfileField(g,'Welches Kniegelenk mit welchen Funktionen','tech:previousKnee','textarea')
+      techProfileField(g,'Welches Hüftgelenk mit welchen Funktionen','tech:previousHip','textarea')
+      techProfileField(g,'Weitere Funktionspassteile','tech:previousParts','textarea')
+      techProfileField(g,'Welche Prothesenverkleidung','tech:previousCover')
+      techProfileField(g,'Gewicht der Prothese','tech:previousWeight','number')
+
+      g=techProfileSection(host,'Spezielle Angaben zum prothetisch zu versorgenden und zum kontralateralen Bein',2)
+      techProfileField(g,'Amputationsart / -technik','tech:ampTechnique','textarea')
+      techProfileField(g,'Stumpfform','tech:stumpShape','select',['zylindrisch','konisch','birnenförmig'])
+      techProfileField(g,'Wurden stumpfformende Maßnahmen durchgeführt (Wickeln)','tech:stumpShaping','select',['Ja','Nein'])
+      techProfileField(g,'Ist die Wundheilung abgeschlossen','tech:woundHealed','select',['Ja','Nein'])
+      techProfileField(g,'Weichteildeckung des Stumpfes','tech:softCover','select',['ausreichend','nicht ausreichend','übermäßig'])
+      techProfileField(g,'Endbelastung des Stumpfes','tech:endLoad','select',['nicht','teilweise','voll'])
+      techProfileField(g,'Palpationsbefund','tech:palpation','textarea')
+      techProfileChecks(g,'Amputationsnarbe','tech:scar',['verheilt','noch nicht verheilt','eingezogen','mit dem Knochen verwachsen'])
+      techProfileField(g,'Zusätzliche Narben / Narbenverlauf','tech:additionalScars','textarea')
+      techProfileField(g,'Zusätzliche Hautläsionen, Druck- u. Scheuerstellen','tech:skinLesions','textarea')
+      techProfileField(g,'Hautempfindung','tech:skinSensitivity','select',['normal','hochsensibel','reduziert'])
+      techProfileField(g,'Hauttransplantation','tech:skinTransplant','select',['Ja','Nein'])
+      techProfileField(g,'Farbe der Haut','tech:skinColor','select',['normal','andere Verfärbung'])
+      techProfileField(g,'Hauttemperatur','tech:skinTemperature','select',['warm','kalt'])
+      techProfileField(g,'Ödeme – wo','tech:edema','textarea')
+      techProfileField(g,'Gefäßstatus / Gefäßprothese','tech:vascular','textarea')
+
+      g=techProfileSection(host,'Schmerzen und sonstige Befunde',2)
+      techProfileField(g,'Stumpfschmerzen – Wo / Wann / Wie oft / Seit wann / provozierbar','tech:stumpPain','textarea')
+      techProfileField(g,'Phantomschmerzen – Wo / Wann / Wie oft / Seit wann / provozierbar','tech:phantomPain','textarea')
+      techProfileField(g,'Bisherige Therapie der Schmerzen','tech:painTherapy','textarea')
+      techProfileField(g,'Röntgenbefund','tech:xray','textarea')
+      techProfileField(g,'Muskelkraft','tech:muscleStrength','select',['voll','reduziert','aufgehoben'])
+      techProfileField(g,'Volumenschwankung','tech:volumeChange','select',['Ja','Nein'])
+      techProfileField(g,'Nachamputation indiziert','tech:reamputationIndicated','select',['Ja','Nein'])
+      techProfileField(g,'Infektionen','tech:infections','textarea')
+      techProfileField(g,'Statische Veränderungen des Beckens, die nicht ausgeglichen werden sollten','tech:pelvisStatic','select',['Ja','Nein'])
+      techProfileField(g,'Nähere Angaben','tech:pelvisStaticDetails','textarea')
+
+      g=techProfileSection(host,'Fragen zur Prothesenfähigkeit',2)
+      techProfileField(g,'Ist der Stumpf aus medizinischer Sicht prothetisch versorgbar','tech:prostheticSuitable','select',['Ja','Nein'])
+      techProfileField(g,'Ist eine Versorgung mit einem Interimsschaftsystem angezeigt','tech:interimIndicated','select',['Ja','Nein'])
+      techProfileField(g,'Ist die Stumpfreifung nach Interimsversorgung abgeschlossen','tech:stumpMature','select',['Ja','Nein'])
+
+      g=techProfileSection(host,'Angaben zur Gelenkfunktion',1)
+      techProfileField(g,'Gelenkbefunde inkl. Gelenkbeweglichkeit in der Neutral-Null-Methode der Amputations- und Gegenseite','tech:joints','textarea')
+
+      const mobilitySection=document.createElement('section');mobilitySection.className='tech-profile-section'
+      const mh=document.createElement('h4');mh.textContent='Fähigkeiten / Mobilitätsmerkmale des Patienten (am Tag der Erhebung)'
+      mobilitySection.appendChild(mh)
+      techMobilityBlock(mobilitySection,'0','Nichtgehfähiger',[
+        'Alleine sitzen','Auf dem erhaltenen Bein im Gehbarren stehen','Das Stehgleichgewicht im Gehbarren halten',
+        'Im Gehbarren oder mit Gehwagen gehen','Mit fremder Hilfe aus sitzender Position aufstehen','Mit fremder Hilfe aus stehender Position hinsetzen',
+        'Die Prothese mit fremder Hilfe an- und ablegen','Der Einweisung in den Gebrauch der Prothese geistig folgen',
+        'Sich weitgehend alleine an- und ausziehen','Sich weitgehend alleine waschen / duschen / baden'
+      ])
+      techMobilityBlock(mobilitySection,'1','Innenbereichsgeher',[
+        'Sich im häuslichen Bereich mittels Prothese fortbewegen und sich mobil halten','In einförmig langsamer Geschwindigkeit gehen',
+        'Die Prothese geringfügig stoßbelasten','Kleine hausinterne Hindernisse überwinden','Die Prothese weitgehend selbständig an- und ablegen',
+        'Auf dem erhaltenen Bein mit Gehstützen stehen','Das Stehgleichgewicht mit Gehstützen halten','Mit Gehstützen gehen',
+        'Selbständig aus sitzender Position aufstehen','Sich selbständig aus der stehenden Position hinsetzen'
+      ])
+      techMobilityBlock(mobilitySection,'2','Eingeschränkter Außenbereichsgeher',[
+        'Mit Prothese bis zu 15 Minuten gehen','Bordsteinkanten / Stufen bewältigen','Kleine Umwelthindernisse überschreiten',
+        'Auf leichten Bodenunebenheiten gehen','Selten seine Gehgeschwindigkeit wechseln','Öffentliche Transportmittel mit Hilfe benutzen',
+        'Die Prothese moderat stoßbelasten','Sich therapeutisch / gehschulisch trainieren','Kleineinkäufe selbständig erledigen'
+      ])
+      techMobilityBlock(mobilitySection,'3','Uneingeschränkter Außenbereichsgeher',[
+        'Auf dem erhaltenen Bein stehen','Das Stehgleichgewicht halten','Sich im Innen- und Außenbereich nur unwesentlich limitiert bewegen',
+        'Treppen / Stufen bewältigen','Fast alle Umwelthindernisse bewältigen','Auf Bodenunsicherheiten wie Schlamm, Nässe, Schnee oder Eis gehen',
+        'Häufig die Gehgeschwindigkeit wechseln','Alle öffentlichen Transportmittel benutzen','Eigene Transportmittel benutzen',
+        'Seinen Beruf ausüben','Seine Familie / Haushalt versorgen','Andere Personen versorgen, z. B. pflegen',
+        'Die Prothese stoßbelasten','Aktivitäten mit körperlicher Belastung ausüben'
+      ])
+      techMobilityBlock(mobilitySection,'4','Uneingeschränkter Außenbereichsgeher mit besonders hohen Ansprüchen',[
+        'Sich auch in bergiger Umgebung oder auf unebenem Untergrund unlimitiert bewegen',
+        'Sich in allen Geschwindigkeitsbereichen bewegen und diese ständig wechseln',
+        'Die Prothese im täglichen Einsatz zeitlich unlimitiert beanspruchen',
+        'Durch hohe körperliche Aktivitäten die Prothese überdurchschnittlich stoßbelasten und mechanisch beanspruchen'
+      ])
+      host.appendChild(mobilitySection)
+
+      g=techProfileSection(host,'Therapieziel / Bewertung',2)
+      techProfileField(g,'Beschreibung des Therapieziels unter Berücksichtigung der momentanen und realistisch zu erwartenden Fähigkeiten','tech:therapyGoal','textarea')
+      techProfileField(g,'Ermittelter Mobilitätsgrad','tech:mobilityGrade','select',['0 – Nichtgehfähiger','1 – Innenbereichsgeher','2 – Eingeschränkter Außenbereichsgeher','3 – Uneingeschränkter Außenbereichsgeher','4 – Uneingeschränkter Außenbereichsgeher mit besonders hohen Ansprüchen'])
+      techProfileField(g,'Beschreibung der weiteren Fähigkeiten','tech:furtherAbilities','textarea')
+      techProfileField(g,'Mit dem Therapieziel verbundene weitere Maßnahmen','tech:furtherMeasures','textarea')
+      techProfileField(g,'Wohnungswechsel erforderlich','tech:movingRequired','select',['Ja','Nein'])
+      techProfileField(g,'Psychotherapeutische Motivierung','tech:psychotherapy','select',['Ja','Nein'])
+      techProfileField(g,'Gehschulung','tech:gaitTraining','select',['ambulant','stationär'])
+      techProfileField(g,'Krankengymnastische Mobilisierung','tech:physioMobilization','select',['Ja','Nein'])
+      techProfileField(g,'Weitere benötigte Hilfsmittel','tech:furtherAids','textarea')
+      techProfileField(g,'Sonstige medizinische Hinweise / Alternativvorschläge','tech:otherMedicalNotes','textarea')
+
+      g=techProfileSection(host,'Wer führte die Beurteilung durch / Bestätigung',2)
+      techProfileField(g,'Arzt/in','tech:assessorDoctor')
+      techProfileField(g,'Datum Arzt/in','tech:assessorDoctorDate','date')
+      techProfileField(g,'Physiotherapeut/in','tech:assessorPhysio')
+      techProfileField(g,'Datum Physiotherapeut/in','tech:assessorPhysioDate','date')
+      techProfileField(g,'Orthopädietechniker/in','tech:assessorTech')
+      techProfileField(g,'Datum Orthopädietechniker/in','tech:assessorTechDate','date')
+      techProfileField(g,'Name Versicherte/r / Betreuer/in','tech:consentName','text',[],[values.patientFirstName,values.patientLastName].filter(Boolean).join(' '))
+      techProfileField(g,'Datum Einverständnis','tech:consentDate','date')
     }
 
     let pdfJsLoader=null
@@ -1257,16 +1395,18 @@
       const meta=selectedHimiMeta()
       const formId=$('careForm').value
       const selected=data.formulare.find(f=>f.Formular_ID===formId)
-      if(pg==='24' && isAokCase()){
-        renderAokPg24Profile()
-        return
-      }
       $('fieldList').className='field-list'
       if(pg && !himiId){
         $('ruleBox').classList.remove('hidden')
         $('ruleBox').innerHTML='<div><strong>Hilfsmittel noch nicht festgelegt</strong><p>Die Formularlogik wird erst nach Auswahl des konkreten Hilfsmittels innerhalb der Produktgruppe freigegeben.</p></div><span class="pill warning">PG '+escapeHtml(pg)+'</span>'
         $('fieldInfo').textContent='Bitte zuerst das konkrete Hilfsmittel / den Versorgungsbereich auswählen.'
         $('fieldList').innerHTML=''
+        return
+      }
+      if(pg==='24'){
+        $('ruleBox').classList.add('hidden')
+        if(isAokCase()) renderAokPg24Profile()
+        else renderTechnikerPg24Profile()
         return
       }
       if(selected){
