@@ -190,10 +190,10 @@
               <aside class="wizard-rail no-print">
                 <div class="wizard-progress"><i id="wizardProgressBar"></i></div>
                 <div class="wizard-progress-text"><span id="wizardProgressText">0 von 11 Arbeitsschritten bearbeitet</span></div>
-                <button class="wizard-step active" data-step="0"><span class="step-no">1</span><span class="step-label">Auftrag & Rezept</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="1"><span class="step-no">2</span><span class="step-label">Versorgungssituation</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="2"><span class="step-no">3</span><span class="step-label">Profilerhebung / Befund</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="3"><span class="step-no">4</span><span class="step-label">Maßaufnahme</span><span class="step-state"></span></button>
+                <button class="wizard-step active" data-step="0"><span class="step-no">1</span><span class="step-label">Auftragserfassung</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="1"><span class="step-no">2</span><span class="step-label">Rezepterfassung</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="2"><span class="step-no">3</span><span class="step-label">Profilerhebung</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="3"><span class="step-no">4</span><span class="step-label">Maßblatt</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="4"><span class="step-no">5</span><span class="step-label">Versorgungsplanung</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="5"><span class="step-no">6</span><span class="step-label">Vertrag & Kostenvoranschlag</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="6"><span class="step-no">7</span><span class="step-label">Genehmigung / Voraussetzungen</span><span class="step-state"></span></button>
@@ -205,56 +205,64 @@
 
               <div class="wizard-stage">
                 <section class="wizard-panel active" data-panel="0"><div class="card">
-                  <h2>1. Auftrag & Rezept</h2><p class="lead">Vorgang anlegen und die Ausgangsdaten erfassen. Eine vorhandene Verordnung kann per Foto oder Datei lokal eingelesen und per OCR erkannt werden; der erkannte Text bleibt manuell korrigierbar.</p>
+                  <h2>1. Auftragserfassung</h2><p class="lead">Auftrag anlegen und die versorgungssteuernden Stammdaten erfassen. Rezeptdaten werden bewusst erst im nächsten Arbeitsschritt verarbeitet.</p>
                   <div class="step-section"><h4>Vorgang / Patient</h4><div class="mini-grid three">
-                    <label>Vorgangsnummer<input data-case-field="caseNumber" placeholder="z. B. 2026-001" /></label>
+                    <label>Vorgangsnummer (SIC, wenn vorhanden)<input data-case-field="caseNumber" placeholder="SIC-Vorgangsnummer" /><small class="muted">Optional. Bei vorhandener SIC-Vorgangsnummer wird diese übernommen bzw. hier eingetragen.</small></label>
                     <label>Vorname<input data-case-field="patientFirstName" autocomplete="given-name" placeholder="Vorname" /></label>
                     <label>Nachname<input data-case-field="patientLastName" autocomplete="family-name" placeholder="Nachname" /></label>
-                    <label>Versichertennummer<input data-case-field="insuredNo" /></label>
-                    <label>Krankenkasse<select id="careKasse"><option value="">Bitte wählen</option></select></label>
+                    <label>Krankenkasse / Kostenträger<select id="careKasse"><option value="">Bitte wählen</option></select></label>
                     <label>Produktgruppe<select id="carePg"><option value="">Bitte wählen</option></select></label>
                     <label>Hilfsmittel / Versorgungsbereich<select id="careHimi"><option value="">Bitte zuerst PG wählen</option></select></label>
                   </div></div>
-                  <div class="step-section"><h4>Verordnung</h4>
-                    <div class="mini-grid">
-                      <label>Verordnung vorhanden?<select id="rxPresent" data-case-field="rxPresent"><option value="">Bitte wählen</option><option value="Ja">Ja</option><option value="Nein">Nein</option></select></label>
-                      <label id="rxDateLabel" class="hidden">Rezeptdatum<input type="date" data-case-field="rxDate" /></label>
-                    </div>
-                    <div id="rxYesPanel" class="hidden">
-                      <div class="mini-grid" style="margin-top:14px">
+                  <div class="step-section"><h4>Versorgungssituation</h4><div class="mini-grid three">
+                    <label>Versorgungsart<select id="careSupplyType" data-case-field="supplyType"><option value="">Bitte wählen</option><option>Post-OP</option><option>Interim</option><option>Definitiv</option><option>Folge</option><option>Wechsel</option><option>Reparatur</option><option>Änderung</option><option>Instandhaltung</option><option>Funktionsbauteilerprobung</option></select></label>
+                    <label id="careAmpLevelLabel"><span id="careAmpLevelText">Amputationshöhe / Versorgungsbereich</span><select id="careAmpLevel" data-case-field="ampLevel"><option value="">Bitte wählen</option><option>Vor-/Mittelfuß</option><option>Fuß/Fußwurzel/Rückfuß</option><option>Unterschenkel</option><option>Knie-Exartikulation</option><option>Oberschenkel</option><option>Hüft-Exartikulation / Hemipelvis</option><option>Sonstige</option></select></label>
+                    <label id="careSideLabel"><span>Seite</span><select id="careSide" data-case-field="side"><option value="">Bitte wählen</option><option>rechts</option><option>links</option><option>beidseitig</option></select></label>
+                  </div></div>
+                </div></section>
+
+                <section class="wizard-panel" data-panel="1"><div class="card">
+                  <h2>2. Rezepterfassung</h2><p class="lead">Rezept ja/nein auswählen. Bei vorhandener Verordnung werden Foto, Scan oder PDF lokal per OCR ausgewertet und erkannte Verordnungsdaten automatisch in die nachfolgenden Felder übernommen.</p>
+                  <div class="mini-grid">
+                    <label>Verordnung vorhanden?<select id="rxPresent" data-case-field="rxPresent"><option value="">Bitte wählen</option><option value="Ja">Ja</option><option value="Nein">Nein</option></select></label>
+                  </div>
+
+                  <div id="rxYesPanel" class="hidden" style="margin-top:14px">
+                    <div class="step-section"><h4>Rezept / Verordnung</h4>
+                      <div class="mini-grid">
                         <label>Rezept erfassen
                           <span class="actions">
                             <span style="flex:1"><small class="muted">Kamera / Foto</small><input type="file" id="rxCameraFile" accept="image/*" capture="environment" /></span>
                             <span style="flex:1"><small class="muted">Datei-Upload</small><input type="file" id="rxFile" accept="image/*,application/pdf" /></span>
                           </span>
-                          <small id="rxFileName" class="muted">Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.</small>
+                          <small id="rxFileName" class="muted">Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei selbst wird nicht in der Fachdatenbank gespeichert.</small>
                         </label>
-                        <label>OCR-Status
-                          <div id="ocrStatus" class="status-card open">Noch keine Rezeptdatei ausgewählt.</div>
-                        </label>
+                        <label>OCR-Status<div id="ocrStatus" class="status-card open">Noch keine Rezeptdatei ausgewählt.</div></label>
                       </div>
-                      <label style="margin-top:14px">Erkannter Verordnungstext
-                        <textarea id="rxOcrText" data-case-field="rxText" rows="6" placeholder="OCR-Ergebnis erscheint hier und kann anschließend korrigiert werden."></textarea>
-                      </label>
                     </div>
-                    <div id="rxNoPanel" class="hidden" style="margin-top:14px">
-                      <label>Verordnungstext / benötigter Rezepttext
-                        <textarea id="rxNeededText" data-case-field="rxNeededText" rows="6" placeholder="Benötigten Rezepttext vollständig erfassen."></textarea>
-                        <small class="muted">Pflichtangabe, solange keine Verordnung vorhanden ist.</small>
-                      </label>
+
+                    <div class="step-section"><h4>Verordnungsdaten</h4>
+                      <div class="mini-grid">
+                        <label>Verordnender Arzt / Praxis<input id="rxDoctor" data-case-field="rxDoctor" /></label>
+                        <label>Praxisanschrift<input id="rxPracticeAddress" data-case-field="rxPracticeAddress" /></label>
+                      </div>
+                      <div class="mini-grid three" style="margin-top:12px">
+                        <label>Verordnungsdatum<input id="rxDate" type="date" data-case-field="rxDate" /></label>
+                        <label>BSNR<input id="rxBsnr" data-case-field="rxBsnr" inputmode="numeric" /></label>
+                        <label>LANR<input id="rxLanr" data-case-field="rxLanr" inputmode="numeric" /></label>
+                        <label>HMV-/Positionsangaben<input id="rxHmvPositions" data-case-field="rxHmvPositions" /></label>
+                        <label>Versichertennummer (OCR)<input id="rxInsuredNo" data-case-field="insuredNo" autocomplete="off" /><small class="muted">Keine Pflichtangabe. Wird soweit erkennbar aus dem Rezept übernommen.</small></label>
+                      </div>
+                      <label style="margin-top:12px">Verordnung / Hilfsmitteltext<textarea id="rxOcrText" data-case-field="rxText" rows="5" placeholder="Der erkannte Verordnungs- bzw. Hilfsmitteltext wird hier automatisch eingetragen und kann korrigiert werden."></textarea></label>
+                      <details style="margin-top:12px"><summary>OCR-Rohtext anzeigen</summary><textarea id="rxOcrRaw" data-case-field="rxOcrRaw" rows="8" readonly style="margin-top:8px"></textarea></details>
                     </div>
                   </div>
-                </div></section>
 
-                <section class="wizard-panel" data-panel="1"><div class="card">
-                  <h2>2. Versorgungssituation</h2><p class="lead">Hier wird festgelegt, in welchem Versorgungskontext gearbeitet wird. Diese Auswahl bestimmt später, welche Dokumente und Prüfschritte relevant sind.</p>
-                  <div class="mini-grid three">
-                    <label>Versorgungsart<select id="careSupplyType" data-case-field="supplyType"><option value="">Bitte wählen</option><option>Post-OP</option><option>Interim</option><option>Definitiv</option><option>Folge</option><option>Wechsel</option><option>Reparatur</option><option>Änderung</option><option>Instandhaltung</option><option>Funktionsbauteilerprobung</option></select></label>
-                    <label id="careAmpLevelLabel"><span id="careAmpLevelText">Amputationshöhe / Versorgungsbereich</span><select id="careAmpLevel" data-case-field="ampLevel"><option value="">Bitte wählen</option><option>Vor-/Mittelfuß</option><option>Fuß/Fußwurzel/Rückfuß</option><option>Unterschenkel</option><option>Knie-Exartikulation</option><option>Oberschenkel</option><option>Hüft-Exartikulation / Hemipelvis</option><option>Sonstige</option></select></label>
-                    <label id="careSideLabel"><span>Seite</span><select id="careSide" data-case-field="side"><option value="">Bitte wählen</option><option>rechts</option><option>links</option><option>beidseitig</option></select></label>
-                    <label>Versorgungsanlass<textarea data-case-field="serviceReason" rows="3"></textarea></label>
-                    <label>Vorversorgung<textarea data-case-field="previousSupply" rows="3"></textarea></label>
-                    <label>Besondere Rahmenbedingungen<textarea data-case-field="contextFactors" rows="3"></textarea></label>
+                  <div id="rxNoPanel" class="hidden" style="margin-top:14px">
+                    <label>Verordnungstext / benötigter Rezepttext
+                      <textarea id="rxNeededText" data-case-field="rxNeededText" rows="6" placeholder="Benötigten Rezepttext vollständig erfassen."></textarea>
+                      <small class="muted">Pflichtangabe, solange keine Verordnung vorhanden ist.</small>
+                    </label>
                   </div>
                 </div></section>
 
@@ -874,7 +882,7 @@
     }
 
     function populateSelectors(){
-      const kassen=[...new Set(data.kassen.map(x=>x.Kasse_Kanonisch).filter(Boolean))].sort()
+      const kassen=[...new Set([...data.kassen.map(x=>x.Kasse_Kanonisch).filter(Boolean),'Privat','Selbstzahler'])].sort((a,b)=>a.localeCompare(b,'de'))
       const pgs=[...new Set(data.produktgruppen.map(x=>String(x.PG)).filter(Boolean))].sort((a,b)=>Number(a)-Number(b))
       $('careKasse').innerHTML='<option value="">Bitte wählen</option>'+kassen.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
       $('carePg').innerHTML='<option value="">Bitte wählen</option>'+pgs.map(x=>'<option value="'+escapeHtml(x)+'">PG '+escapeHtml(x)+'</option>').join('')
@@ -1310,8 +1318,8 @@
 
 
     const wizardSteps=[
-      {name:'Auftrag & Rezept'}, {name:'Versorgungssituation'}, {name:'Profilerhebung / Befund'},
-      {name:'Maßaufnahme'}, {name:'Versorgungsplanung'}, {name:'Vertrag & Kostenvoranschlag'},
+      {name:'Auftragserfassung'}, {name:'Rezepterfassung'}, {name:'Profilerhebung'},
+      {name:'Maßblatt'}, {name:'Versorgungsplanung'}, {name:'Vertrag & Kostenvoranschlag'},
       {name:'Genehmigung / Voraussetzungen'}, {name:'Versorgungsverlauf'}, {name:'Erprobung / Bild / Video'},
       {name:'Abgabe'}, {name:'Abrechnung & Abschluss'}
     ]
@@ -1448,20 +1456,20 @@
       if(!stepApplicable(i)) return {ok:true,missing:[]}
       let missing=[]
       if(i===0){
-        if(!$('careKasse').value) missing.push('Krankenkasse')
+        if(!$('careKasse').value) missing.push('Krankenkasse / Kostenträger')
         if(!$('carePg').value) missing.push('Produktgruppe')
         if(!selectedHimiId()) missing.push('Hilfsmittel / Versorgungsbereich')
-        missing.push(...missingValues(['patientFirstName','patientLastName','insuredNo','rxPresent']))
+        missing.push(...missingValues(['patientFirstName','patientLastName','supplyType']))
+        if(requiresSide()) missing.push(...missingValues(['side']))
+        if($('carePg').value==='24') missing.push(...missingValues(['ampLevel']))
+      } else if(i===1){
+        missing=missingValues(['rxPresent'])
         if(values.rxPresent==='Ja'){
           if(!values.rxFileCaptured) missing.push('Rezeptfoto / Rezeptdatei')
-          if(!String(values.rxText||'').trim()) missing.push('erkannter / korrigierter Verordnungstext')
+          if(!String(values.rxText||'').trim()) missing.push('Verordnung / Hilfsmitteltext')
         }else if(values.rxPresent==='Nein'){
           if(!String(values.rxNeededText||'').trim()) missing.push('Verordnungstext / benötigter Rezepttext')
         }
-      } else if(i===1){
-        missing=missingValues(['supplyType'])
-        if(requiresSide()) missing.push(...missingValues(['side']))
-        if($('carePg').value==='24') missing.push(...missingValues(['ampLevel']))
       } else if(i===2){
         return profileValidation()
       } else if(i===3){
@@ -1563,7 +1571,6 @@
       const no=present==='Nein'
       $('rxYesPanel')?.classList.toggle('hidden',!yes)
       $('rxNoPanel')?.classList.toggle('hidden',!no)
-      $('rxDateLabel')?.classList.toggle('hidden',!yes)
       if(yes) values.rxNeededText=''
       if(no){
         values.rxText=''
@@ -1611,6 +1618,71 @@
       return canvas
     }
 
+    function normalizeRxDate(value){
+      const m=String(value||'').match(/\b(0?[1-9]|[12]\d|3[01])[.\/-](0?[1-9]|1[0-2])[.\/-](\d{2}|\d{4})\b/)
+      if(!m) return ''
+      let y=m[3]; if(y.length===2) y='20'+y
+      return y+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0')
+    }
+
+    function setRecognizedField(key,value,overwrite=false){
+      value=String(value||'').trim()
+      if(!value) return
+      if(!overwrite && String(values[key]||'').trim()) return
+      values[key]=value
+      const el=document.querySelector('[data-case-field="'+key+'"]')
+      if(el) el.value=value
+    }
+
+    function extractAfterLabel(text,labelPattern,digitsPattern){
+      const m=String(text||'').match(new RegExp(labelPattern+'[^A-Z0-9]{0,18}('+digitsPattern+')','i'))
+      return m?m[1]:''
+    }
+
+    function parsePrescriptionOcr(text){
+      const clean=String(text||'').replace(/\r/g,'')
+      const lines=clean.split('\n').map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean)
+      const result={}
+      result.bsnr=extractAfterLabel(clean,'BSNR','\\d{9}')
+      result.lanr=extractAfterLabel(clean,'LANR','\\d{9}')
+      const kvnr=(clean.toUpperCase().match(/\b[A-Z]\d{9}\b/)||[])[0]||''
+      result.insuredNo=kvnr
+      const labelledDate=clean.match(/(?:Ausstellungsdatum|Verordnungsdatum|Rezeptdatum|Datum)\D{0,20}((?:0?[1-9]|[12]\d|3[01])[.\/-](?:0?[1-9]|1[0-2])[.\/-](?:\d{2}|\d{4}))/i)
+      const anyDate=clean.match(/\b(?:0?[1-9]|[12]\d|3[01])[.\/-](?:0?[1-9]|1[0-2])[.\/-](?:\d{2}|\d{4})\b/)
+      result.date=normalizeRxDate(labelledDate?.[1]||anyDate?.[0]||'')
+      const hmvs=[...clean.matchAll(/\b\d{2}\.\d{2}\.\d{2}\.\d{3,4}\b/g)].map(m=>m[0])
+      result.hmv=[...new Set(hmvs)].join(', ')
+      result.doctor=lines.find(l=>/(?:\bDr\.?\b|Praxis|MVZ|Arzt|Ärztin|Ärzte)/i.test(l) && l.length<120)||''
+      result.address=lines.find(l=>/\b\d{5}\s+[A-Za-zÄÖÜäöüß-]{2,}/.test(l) || /(straße|str\.|weg|platz|allee|gasse)\b/i.test(l))||''
+      const rxIndex=lines.findIndex(l=>/(Verordnung|Hilfsmittel|Hilfsmitteltext|Bezeichnung des Hilfsmittels)/i.test(l))
+      if(rxIndex>=0){
+        result.rxText=lines.slice(rxIndex,Math.min(lines.length,rxIndex+5))
+          .filter(l=>!/(BSNR|LANR|Versichert|Krankenkasse|Geburtsdatum)/i.test(l)).join('\n')
+      }
+      if(!result.rxText) result.rxText=clean
+      return result
+    }
+
+    function applyPrescriptionOcr(text){
+      const parsed=parsePrescriptionOcr(text)
+      values.rxOcrRaw=String(text||'')
+      const raw=$('rxOcrRaw'); if(raw) raw.value=values.rxOcrRaw
+      setRecognizedField('rxDoctor',parsed.doctor)
+      setRecognizedField('rxPracticeAddress',parsed.address)
+      setRecognizedField('rxDate',parsed.date)
+      setRecognizedField('rxBsnr',parsed.bsnr)
+      setRecognizedField('rxLanr',parsed.lanr)
+      setRecognizedField('rxHmvPositions',parsed.hmv)
+      setRecognizedField('insuredNo',parsed.insuredNo)
+      setRecognizedField('rxText',parsed.rxText)
+      const kassen=[...new Set(data.kassen.map(x=>x.Kasse_Kanonisch).filter(Boolean))]
+      if(!$('careKasse').value){
+        const hay=norm(text)
+        const found=kassen.find(k=>hay.includes(norm(k)))
+        if(found){$('careKasse').value=found;updateCare()}
+      }
+    }
+
     async function handleRxFile(e){
       const file=e.target.files?.[0]
       if(!file){
@@ -1629,10 +1701,9 @@
         values.rxFileName=file.name||'Kameraaufnahme'
         values.rxFileType=file.type||'image/*'
         values.rxOcrAt=new Date().toISOString()
-        values.rxText=text
-        $('rxOcrText').value=text
+        applyPrescriptionOcr(text)
         $('ocrStatus').className=text?'status-card ready':'status-card open'
-        $('ocrStatus').textContent=text?'OCR abgeschlossen. Bitte erkannten Text prüfen und bei Bedarf korrigieren.':'OCR abgeschlossen, aber kein Text erkannt. Bitte Text manuell erfassen.'
+        $('ocrStatus').textContent=text?'OCR abgeschlossen. Erkannte Verordnungsdaten wurden automatisch übernommen. Bitte Felder fachlich prüfen und bei Bedarf korrigieren.':'OCR abgeschlossen, aber kein Text erkannt. Bitte Verordnungsdaten manuell erfassen.'
         updateWizardStatus()
       }catch(err){
         console.error('OCR error',err)
@@ -1764,6 +1835,7 @@
       $('rxFileName').textContent='Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
       $('ocrStatus').className='status-card open'
       $('ocrStatus').textContent='Noch keine Rezeptdatei ausgewählt.'
+      if($('rxOcrRaw')) $('rxOcrRaw').value=''
       values.rxFileCaptured=false
       values.rxFileName=''
       values.rxFileType=''
