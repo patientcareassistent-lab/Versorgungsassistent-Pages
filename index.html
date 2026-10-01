@@ -1471,6 +1471,54 @@
       const h=document.createElement('h4');h.textContent=title;sec.appendChild(h);body.appendChild(sec);return sec
     }
 
+    function enableVerticalMeasureTableTabbing(host){
+      if(!host) return
+      host.onkeydown=event=>{
+        if(event.key!=='Tab') return
+        const control=event.target.closest('.source-measure-table input, .source-measure-table select, .source-measure-table textarea')
+        if(!control) return
+        const cell=control.closest('td')
+        const row=control.closest('tr')
+        const tbody=row?.parentElement
+        const table=control.closest('.source-measure-table')
+        if(!cell||!row||!tbody||!table||tbody.tagName!=='TBODY') return
+
+        const rows=[...tbody.rows]
+        const rowIndex=rows.indexOf(row)
+        const colIndex=cell.cellIndex
+        const firstDataCol=Math.min(...rows.flatMap(r=>[...r.cells].map((td,i)=>td.querySelector('input,select,textarea')?i:999)).filter(i=>i!==999))
+        const lastCol=Math.max(...rows.flatMap(r=>[...r.cells].map((td,i)=>td.querySelector('input,select,textarea')?i:-1)))
+
+        const getControl=(r,c)=>{
+          const el=rows[r]?.cells[c]?.querySelector('input:not([disabled]),select:not([disabled]),textarea:not([disabled])')
+          return el && el.offsetParent!==null ? el : null
+        }
+
+        let target=null
+        if(!event.shiftKey){
+          for(let r=rowIndex+1;r<rows.length&&!target;r++) target=getControl(r,colIndex)
+          if(!target){
+            for(let col=colIndex+1;col<=lastCol&&!target;col++){
+              for(let r=0;r<rows.length&&!target;r++) target=getControl(r,col)
+            }
+          }
+        }else{
+          for(let r=rowIndex-1;r>=0&&!target;r--) target=getControl(r,colIndex)
+          if(!target){
+            for(let col=colIndex-1;col>=firstDataCol&&!target;col--){
+              for(let r=rows.length-1;r>=0&&!target;r--) target=getControl(r,col)
+            }
+          }
+        }
+
+        if(target){
+          event.preventDefault()
+          target.focus()
+          if(typeof target.select==='function' && target.tagName==='INPUT') target.select()
+        }
+      }
+    }
+
     function renderSourceMeasureCircumferences(body,schema){
       const sec=sourceMeasureSection(body,'Stumpf / Positiv / Maßkontrolle')
       const wrap=document.createElement('div');wrap.className='source-measure-table-wrap'
@@ -1881,6 +1929,7 @@
       renderSourceMeasureDetails(body,schema)
       renderSourceMeasureFooter(body,schema)
       renderSourceMeasureOptionalOs(body,schema)
+      enableVerticalMeasureTableTabbing(host)
       $('saveMeasureHistoryButton').addEventListener('click',()=>saveSourceMeasureSnapshot(schema))
       renderMeasureOrientation(schema)
       renderSourceMeasureSummary()
