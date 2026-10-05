@@ -839,7 +839,7 @@
       activeSupplyId=item.id
       Object.keys(values).forEach(k=>delete values[k])
       Object.assign(values,item.values||{})
-      if(!values.caseKind) values.caseKind=inferredCaseKindFromSupplyType(values.supplyType)||'Neuversorgung'
+      if(!values.caseKind) values.caseKind='Neuversorgung'
       if(values.patientName && !values.patientFirstName && !values.patientLastName){
         values.patientLastName=values.patientName
       }
@@ -2896,6 +2896,7 @@
       syncWizardBranchLabels()
       syncSituationFields()
       syncRxPresence()
+      updateCareFields()
       renderMeasureFields()
     }
 
