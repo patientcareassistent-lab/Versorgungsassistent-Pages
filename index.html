@@ -305,11 +305,11 @@
                           <div class="order-field order-field-kind">
                             <span class="order-field-title">Vorgangsart <span class="order-required">*</span></span>
                             <div class="case-kind-options">
-                              <label class="case-kind-option"><input type="radio" name="caseKindChoice" value="Neuversorgung" data-case-field="caseKind"><span><b>Neuversorgung</b><small>Post-OP, Interim, Definitiv-, Folge- oder Wechselversorgung.</small></span></label>
-                              <label class="case-kind-option"><input type="radio" name="caseKindChoice" value="Reparatur" data-case-field="caseKind"><span><b>Reparatur</b><small>Reparatur-/Instandsetzungsfall mit eigenem Reparaturprotokoll.</small></span></label>
+                              <label class="case-kind-option"><input type="radio" name="caseKindChoice" value="Neuversorgung" data-case-field="caseKind"><span><b>Neuversorgung</b><small>Post-OP, Interim, Definitiv, Folge, Wechsel oder Funktionsbauteilerprobung.</small></span></label>
+                              <label class="case-kind-option"><input type="radio" name="caseKindChoice" value="Reparatur" data-case-field="caseKind"><span><b>Reparatur</b><small>Reparatur, Änderung oder Instandhaltung mit Reparaturprotokoll.</small></span></label>
                             </div>
                           </div>
-                          <div id="repairPathNote" class="repair-path-note hidden"><strong>Reparaturpfad:</strong> Auftragserfassung → Rezepterfassung → Reparaturprotokoll. Versorgungsspezifische Neuversorgungs-Schritte werden automatisch übersprungen.</div>
+                          <div id="repairPathNote" class="repair-path-note hidden"><strong>Reparaturpfad:</strong> Reparatur, Änderung und Instandhaltung führen über Auftragserfassung → Rezepterfassung → Reparaturprotokoll. Versorgungsspezifische Neuversorgungs-Schritte werden automatisch übersprungen.</div>
                           <label id="orderSupplyTypeField" class="order-field order-field-supply"><span class="order-field-title">Versorgungsart <span class="order-required">*</span></span>
                             <select id="careSupplyType" data-case-field="supplyType"><option value="">Bitte wählen</option><option>Post-OP</option><option>Interim</option><option>Definitiv</option><option>Folge</option><option>Wechsel</option><option>Reparatur</option><option>Änderung</option><option>Instandhaltung</option><option>Funktionsbauteilerprobung</option></select>
                           </label>
@@ -839,7 +839,7 @@
       activeSupplyId=item.id
       Object.keys(values).forEach(k=>delete values[k])
       Object.assign(values,item.values||{})
-      if(!values.caseKind) values.caseKind=values.supplyType==='Reparatur'?'Reparatur':'Neuversorgung'
+      if(!values.caseKind) values.caseKind=inferredCaseKindFromSupplyType(values.supplyType)||'Neuversorgung'
       if(values.patientName && !values.patientFirstName && !values.patientLastName){
         values.patientLastName=values.patientName
       }
@@ -1019,19 +1019,32 @@
     function syncSupplyTypeOptions(){
       const el=$('careSupplyType')
       if(!el) return
-      if(isRepairCase()){
-        el.innerHTML='<option value="Reparatur">Reparatur</option>'
-        el.value='Reparatur';values.supplyType='Reparatur'
-        return
-      }
+      const kind=selectedCaseKind()
       const meta=selectedHimiMeta()
       const current=values.supplyType||el.value
-      const fallback=['Post-OP','Interim','Definitiv','Folge','Wechsel','Änderung','Instandhaltung','Funktionsbauteilerprobung']
-      let options=(meta?.Versorgungsarten?.length?meta.Versorgungsarten:fallback).filter(x=>x!=='Reparatur')
-      if(!options.length) options=fallback
-      el.innerHTML='<option value="">Bitte wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
-      if(options.includes(current)){el.value=current;values.supplyType=current}
-      else{el.value='';values.supplyType=''}
+      const branchOptions=kind==='Reparatur'?REPAIR_SUPPLY_TYPES:kind==='Neuversorgung'?NEW_SUPPLY_TYPES:[]
+      const metaOptions=Array.isArray(meta?.Versorgungsarten)?meta.Versorgungsarten:[]
+      let options=branchOptions
+      if(metaOptions.length){
+        const intersection=branchOptions.filter(x=>metaOptions.includes(x))
+        if(intersection.length) options=intersection
+      }
+
+      if(!kind){
+        el.innerHTML='<option value="">Bitte zuerst Neuversorgung oder Reparatur wählen</option>'
+        el.value=''
+        values.supplyType=''
+        return
+      }
+
+      el.innerHTML='<option value="">Bitte Versorgungsart wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
+      if(options.includes(current)){
+        el.value=current
+        values.supplyType=current
+      }else{
+        el.value=''
+        values.supplyType=''
+      }
     }
 
     function createDynamicControl(f,keyPrefix){
@@ -2847,7 +2860,23 @@
       else if(value===undefined||value===null) el.value=''
     }
 
-    function isRepairCase(){ return values.caseKind==='Reparatur' }
+    const NEW_SUPPLY_TYPES=['Post-OP','Interim','Definitiv','Folge','Wechsel','Funktionsbauteilerprobung']
+    const REPAIR_SUPPLY_TYPES=['Reparatur','Änderung','Instandhaltung']
+
+    function selectedCaseKind(){
+      const checked=document.querySelector('input[name="caseKindChoice"]:checked')
+      return checked?.value || values.caseKind || ''
+    }
+
+    function isRepairCase(){
+      return selectedCaseKind()==='Reparatur'
+    }
+
+    function inferredCaseKindFromSupplyType(type=values.supplyType){
+      if(REPAIR_SUPPLY_TYPES.includes(type)) return 'Reparatur'
+      if(NEW_SUPPLY_TYPES.includes(type)) return 'Neuversorgung'
+      return ''
+    }
 
     function syncWizardBranchLabels(){
       const repair=isRepairCase()
@@ -2859,25 +2888,29 @@
       if(repairBox) repairBox.classList.toggle('hidden',!repair)
     }
 
-    function syncCaseKind(){
-      const repair=isRepairCase()
+    function syncCaseKind(explicitKind=''){
+      const kind=explicitKind || selectedCaseKind()
+      if(kind) values.caseKind=kind
+
+      document.querySelectorAll('input[name="caseKindChoice"]').forEach(radio=>{
+        radio.checked=String(radio.value)===String(values.caseKind||'')
+      })
+
+      const repair=values.caseKind==='Reparatur'
       $('repairPathNote')?.classList.toggle('hidden',!repair)
-      $('orderSupplyTypeField')?.classList.toggle('hidden',repair)
+      $('orderSupplyTypeField')?.classList.remove('hidden')
       $('repairPreperformedLabel')?.classList.toggle('hidden',!repair)
 
-      if(repair){
-        values.supplyType='Reparatur'
-        if($('careSupplyType')){
-          $('careSupplyType').innerHTML='<option value="Reparatur">Reparatur</option>'
-          $('careSupplyType').value='Reparatur'
-        }
-      }else{
-        if(values.supplyType==='Reparatur') values.supplyType=''
+      const previousType=values.supplyType||$('careSupplyType')?.value||''
+      const allowed=repair?REPAIR_SUPPLY_TYPES:values.caseKind==='Neuversorgung'?NEW_SUPPLY_TYPES:[]
+      if(previousType && !allowed.includes(previousType)) values.supplyType=''
+
+      if(!repair){
         values.repairPreperformed=''
         if($('repairPreperformed')) $('repairPreperformed').value=''
-        syncSupplyTypeOptions()
       }
 
+      syncSupplyTypeOptions()
       if($('repairPreperformedMirror')) $('repairPreperformedMirror').value=repair?(values.repairPreperformed||''):''
       syncWizardBranchLabels()
       syncSituationFields()
@@ -3004,6 +3037,8 @@
       if(!stepApplicable(i)) return {ok:true,missing:[]}
       let missing=[]
       if(i===0){
+        const caseKind=selectedCaseKind()
+        if(caseKind && values.caseKind!==caseKind) values.caseKind=caseKind
         if(!$('careKasse').value) missing.push('Krankenkasse / Kostenträger')
         if(!$('carePg').value) missing.push('Produktgruppe')
         if(!selectedHimiId()) missing.push('Hilfsmittel / Versorgungsbereich')
@@ -3117,6 +3152,15 @@
         }
         el.addEventListener('input',save)
         el.addEventListener('change',save)
+      })
+      document.querySelectorAll('input[name="caseKindChoice"]').forEach(radio=>{
+        radio.addEventListener('change',()=>{
+          if(!radio.checked) return
+          values.caseKind=radio.value
+          syncCaseKind(radio.value)
+          showWizardError('')
+          updateWizardStatus()
+        })
       })
       document.querySelectorAll('.wizard-step').forEach(b=>b.addEventListener('click',()=>{
         const target=Number(b.dataset.step)
@@ -3546,7 +3590,7 @@
     function clearCurrentSupplyInputs(){
       if(!activeSupplyId) return
       Object.keys(values).forEach(k=>delete values[k])
-      document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox')el.checked=false;else el.value=''})
+      document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox'||el.type==='radio')el.checked=false;else el.value=''})
       $('careKasse').value=''
       $('carePg').value=''
       values.himiId=''
@@ -3590,7 +3634,7 @@
       if(activeSupplyId) void autosaveSupplyDraft()
       activeSupplyId=(crypto.randomUUID?crypto.randomUUID():'versorgung-'+Date.now()+'-'+Math.random().toString(16).slice(2))
       Object.keys(values).forEach(k=>delete values[k])
-      document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox')el.checked=false;else el.value=''})
+      document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox'||el.type==='radio')el.checked=false;else el.value=''})
       $('careKasse').value=''
       $('carePg').value=''
       values.himiId=''
@@ -3621,7 +3665,7 @@
       void autosaveSupplyDraft()
       activeSupplyId=null
       Object.keys(values).forEach(k=>delete values[k])
-      document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox')el.checked=false;else el.value=''})
+      document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox'||el.type==='radio')el.checked=false;else el.value=''})
       $('careKasse').value=''
       $('carePg').value=''
       values.himiId=''
