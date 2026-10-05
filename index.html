@@ -911,6 +911,7 @@
       syncCaseKind()
       renderMeasureFields()
       syncRxPresence()
+      renderRepairPhotos()
       renderWizard()
       setView('care')
       updateSupplyEditState()
@@ -2928,6 +2929,7 @@
       const profile=$('profileStepContent'),repairBox=$('repairStepContent')
       if(profile) profile.classList.toggle('hidden',repair)
       if(repairBox) repairBox.classList.toggle('hidden',!repair)
+      if(repair) renderRepairPhotos()
     }
 
     function syncCaseKind(explicitKind=''){
@@ -2941,7 +2943,6 @@
       const repair=values.caseKind==='Reparatur'
       $('repairPathNote')?.classList.toggle('hidden',!repair)
       $('orderSupplyTypeField')?.classList.remove('hidden')
-      $('repairPreperformedLabel')?.classList.toggle('hidden',!repair)
 
       if(!repair){
         values.repairPreperformed=''
@@ -2949,7 +2950,6 @@
       }
 
       syncSupplyTypeOptions()
-      if($('repairPreperformedMirror')) $('repairPreperformedMirror').value=repair?(values.repairPreperformed||''):''
       syncWizardBranchLabels()
       syncSituationFields()
       syncRxPresence()
@@ -3086,7 +3086,6 @@
         if($('carePg').value==='24') missing.push(...missingValues(['ampLevel']))
       } else if(i===1){
         missing=missingValues(['rxPresent'])
-        if(isRepairCase() && !values.repairPreperformed) missing.push('Reparatur vorab erfolgt?')
         if(values.rxPresent==='Ja'){
           if(!values.rxFileCaptured) missing.push('Rezeptfoto / Rezeptdatei')
           if(!String(values.rxText||'').trim()) missing.push('Verordnung / Hilfsmitteltext')
@@ -3095,7 +3094,7 @@
         }
       } else if(i===2){
         if(isRepairCase()){
-          missing=missingValues(['repairDate','repairTechnician','repairComplaint','repairWork','repairFunctionTest','repairUsable','repairCompleted'])
+          missing=missingValues(['repairSicHimiId','repairDate','repairTechnician','repairPreperformed','repairComplaint','repairWork','repairFunctionTest','repairUsable','repairCompleted'])
           return {ok:missing.length===0,missing}
         }
         return profileValidation()
@@ -3170,6 +3169,112 @@
       el.innerHTML='<strong>'+escapeHtml(message)+'</strong>'+(missing.length?escapeHtml(missing.join(' · ')):'')
     }
 
+    function repairPhotos(){
+      return Array.isArray(values.repairPhotos)?values.repairPhotos:[]
+    }
+
+    function formatRepairPhotoSize(chars){
+      const bytes=Math.round((Number(chars)||0)*0.75)
+      if(bytes<1024) return bytes+' B'
+      if(bytes<1024*1024) return Math.round(bytes/1024)+' KB'
+      return (bytes/(1024*1024)).toFixed(1)+' MB'
+    }
+
+    async function compressRepairPhoto(file){
+      const bmp=await createImageBitmap(file)
+      try{
+        const maxSide=1000
+        const scale=Math.min(1,maxSide/Math.max(bmp.width,bmp.height))
+        const width=Math.max(1,Math.round(bmp.width*scale))
+        const height=Math.max(1,Math.round(bmp.height*scale))
+        const canvas=document.createElement('canvas')
+        canvas.width=width;canvas.height=height
+        const ctx=canvas.getContext('2d',{alpha:false})
+        ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height)
+        ctx.drawImage(bmp,0,0,width,height)
+        let quality=.72
+        let dataUrl=canvas.toDataURL('image/jpeg',quality)
+        if(dataUrl.length>480000){
+          quality=.56
+          dataUrl=canvas.toDataURL('image/jpeg',quality)
+        }
+        if(dataUrl.length>480000){
+          const smaller=document.createElement('canvas')
+          const ratio=Math.sqrt(430000/dataUrl.length)
+          smaller.width=Math.max(1,Math.round(width*ratio))
+          smaller.height=Math.max(1,Math.round(height*ratio))
+          const sctx=smaller.getContext('2d',{alpha:false})
+          sctx.fillStyle='#fff';sctx.fillRect(0,0,smaller.width,smaller.height)
+          sctx.drawImage(canvas,0,0,smaller.width,smaller.height)
+          dataUrl=smaller.toDataURL('image/jpeg',.55)
+        }
+        return {
+          id:crypto.randomUUID?crypto.randomUUID():'foto-'+Date.now()+'-'+Math.random().toString(16).slice(2),
+          name:String(file.name||'Reparaturfoto').slice(0,120),
+          type:'image/jpeg',
+          width,height,
+          createdAt:new Date().toISOString(),
+          dataUrl
+        }
+      }finally{bmp.close?.()}
+    }
+
+    function renderRepairPhotos(){
+      const host=$('repairPhotoGallery'),counter=$('repairPhotoCounter')
+      if(!host||!counter) return
+      const photos=repairPhotos()
+      counter.textContent=photos.length?photos.length+' von 4 Fotos gespeichert.':'Noch keine Fotos erfasst.'
+      if(!photos.length){
+        host.innerHTML='<div class="repair-photo-empty">Noch keine Fotodokumentation vorhanden.</div>'
+        return
+      }
+      host.innerHTML=photos.map((photo,index)=>
+        '<article class="repair-photo-item">'+
+          '<button type="button" class="repair-photo-remove" data-repair-photo-remove="'+index+'" aria-label="Foto löschen">×</button>'+
+          '<img src="'+escapeHtml(photo.dataUrl)+'" alt="Reparaturfoto '+(index+1)+'">'+
+          '<div class="repair-photo-meta" title="'+escapeHtml(photo.name)+'">'+escapeHtml(photo.name)+' · '+escapeHtml(formatRepairPhotoSize(photo.dataUrl?.length||0))+'</div>'+
+        '</article>'
+      ).join('')
+      host.querySelectorAll('[data-repair-photo-remove]').forEach(btn=>btn.addEventListener('click',()=>{
+        const i=Number(btn.dataset.repairPhotoRemove)
+        const next=repairPhotos().slice()
+        next.splice(i,1)
+        values.repairPhotos=next
+        renderRepairPhotos()
+        queueAutosaveSupply()
+        updateWizardStatus()
+      }))
+    }
+
+    async function handleRepairPhotos(files){
+      const selected=[...(files||[])].filter(file=>String(file.type||'').startsWith('image/'))
+      if(!selected.length) return
+      const existing=repairPhotos().slice()
+      const slots=Math.max(0,4-existing.length)
+      if(!slots){
+        showWizardError('Es können maximal 4 Reparaturfotos gespeichert werden.')
+        return
+      }
+      const todo=selected.slice(0,slots)
+      const counter=$('repairPhotoCounter')
+      if(counter) counter.textContent='Fotos werden vorbereitet …'
+      try{
+        for(const file of todo) existing.push(await compressRepairPhoto(file))
+        values.repairPhotos=existing
+        renderRepairPhotos()
+        queueAutosaveSupply()
+        showWizardError('')
+        updateWizardStatus()
+      }catch(err){
+        console.error(err)
+        showWizardError('Ein Reparaturfoto konnte nicht verarbeitet werden.',[err?.message||'Unbekannter Fehler'])
+        renderRepairPhotos()
+      }finally{
+        if($('repairPhotoFiles')) $('repairPhotoFiles').value=''
+        if($('repairPhotoCamera')) $('repairPhotoCamera').value=''
+      }
+    }
+
     function bindWizardInputs(){
       if(wizardBound) return
       wizardBound=true
@@ -3183,9 +3288,6 @@
           if(key==='caseKind') syncCaseKind()
           if(key==='supplyType'){syncSituationFields();renderMeasureFields()}
           if(key==='rxPresent') syncRxPresence()
-          if(key==='repairPreperformed'){
-            if($('repairPreperformedMirror')) $('repairPreperformedMirror').value=values.repairPreperformed||''
-          }
           showWizardError('');updateWizardStatus()
         }
         el.addEventListener('input',save)
@@ -3216,7 +3318,10 @@
       $('newSupplyOverviewButton').addEventListener('click',startNewSupply)
       $('rxFile').addEventListener('change',handleRxFile)
       $('rxCameraFile').addEventListener('change',handleRxFile)
+      $('repairPhotoFiles').addEventListener('change',e=>handleRepairPhotos(e.target.files))
+      $('repairPhotoCamera').addEventListener('change',e=>handleRepairPhotos(e.target.files))
       syncCaseKind()
+      renderRepairPhotos()
       syncRxPresence()
     }
 
@@ -3226,8 +3331,6 @@
       const no=present==='Nein'
       $('rxYesPanel')?.classList.toggle('hidden',!yes)
       $('rxNoPanel')?.classList.toggle('hidden',!no)
-      $('repairPreperformedLabel')?.classList.toggle('hidden',!isRepairCase())
-      if($('repairPreperformedMirror')) $('repairPreperformedMirror').value=isRepairCase()?(values.repairPreperformed||''):''
       if($('rxNeededHint')) $('rxNeededHint').textContent=isRepairCase()
         ?'Bei Reparaturen ist dieser Text optional, wenn keine Verordnung vorliegt.'
         :'Pflichtangabe, solange keine Verordnung vorhanden ist.'
@@ -3639,6 +3742,9 @@
       $('ruleBox').classList.add('hidden')
       $('rxFile').value=''
       $('rxCameraFile').value=''
+      if($('repairPhotoFiles')) $('repairPhotoFiles').value=''
+      if($('repairPhotoCamera')) $('repairPhotoCamera').value=''
+      renderRepairPhotos()
       $('rxFileName').textContent='Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
       $('ocrStatus').className='status-card open'
       $('ocrStatus').textContent='Noch keine Rezeptdatei ausgewählt.'
@@ -3683,6 +3789,9 @@
       $('ruleBox').classList.add('hidden')
       $('rxFile').value=''
       $('rxCameraFile').value=''
+      if($('repairPhotoFiles')) $('repairPhotoFiles').value=''
+      if($('repairPhotoCamera')) $('repairPhotoCamera').value=''
+      renderRepairPhotos()
       $('rxFileName').textContent='Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
       $('ocrStatus').className='status-card open'
       $('ocrStatus').textContent='Noch keine Rezeptdatei ausgewählt.'
@@ -3714,6 +3823,9 @@
       $('ruleBox').classList.add('hidden')
       $('rxFile').value=''
       $('rxCameraFile').value=''
+      if($('repairPhotoFiles')) $('repairPhotoFiles').value=''
+      if($('repairPhotoCamera')) $('repairPhotoCamera').value=''
+      renderRepairPhotos()
       $('rxFileName').textContent='Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
       $('ocrStatus').className='status-card open'
       $('ocrStatus').textContent='Noch keine Rezeptdatei ausgewählt.'
