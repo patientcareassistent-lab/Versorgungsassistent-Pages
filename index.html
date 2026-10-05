@@ -54,6 +54,7 @@
     .wizard-actions .right{display:flex;gap:10px}.step-section{border:1px solid #e7ecec;border-radius:13px;padding:16px;margin-top:14px;background:#fff}.step-section h4{margin:0 0 12px;font-size:.95rem}
     .mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.mini-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}
     .order-capture{display:grid;gap:14px;margin-top:4px}.order-section{border:1px solid #dfe4ef;border-radius:15px;background:#fff;overflow:hidden}.order-section-head{display:flex;align-items:center;gap:11px;padding:13px 15px;background:#f8f9fc;border-bottom:1px solid #e7eaf0}.order-section-no{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;flex:0 0 auto;background:#00157A;color:#fff;font-size:.75rem;font-weight:850}.order-section-head h4{margin:0;color:#102a43;font-size:.93rem}.order-section-head p{margin:2px 0 0;color:#667085;font-size:.73rem;line-height:1.35}.order-section-body{padding:15px}.order-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:12px 14px;align-items:start}.order-field{display:grid;grid-template-rows:auto 42px auto;gap:6px;min-width:0;font-size:.82rem;font-weight:700;align-self:start}.order-field>input,.order-field>select{height:42px}.order-field-title{display:flex;align-items:center;gap:4px;min-height:20px}.order-field small{font-weight:400;color:#667085;line-height:1.35}.order-field-name{grid-column:span 4}.order-field-case{grid-column:span 4}.order-field-payer{grid-column:span 5}.order-field-pg{grid-column:span 2}.order-field-aid{grid-column:span 5}.order-field-supply{grid-column:span 4}.order-field-level{grid-column:span 5}.order-field-side{grid-column:span 3}.order-optional{display:inline-flex;align-items:center;width:max-content;margin-left:5px;padding:2px 6px;border-radius:999px;background:#f2f4f7;color:#667085;font-size:.64rem;font-weight:700;vertical-align:middle}.order-required{color:#b42318;font-weight:850}.order-help{display:flex;align-items:flex-start;gap:7px;margin-top:11px;padding:9px 10px;border-radius:10px;background:#f7f9fc;color:#596673;font-size:.72rem;line-height:1.4}.order-help strong{color:#344054}.order-flow-note{display:flex;align-items:center;gap:8px;margin:-6px 0 14px;color:#667085;font-size:.76rem}.order-flow-note:before{content:"";width:18px;height:2px;background:#00157A;border-radius:2px}
+    .order-field-kind{grid-column:span 12}.case-kind-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.case-kind-option{position:relative;display:flex;align-items:flex-start;gap:9px;border:1px solid #d6dee9;border-radius:11px;padding:11px 12px;background:#fff;cursor:pointer}.case-kind-option:has(input:checked){border-color:#00157A;background:#f3f6ff;box-shadow:inset 0 0 0 1px #00157A}.case-kind-option input{width:auto;margin-top:2px}.case-kind-option b{display:block;color:#102a43;font-size:.82rem}.case-kind-option small{display:block;margin-top:2px;color:#667085;font-size:.7rem;font-weight:400}.repair-path-note{grid-column:span 12;border:1px solid #cfd9ea;border-radius:10px;background:#f5f8ff;padding:9px 10px;color:#344054;font-size:.73rem;line-height:1.45}.repair-path-note strong{color:#00157A}.repair-protocol{display:grid;gap:14px}.repair-protocol .step-section{margin-top:0}.repair-status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.repair-protocol-note{border:1px solid #d8e1ed;border-radius:11px;background:#f8faff;padding:10px 12px;color:#475467;font-size:.74rem;line-height:1.45}.repair-protocol-note strong{color:#00157A}@media(max-width:700px){.case-kind-options,.repair-status-grid{grid-template-columns:1fr}.order-field-kind,.repair-path-note{grid-column:1}}
     @media(max-width:900px){.order-field-name,.order-field-case,.order-field-payer,.order-field-pg,.order-field-aid,.order-field-supply,.order-field-level,.order-field-side{grid-column:span 6}}
     @media(max-width:620px){.order-grid{grid-template-columns:1fr}.order-field-name,.order-field-case,.order-field-payer,.order-field-pg,.order-field-aid,.order-field-supply,.order-field-level,.order-field-side{grid-column:1}.order-section-body{padding:13px}}
     .check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.check-tile{display:flex;gap:10px;align-items:flex-start;border:1px solid #e7ecec;border-radius:11px;padding:12px;background:#fafcfc}.check-tile input{width:auto;margin-top:3px}.check-tile b{display:block;font-size:.86rem}.check-tile small{display:block;color:#7a8794;margin-top:2px;line-height:1.4}
@@ -301,7 +302,15 @@
                       </div>
                       <div class="order-section-body">
                         <div class="order-grid">
-                          <label class="order-field order-field-supply"><span class="order-field-title">Versorgungsart <span class="order-required">*</span></span>
+                          <div class="order-field order-field-kind">
+                            <span class="order-field-title">Vorgangsart <span class="order-required">*</span></span>
+                            <div class="case-kind-options">
+                              <label class="case-kind-option"><input type="radio" name="caseKindChoice" value="Neuversorgung" data-case-field="caseKind"><span><b>Neuversorgung</b><small>Post-OP, Interim, Definitiv-, Folge- oder Wechselversorgung.</small></span></label>
+                              <label class="case-kind-option"><input type="radio" name="caseKindChoice" value="Reparatur" data-case-field="caseKind"><span><b>Reparatur</b><small>Reparatur-/Instandsetzungsfall mit eigenem Reparaturprotokoll.</small></span></label>
+                            </div>
+                          </div>
+                          <div id="repairPathNote" class="repair-path-note hidden"><strong>Reparaturpfad:</strong> Auftragserfassung → Rezepterfassung → Reparaturprotokoll. Versorgungsspezifische Neuversorgungs-Schritte werden automatisch übersprungen.</div>
+                          <label id="orderSupplyTypeField" class="order-field order-field-supply"><span class="order-field-title">Versorgungsart <span class="order-required">*</span></span>
                             <select id="careSupplyType" data-case-field="supplyType"><option value="">Bitte wählen</option><option>Post-OP</option><option>Interim</option><option>Definitiv</option><option>Folge</option><option>Wechsel</option><option>Reparatur</option><option>Änderung</option><option>Instandhaltung</option><option>Funktionsbauteilerprobung</option></select>
                           </label>
                           <label class="order-field order-field-side" id="careSideLabel"><span class="order-field-title">Seite <span class="order-required">*</span></span>
@@ -320,6 +329,7 @@
                   <h2>2. Rezepterfassung</h2><p class="lead">Rezept ja/nein auswählen. Bei vorhandener Verordnung werden Foto, Scan oder PDF lokal per OCR ausgewertet und erkannte Verordnungsdaten automatisch in die nachfolgenden Felder übernommen.</p>
                   <div class="mini-grid">
                     <label>Verordnung vorhanden?<select id="rxPresent" data-case-field="rxPresent"><option value="">Bitte wählen</option><option value="Ja">Ja</option><option value="Nein">Nein</option></select></label>
+                    <label id="repairPreperformedLabel" class="hidden">Reparatur vorab erfolgt?<select id="repairPreperformed" data-case-field="repairPreperformed"><option value="">Bitte wählen</option><option value="Nein">Nein – Reparatur noch nicht durchgeführt</option><option value="Ja">Ja – Reparatur wurde bereits durchgeführt</option></select><small class="muted">Diese Angabe wird im Reparaturvorgang dokumentiert.</small></label>
                   </div>
 
                   <div id="rxYesPanel" class="hidden" style="margin-top:14px">
@@ -362,6 +372,7 @@
                 </div></section>
 
                 <section class="wizard-panel" data-panel="2"><div class="card">
+                  <div id="profileStepContent">
                   <h2>3. Profilerhebung / Befund</h2><p class="lead" id="fieldInfo">Kasse und Produktgruppe auswählen, um den passenden Erhebungsbogen aus der hinterlegten Formularlogik zu laden.</p>
                   <div class="status-card open" id="profileHint"><strong>Formularlogik</strong>Kassenspezifische Vorgaben werden bevorzugt; ansonsten wird der generische PG-Bogen verwendet.</div>
                   <section id="profileAiPanel" class="profile-ai">
@@ -391,6 +402,41 @@
                     </div>
                   </section>
                   <div id="fieldList" class="field-list" style="margin-top:14px"></div>
+                  </div>
+                  <div id="repairStepContent" class="hidden">
+                    <h2>3. Reparaturprotokoll</h2>
+                    <p class="lead">Schaden, Reparaturmaßnahme und Funktionsprüfung des vorhandenen Hilfsmittels nachvollziehbar dokumentieren.</p>
+                    <div class="repair-protocol-note"><strong>Reparaturvorgang</strong> Die Angaben aus Auftrag und Rezept bleiben dem Vorgang zugeordnet. Hier wird ausschließlich die durchgeführte bzw. geplante Reparatur dokumentiert.</div>
+                    <div class="repair-protocol" style="margin-top:14px">
+                      <div class="step-section"><h4>Reparaturauftrag / Befund</h4>
+                        <div class="mini-grid three">
+                          <label>Reparaturdatum<input type="date" data-case-field="repairDate"></label>
+                          <label>Techniker/in<input data-case-field="repairTechnician"></label>
+                          <label>Reparatur vorab erfolgt?<select data-case-field="repairPreperformedMirror"><option value="">aus Rezepterfassung</option><option>Nein</option><option>Ja</option></select><small class="muted">Wird aus der Rezepterfassung übernommen.</small></label>
+                        </div>
+                        <div class="mini-grid" style="margin-top:12px">
+                          <label>Beanstandung / Schaden<textarea data-case-field="repairComplaint" rows="4" placeholder="Was ist defekt bzw. was wurde beanstandet?"></textarea></label>
+                          <label>Befund / Fehlerursache<textarea data-case-field="repairFinding" rows="4" placeholder="Technischer Befund und erkennbare Ursache"></textarea></label>
+                        </div>
+                      </div>
+                      <div class="step-section"><h4>Durchgeführte Reparatur</h4>
+                        <div class="mini-grid">
+                          <label>Durchgeführte Arbeiten<textarea data-case-field="repairWork" rows="5" placeholder="Arbeitsschritte der Reparatur / Instandsetzung"></textarea></label>
+                          <label>Ersatzteile / Komponenten<textarea data-case-field="repairParts" rows="5" placeholder="Bauteile, Hersteller, Artikel-/Seriennummer soweit relevant"></textarea></label>
+                          <label>Besonderheiten / Abweichungen<textarea data-case-field="repairNotes" rows="4"></textarea></label>
+                          <label>Fotodokumentation<select data-case-field="repairPhoto"><option value="">Bitte wählen</option><option>nicht erforderlich / nicht vorhanden</option><option>vor Reparatur vorhanden</option><option>nach Reparatur vorhanden</option><option>vor und nach Reparatur vorhanden</option></select></label>
+                        </div>
+                      </div>
+                      <div class="step-section"><h4>Funktionsprüfung / Ergebnis</h4>
+                        <div class="repair-status-grid">
+                          <label>Funktionsprüfung durchgeführt?<select data-case-field="repairFunctionTest"><option value="">Bitte wählen</option><option>Ja</option><option>Nein</option></select></label>
+                          <label>Gebrauchsfähiger Zustand hergestellt?<select data-case-field="repairUsable"><option value="">Bitte wählen</option><option>Ja</option><option>Nein</option><option>nur eingeschränkt</option></select></label>
+                          <label>Reparatur abgeschlossen?<select data-case-field="repairCompleted"><option value="">Bitte wählen</option><option>Ja</option><option>Nein</option></select></label>
+                        </div>
+                        <label style="margin-top:12px">Ergebnis / Restmängel / weitere Maßnahmen<textarea data-case-field="repairResult" rows="4"></textarea></label>
+                      </div>
+                    </div>
+                  </div>
                 </div></section>
 
                 <section class="wizard-panel" data-panel="3"><div class="card">
@@ -2760,7 +2806,7 @@
 
 
     const wizardSteps=[
-      {name:'Auftragserfassung'}, {name:'Rezepterfassung'}, {name:'Profilerhebung'},
+      {name:'Auftragserfassung'}, {name:'Rezepterfassung'}, {name:'Profilerhebung / Reparaturprotokoll'},
       {name:'Maßblatt'}, {name:'Versorgungsplanung'}, {name:'Vertrag & Kostenvoranschlag'},
       {name:'Genehmigung / Voraussetzungen'}, {name:'Versorgungsverlauf'}, {name:'Erprobung / Bild / Video'},
       {name:'Abgabe'}, {name:'Abrechnung & Abschluss'}
