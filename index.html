@@ -195,9 +195,9 @@
               </div></div>
               <div class="table-wrap">
                 <table>
-                  <thead><tr><th>Kunde / Vorgang</th><th>Kasse</th><th>PG / Hilfsmittel</th><th>Aktueller Schritt</th><th>Status</th><th>Letzte Änderung</th></tr></thead>
+                  <thead><tr><th>Kunde / Vorgang</th><th>Vorgangsart</th><th>Kasse</th><th>PG / Hilfsmittel</th><th>Aktueller Schritt</th><th>Status</th><th>Letzte Änderung</th></tr></thead>
                   <tbody id="supplyOverviewBody">
-                    <tr><td colspan="6" class="supply-empty"><strong>Noch keine zwischengespeicherten Versorgungen vorhanden.</strong><small>Sobald in einer neuen Versorgung eine Änderung erfolgt, wird der Vorgang automatisch zwischengespeichert und hier angezeigt.</small></td></tr>
+                    <tr><td colspan="7" class="supply-empty"><strong>Noch keine zwischengespeicherten Versorgungen vorhanden.</strong><small>Sobald in einer neuen Versorgung eine Änderung erfolgt, wird der Vorgang automatisch zwischengespeichert und hier angezeigt.</small></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -871,7 +871,7 @@
       })
 
       if(!filtered.length){
-        body.innerHTML='<tr><td colspan="6" class="supply-empty"><strong>Keine passenden Versorgungen.</strong><small>Filter anpassen oder eine neue Versorgung beginnen. Änderungen werden automatisch zwischengespeichert.</small></td></tr>'
+        body.innerHTML='<tr><td colspan="7" class="supply-empty"><strong>Keine passenden Versorgungen.</strong><small>Filter anpassen oder eine neue Versorgung beginnen. Änderungen werden automatisch zwischengespeichert.</small></td></tr>'
         return
       }
 
@@ -879,8 +879,12 @@
         const name=([x.values?.patientFirstName,x.values?.patientLastName].filter(Boolean).join(' ')||x.values?.patientName||'Patient noch nicht erfasst')
         const caseNo=x.values?.caseNumber||x.id.slice(0,8)
         const pgText=x.pg?'PG '+escapeHtml(x.pg):'PG offen'
+        const caseKind=x.values?.caseKind||''
+        const caseKindClass=caseKind==='Reparatur'?'warning':caseKind==='Neuversorgung'?'blue':''
+        const caseKindText=caseKind||'Nicht erfasst'
         return '<tr class="supply-row" data-supply-id="'+escapeHtml(x.id)+'" tabindex="0" title="Versorgung öffnen">'+
           '<td><strong>'+escapeHtml(name)+'</strong><br><small>'+escapeHtml(caseNo)+'</small></td>'+
+          '<td><span class="pill '+caseKindClass+'">'+escapeHtml(caseKindText)+'</span></td>'+
           '<td>'+escapeHtml(x.kasse||'—')+'</td>'+
           '<td>'+pgText+(x.himi?'<br><small>'+escapeHtml(x.himi)+'</small>':'')+'</td>'+
           '<td>'+escapeHtml(supplyStepLabel(x))+'</td>'+
