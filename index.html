@@ -480,7 +480,26 @@
                       </section>
 
                       <section class="repair-protocol-card">
-                        <div class="repair-protocol-head"><span class="order-section-no">5</span><div><h4>Funktionsprüfung & Abschluss</h4><p>Ergebnis der Reparatur und weitere Maßnahmen festhalten.</p></div></div>
+                        <div class="repair-protocol-head"><span class="order-section-no">5</span><div><h4>Passteiletiketten / Herstellerlabels</h4><p>Typenschilder, Seriennummern, Artikelnummern und Herstelleretiketten der verbauten bzw. vorhandenen Komponenten fotografisch dokumentieren.</p></div></div>
+                        <div class="repair-protocol-body">
+                          <div class="repair-photo-drop">
+                            <div class="repair-photo-actions">
+                              <label>Etikett fotografieren
+                                <input id="repairLabelCamera" type="file" accept="image/*" capture="environment">
+                              </label>
+                              <label>Etikett-Fotos auswählen
+                                <input id="repairLabelFiles" type="file" accept="image/*" multiple>
+                              </label>
+                            </div>
+                            <div><span id="repairLabelCounter" class="repair-photo-counter">Noch keine Passteiletiketten erfasst.</span></div>
+                            <div id="repairLabelGallery" class="repair-photo-gallery"><div class="repair-photo-empty">Noch keine Hersteller-/Passteiletiketten vorhanden.</div></div>
+                            <div class="repair-photo-warning">Maximal 10 Bilder. Fotografieren Sie Etiketten möglichst frontal und scharf, sodass Hersteller, Artikel-/Seriennummer und Typbezeichnung lesbar bleiben. Die Bilder werden privat und benutzergebunden gespeichert.</div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section class="repair-protocol-card">
+                        <div class="repair-protocol-head"><span class="order-section-no">6</span><div><h4>Funktionsprüfung & Abschluss</h4><p>Ergebnis der Reparatur und weitere Maßnahmen festhalten.</p></div></div>
                         <div class="repair-protocol-body">
                           <div class="repair-status-grid">
                             <label>Funktionsprüfung durchgeführt? <span class="order-required">*</span><select data-case-field="repairFunctionTest"><option value="">Bitte wählen</option><option>Ja</option><option>Nein</option></select></label>
@@ -916,6 +935,7 @@
       renderMeasureFields()
       syncRxPresence()
       renderRepairPhotos()
+      renderRepairLabelPhotos()
       renderWizard()
       setView('care')
       updateSupplyEditState()
@@ -2933,7 +2953,10 @@
       const profile=$('profileStepContent'),repairBox=$('repairStepContent')
       if(profile) profile.classList.toggle('hidden',repair)
       if(repairBox) repairBox.classList.toggle('hidden',!repair)
-      if(repair) renderRepairPhotos()
+      if(repair){
+        renderRepairPhotos()
+        renderRepairLabelPhotos()
+      }
     }
 
     function syncCaseKind(explicitKind=''){
@@ -3233,9 +3256,10 @@
       }finally{bmp.close?.()}
     }
 
-    async function uploadRepairPhoto(prepared){
+    async function uploadRepairPhoto(prepared,folder='repair'){
       if(!currentSession?.user?.id || !activeSupplyId) throw new Error('Kein aktiver Versorgungsvorgang.')
-      const path=currentSession.user.id+'/'+activeSupplyId+'/'+prepared.meta.id+'.jpg'
+      const safeFolder=folder==='labels'?'labels':'repair'
+      const path=currentSession.user.id+'/'+activeSupplyId+'/'+safeFolder+'/'+prepared.meta.id+'.jpg'
       const upload=await supabase.storage.from(REPAIR_PHOTO_BUCKET).upload(path,prepared.blob,{
         contentType:'image/jpeg',
         cacheControl:'3600',
@@ -3327,6 +3351,81 @@
       }
     }
 
+    function repairLabelPhotos(){
+      return Array.isArray(values.repairLabelPhotos)?values.repairLabelPhotos:[]
+    }
+
+    async function renderRepairLabelPhotos(){
+      const host=$('repairLabelGallery'),counter=$('repairLabelCounter')
+      if(!host||!counter) return
+      const photos=repairLabelPhotos()
+      counter.textContent=photos.length?photos.length+' von 10 Etikett-Fotos gespeichert.':'Noch keine Passteiletiketten erfasst.'
+      if(!photos.length){
+        host.innerHTML='<div class="repair-photo-empty">Noch keine Hersteller-/Passteiletiketten vorhanden.</div>'
+        return
+      }
+      host.innerHTML='<div class="repair-photo-empty">Etikett-Fotos werden geladen …</div>'
+      const urls=await Promise.all(photos.map(async photo=>{
+        try{return await repairPhotoDisplayUrl(photo)}catch(err){console.error(err);return ''}
+      }))
+      host.innerHTML=photos.map((photo,index)=>
+        '<article class="repair-photo-item">'+
+          '<button type="button" class="repair-photo-remove" data-repair-label-remove="'+index+'" aria-label="Etikett-Foto löschen">×</button>'+
+          (urls[index]?'<img src="'+escapeHtml(urls[index])+'" alt="Passteiletikett '+(index+1)+'">':'<div class="repair-photo-empty">Foto konnte nicht geladen werden.</div>')+
+          '<div class="repair-photo-meta" title="'+escapeHtml(photo.name)+'">'+escapeHtml(photo.name)+' · '+escapeHtml(formatRepairPhotoSize(photo.size||0))+'</div>'+
+        '</article>'
+      ).join('')
+      host.querySelectorAll('[data-repair-label-remove]').forEach(btn=>btn.addEventListener('click',async()=>{
+        const i=Number(btn.dataset.repairLabelRemove)
+        const next=repairLabelPhotos().slice()
+        const [removed]=next.splice(i,1)
+        if(removed?.path){
+          const result=await supabase.storage.from(REPAIR_PHOTO_BUCKET).remove([removed.path])
+          if(result.error){
+            showWizardError('Etikett-Foto konnte nicht gelöscht werden.',[result.error.message])
+            return
+          }
+          repairPhotoUrlCache.delete(removed.path)
+        }
+        values.repairLabelPhotos=next
+        await renderRepairLabelPhotos()
+        queueAutosaveSupply()
+        updateWizardStatus()
+      }))
+    }
+
+    async function handleRepairLabelPhotos(files){
+      const selected=[...(files||[])].filter(file=>String(file.type||'').startsWith('image/'))
+      if(!selected.length) return
+      const existing=repairLabelPhotos().slice()
+      const slots=Math.max(0,10-existing.length)
+      if(!slots){
+        showWizardError('Es können maximal 10 Passteiletiketten gespeichert werden.')
+        return
+      }
+      const todo=selected.slice(0,slots)
+      const counter=$('repairLabelCounter')
+      if(counter) counter.textContent='Etikett-Fotos werden vorbereitet und sicher gespeichert …'
+      try{
+        for(const file of todo){
+          const prepared=await compressRepairPhoto(file)
+          existing.push(await uploadRepairPhoto(prepared,'labels'))
+        }
+        values.repairLabelPhotos=existing
+        await renderRepairLabelPhotos()
+        queueAutosaveSupply()
+        showWizardError('')
+        updateWizardStatus()
+      }catch(err){
+        console.error(err)
+        showWizardError('Ein Etikett-Foto konnte nicht gespeichert werden.',[err?.message||'Unbekannter Fehler'])
+        await renderRepairLabelPhotos()
+      }finally{
+        if($('repairLabelFiles')) $('repairLabelFiles').value=''
+        if($('repairLabelCamera')) $('repairLabelCamera').value=''
+      }
+    }
+
     function bindWizardInputs(){
       if(wizardBound) return
       wizardBound=true
@@ -3372,8 +3471,11 @@
       $('rxCameraFile').addEventListener('change',handleRxFile)
       $('repairPhotoFiles').addEventListener('change',e=>handleRepairPhotos(e.target.files))
       $('repairPhotoCamera').addEventListener('change',e=>handleRepairPhotos(e.target.files))
+      $('repairLabelFiles').addEventListener('change',e=>handleRepairLabelPhotos(e.target.files))
+      $('repairLabelCamera').addEventListener('change',e=>handleRepairLabelPhotos(e.target.files))
       syncCaseKind()
       renderRepairPhotos()
+      renderRepairLabelPhotos()
       syncRxPresence()
     }
 
@@ -3796,7 +3898,10 @@
       $('rxCameraFile').value=''
       if($('repairPhotoFiles')) $('repairPhotoFiles').value=''
       if($('repairPhotoCamera')) $('repairPhotoCamera').value=''
+      if($('repairLabelFiles')) $('repairLabelFiles').value=''
+      if($('repairLabelCamera')) $('repairLabelCamera').value=''
       renderRepairPhotos()
+      renderRepairLabelPhotos()
       $('rxFileName').textContent='Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
       $('ocrStatus').className='status-card open'
       $('ocrStatus').textContent='Noch keine Rezeptdatei ausgewählt.'
@@ -3843,7 +3948,10 @@
       $('rxCameraFile').value=''
       if($('repairPhotoFiles')) $('repairPhotoFiles').value=''
       if($('repairPhotoCamera')) $('repairPhotoCamera').value=''
+      if($('repairLabelFiles')) $('repairLabelFiles').value=''
+      if($('repairLabelCamera')) $('repairLabelCamera').value=''
       renderRepairPhotos()
+      renderRepairLabelPhotos()
       $('rxFileName').textContent='Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
       $('ocrStatus').className='status-card open'
       $('ocrStatus').textContent='Noch keine Rezeptdatei ausgewählt.'
@@ -3877,7 +3985,10 @@
       $('rxCameraFile').value=''
       if($('repairPhotoFiles')) $('repairPhotoFiles').value=''
       if($('repairPhotoCamera')) $('repairPhotoCamera').value=''
+      if($('repairLabelFiles')) $('repairLabelFiles').value=''
+      if($('repairLabelCamera')) $('repairLabelCamera').value=''
       renderRepairPhotos()
+      renderRepairLabelPhotos()
       $('rxFileName').textContent='Foto, Bild oder PDF auswählen. Die OCR läuft lokal im Browser; die Datei wird nicht an die Fachdatenbank übertragen.'
       $('ocrStatus').className='status-card open'
       $('ocrStatus').textContent='Noch keine Rezeptdatei ausgewählt.'
