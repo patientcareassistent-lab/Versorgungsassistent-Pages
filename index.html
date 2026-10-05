@@ -298,18 +298,18 @@
                     <section class="order-section">
                       <div class="order-section-head">
                         <span class="order-section-no">3</span>
-                        <div><h4>Versorgungssituation</h4><p>Versorgungsart, anatomischer Bereich und Seite legen den weiteren PG24-Ablauf fest.</p></div>
+                        <div><h4>Versorgungssituation</h4><p>Die Vorgangsart steuert den Ablauf; Versorgungsart, anatomischer Bereich und Seite werden unabhängig davon erfasst.</p></div>
                       </div>
                       <div class="order-section-body">
                         <div class="order-grid">
                           <div class="order-field order-field-kind">
                             <span class="order-field-title">Vorgangsart <span class="order-required">*</span></span>
                             <div class="case-kind-options">
-                              <label class="case-kind-option"><input type="radio" name="caseKindChoice" value="Neuversorgung" data-case-field="caseKind"><span><b>Neuversorgung</b><small>Post-OP, Interim, Definitiv, Folge, Wechsel oder Funktionsbauteilerprobung.</small></span></label>
-                              <label class="case-kind-option"><input type="radio" name="caseKindChoice" value="Reparatur" data-case-field="caseKind"><span><b>Reparatur</b><small>Reparatur, Änderung oder Instandhaltung mit Reparaturprotokoll.</small></span></label>
+                              <label class="case-kind-option"><input type="radio" name="caseKindChoice" value="Neuversorgung" data-case-field="caseKind"><span><b>Neuversorgung</b><small>Nach der Rezepterfassung folgt die Profilerhebung.</small></span></label>
+                              <label class="case-kind-option"><input type="radio" name="caseKindChoice" value="Reparatur" data-case-field="caseKind"><span><b>Reparatur</b><small>Nach der Rezepterfassung folgt das Reparaturprotokoll.</small></span></label>
                             </div>
                           </div>
-                          <div id="repairPathNote" class="repair-path-note hidden"><strong>Reparaturpfad:</strong> Reparatur, Änderung und Instandhaltung führen über Auftragserfassung → Rezepterfassung → Reparaturprotokoll. Versorgungsspezifische Neuversorgungs-Schritte werden automatisch übersprungen.</div>
+                          <div id="repairPathNote" class="repair-path-note hidden"><strong>Reparaturpfad:</strong> Die gewählte Versorgungsart bleibt unverändert. Ausschließlich die Vorgangsart „Reparatur“ führt nach der Rezepterfassung zum Reparaturprotokoll.</div>
                           <label id="orderSupplyTypeField" class="order-field order-field-supply"><span class="order-field-title">Versorgungsart <span class="order-required">*</span></span>
                             <select id="careSupplyType" data-case-field="supplyType"><option value="">Bitte wählen</option><option>Post-OP</option><option>Interim</option><option>Definitiv</option><option>Folge</option><option>Wechsel</option><option>Reparatur</option><option>Änderung</option><option>Instandhaltung</option><option>Funktionsbauteilerprobung</option></select>
                           </label>
@@ -1019,24 +1019,15 @@
     function syncSupplyTypeOptions(){
       const el=$('careSupplyType')
       if(!el) return
-      const kind=selectedCaseKind()
       const current=values.supplyType||el.value
-      const options=kind==='Reparatur'?REPAIR_SUPPLY_TYPES:kind==='Neuversorgung'?NEW_SUPPLY_TYPES:[]
-
-      if(!kind){
-        el.innerHTML='<option value="">Bitte zuerst Neuversorgung oder Reparatur wählen</option>'
-        el.value=''
-        values.supplyType=''
-        return
-      }
-
+      const options=ALL_SUPPLY_TYPES
       el.innerHTML='<option value="">Bitte Versorgungsart wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
       if(options.includes(current)){
         el.value=current
         values.supplyType=current
       }else{
         el.value=''
-        values.supplyType=''
+        if(current) values.supplyType=''
       }
     }
 
@@ -2853,6 +2844,7 @@
       else if(value===undefined||value===null) el.value=''
     }
 
+    const ALL_SUPPLY_TYPES=['Post-OP','Interim','Definitiv','Folge','Wechsel','Reparatur','Änderung','Instandhaltung','Funktionsbauteilerprobung']
     const NEW_SUPPLY_TYPES=['Post-OP','Interim','Definitiv','Folge','Wechsel','Funktionsbauteilerprobung']
     const REPAIR_SUPPLY_TYPES=['Reparatur','Änderung','Instandhaltung']
 
@@ -2893,10 +2885,6 @@
       $('repairPathNote')?.classList.toggle('hidden',!repair)
       $('orderSupplyTypeField')?.classList.remove('hidden')
       $('repairPreperformedLabel')?.classList.toggle('hidden',!repair)
-
-      const previousType=values.supplyType||$('careSupplyType')?.value||''
-      const allowed=repair?REPAIR_SUPPLY_TYPES:values.caseKind==='Neuversorgung'?NEW_SUPPLY_TYPES:[]
-      if(previousType && !allowed.includes(previousType)) values.supplyType=''
 
       if(!repair){
         values.repairPreperformed=''
@@ -2960,13 +2948,12 @@
     }
 
     function requiresProfile(){
-      if(isRepairCase()) return false
+      const kind=selectedCaseKind()
+      if(kind==='Reparatur') return false
+      if(kind==='Neuversorgung') return true
       const meta=selectedHimiMeta()
       if(meta) return !!meta.Profil_erforderlich
-      const s=supplyType()
-      if(!s) return true
-      if(isAokCase()) return ['Interim','Definitiv','Folge','Wechsel','Funktionsbauteilerprobung'].includes(s)
-      return !['Post-OP','Reparatur','Änderung','Instandhaltung'].includes(s)
+      return true
     }
     function requiresMeasure(){
       if(isRepairCase()) return false
@@ -2990,7 +2977,7 @@
       return !!meta?.Erprobung_erforderlich || supplyType()==='Funktionsbauteilerprobung' || supplyType()==='Erprobung' || values.requiresTrialEvidence==='Ja' || values.evidenceRequired===true
     }
     function stepApplicable(i){
-      if(i===2) return isRepairCase() || requiresProfile()
+      if(i===2) return selectedCaseKind()==='Neuversorgung' || selectedCaseKind()==='Reparatur'
       if(i===3) return !isRepairCase() && requiresMeasure()
       if(i===4) return !isRepairCase()
       if(i===7) return !isRepairCase() && requiresCourse()
