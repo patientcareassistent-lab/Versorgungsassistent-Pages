@@ -366,7 +366,7 @@
                   <div id="rxNoPanel" class="hidden" style="margin-top:14px">
                     <label>Verordnungstext / benötigter Rezepttext
                       <textarea id="rxNeededText" data-case-field="rxNeededText" rows="6" placeholder="Benötigten Rezepttext vollständig erfassen."></textarea>
-                      <small class="muted">Pflichtangabe, solange keine Verordnung vorhanden ist.</small>
+                      <small id="rxNeededHint" class="muted">Pflichtangabe, solange keine Verordnung vorhanden ist.</small>
                     </label>
                   </div>
                 </div></section>
@@ -2741,6 +2741,11 @@
     }
 
     function updateCareFields(){
+      if(isRepairCase()){
+        $('fieldList').innerHTML=''
+        $('ruleBox').classList.add('hidden')
+        return
+      }
       const pg=$('carePg').value
       const himi=selectedHimi()
       const himiId=selectedHimiId()
@@ -3141,6 +3146,9 @@
       $('rxNoPanel')?.classList.toggle('hidden',!no)
       $('repairPreperformedLabel')?.classList.toggle('hidden',!isRepairCase())
       if($('repairPreperformedMirror')) $('repairPreperformedMirror').value=isRepairCase()?(values.repairPreperformed||''):''
+      if($('rxNeededHint')) $('rxNeededHint').textContent=isRepairCase()
+        ?'Bei Reparaturen ist dieser Text optional, wenn keine Verordnung vorliegt.'
+        :'Pflichtangabe, solange keine Verordnung vorhanden ist.'
       if(yes) values.rxNeededText=''
       if(no){
         values.rxText=''
