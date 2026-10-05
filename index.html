@@ -1020,15 +1020,8 @@
       const el=$('careSupplyType')
       if(!el) return
       const kind=selectedCaseKind()
-      const meta=selectedHimiMeta()
       const current=values.supplyType||el.value
-      const branchOptions=kind==='Reparatur'?REPAIR_SUPPLY_TYPES:kind==='Neuversorgung'?NEW_SUPPLY_TYPES:[]
-      const metaOptions=Array.isArray(meta?.Versorgungsarten)?meta.Versorgungsarten:[]
-      let options=branchOptions
-      if(metaOptions.length){
-        const intersection=branchOptions.filter(x=>metaOptions.includes(x))
-        if(intersection.length) options=intersection
-      }
+      const options=kind==='Reparatur'?REPAIR_SUPPLY_TYPES:kind==='Neuversorgung'?NEW_SUPPLY_TYPES:[]
 
       if(!kind){
         el.innerHTML='<option value="">Bitte zuerst Neuversorgung oder Reparatur wählen</option>'
@@ -3609,7 +3602,7 @@
       values.rxFileName=''
       values.rxFileType=''
       values.rxOcrAt=''
-      syncRxPresence()
+      syncCaseKind()
       wizardIndex=0
       showWizardError('')
       renderWizard()
@@ -3653,7 +3646,7 @@
       values.rxFileName=''
       values.rxFileType=''
       values.rxOcrAt=''
-      syncRxPresence()
+      syncCaseKind()
       wizardIndex=0
       showWizardError('')
       setView('care')
@@ -3684,7 +3677,7 @@
       values.rxFileName=''
       values.rxFileType=''
       values.rxOcrAt=''
-      syncRxPresence()
+      syncCaseKind()
       wizardIndex=0
       showWizardError('')
       renderWizard()
