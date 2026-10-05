@@ -412,7 +412,7 @@
                         <div class="mini-grid three">
                           <label>Reparaturdatum<input type="date" data-case-field="repairDate"></label>
                           <label>Techniker/in<input data-case-field="repairTechnician"></label>
-                          <label>Reparatur vorab erfolgt?<select data-case-field="repairPreperformedMirror"><option value="">aus Rezepterfassung</option><option>Nein</option><option>Ja</option></select><small class="muted">Wird aus der Rezepterfassung übernommen.</small></label>
+                          <label>Reparatur vorab erfolgt?<input id="repairPreperformedMirror" readonly placeholder="aus Rezepterfassung"><small class="muted">Wird automatisch aus der Rezepterfassung übernommen.</small></label>
                         </div>
                         <div class="mini-grid" style="margin-top:12px">
                           <label>Beanstandung / Schaden<textarea data-case-field="repairComplaint" rows="4" placeholder="Was ist defekt bzw. was wurde beanstandet?"></textarea></label>
@@ -839,6 +839,7 @@
       activeSupplyId=item.id
       Object.keys(values).forEach(k=>delete values[k])
       Object.assign(values,item.values||{})
+      if(!values.caseKind) values.caseKind=values.supplyType==='Reparatur'?'Reparatur':'Neuversorgung'
       if(values.patientName && !values.patientFirstName && !values.patientLastName){
         values.patientLastName=values.patientName
       }
@@ -850,6 +851,7 @@
       if(values.himiId) $('careHimi').value=values.himiId
       document.querySelectorAll('[data-case-field]').forEach(el=>writeCaseField(el,values[el.dataset.caseField]))
       updateCare()
+      syncCaseKind()
       renderMeasureFields()
       syncRxPresence()
       renderWizard()
@@ -1017,10 +1019,16 @@
     function syncSupplyTypeOptions(){
       const el=$('careSupplyType')
       if(!el) return
+      if(isRepairCase()){
+        el.innerHTML='<option value="Reparatur">Reparatur</option>'
+        el.value='Reparatur';values.supplyType='Reparatur'
+        return
+      }
       const meta=selectedHimiMeta()
       const current=values.supplyType||el.value
-      const fallback=['Post-OP','Interim','Definitiv','Folge','Wechsel','Reparatur','Änderung','Instandhaltung','Funktionsbauteilerprobung']
-      const options=(meta?.Versorgungsarten?.length?meta.Versorgungsarten:fallback)
+      const fallback=['Post-OP','Interim','Definitiv','Folge','Wechsel','Änderung','Instandhaltung','Funktionsbauteilerprobung']
+      let options=(meta?.Versorgungsarten?.length?meta.Versorgungsarten:fallback).filter(x=>x!=='Reparatur')
+      if(!options.length) options=fallback
       el.innerHTML='<option value="">Bitte wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
       if(options.includes(current)){el.value=current;values.supplyType=current}
       else{el.value='';values.supplyType=''}
@@ -2823,12 +2831,53 @@
 
     function readCaseField(el){
       if(el.type==='checkbox') return !!el.checked
+      if(el.type==='radio') return el.checked?el.value:undefined
       return el.value
     }
 
     function writeCaseField(el,value){
       if(el.type==='checkbox') el.checked=!!value
+      else if(el.type==='radio') el.checked=String(value??'')===String(el.value)
       else if(value!==undefined && value!==null) el.value=value
+      else if(value===undefined||value===null) el.value=''
+    }
+
+    function isRepairCase(){ return values.caseKind==='Reparatur' }
+
+    function syncWizardBranchLabels(){
+      const repair=isRepairCase()
+      wizardSteps[2].name=repair?'Reparaturprotokoll':'Profilerhebung'
+      const step=document.querySelector('.wizard-step[data-step="2"] .step-label')
+      if(step) step.textContent=wizardSteps[2].name
+      const profile=$('profileStepContent'),repairBox=$('repairStepContent')
+      if(profile) profile.classList.toggle('hidden',repair)
+      if(repairBox) repairBox.classList.toggle('hidden',!repair)
+    }
+
+    function syncCaseKind(){
+      const repair=isRepairCase()
+      $('repairPathNote')?.classList.toggle('hidden',!repair)
+      $('orderSupplyTypeField')?.classList.toggle('hidden',repair)
+      $('repairPreperformedLabel')?.classList.toggle('hidden',!repair)
+
+      if(repair){
+        values.supplyType='Reparatur'
+        if($('careSupplyType')){
+          $('careSupplyType').innerHTML='<option value="Reparatur">Reparatur</option>'
+          $('careSupplyType').value='Reparatur'
+        }
+      }else{
+        if(values.supplyType==='Reparatur') values.supplyType=''
+        values.repairPreperformed=''
+        if($('repairPreperformed')) $('repairPreperformed').value=''
+        syncSupplyTypeOptions()
+      }
+
+      if($('repairPreperformedMirror')) $('repairPreperformedMirror').value=repair?(values.repairPreperformed||''):''
+      syncWizardBranchLabels()
+      syncSituationFields()
+      syncRxPresence()
+      renderMeasureFields()
     }
 
     function isAokCase(){ return $('careKasse').value==='AOK Baden-Württemberg' }
@@ -2880,6 +2929,7 @@
     }
 
     function requiresProfile(){
+      if(isRepairCase()) return false
       const meta=selectedHimiMeta()
       if(meta) return !!meta.Profil_erforderlich
       const s=supplyType()
@@ -2888,6 +2938,7 @@
       return !['Post-OP','Reparatur','Änderung','Instandhaltung'].includes(s)
     }
     function requiresMeasure(){
+      if(isRepairCase()) return false
       const meta=selectedHimiMeta()
       if(meta){
         if(!meta.Mass_erforderlich) return false
@@ -2897,19 +2948,22 @@
       return ['Interim','Definitiv','Folge','Wechsel'].includes(supplyType())
     }
     function requiresCourse(){
+      if(isRepairCase()) return false
       const meta=selectedHimiMeta()
       if(meta) return !!meta.Verlauf_erforderlich
       return ['Interim','Definitiv','Folge','Wechsel'].includes(supplyType())
     }
     function requiresEvidence(){
+      if(isRepairCase()) return false
       const meta=selectedHimiMeta()
       return !!meta?.Erprobung_erforderlich || supplyType()==='Funktionsbauteilerprobung' || supplyType()==='Erprobung' || values.requiresTrialEvidence==='Ja' || values.evidenceRequired===true
     }
     function stepApplicable(i){
-      if(i===2) return requiresProfile()
-      if(i===3) return requiresMeasure()
-      if(i===7) return requiresCourse()
-      if(i===8) return requiresEvidence()
+      if(i===2) return isRepairCase() || requiresProfile()
+      if(i===3) return !isRepairCase() && requiresMeasure()
+      if(i===4) return !isRepairCase()
+      if(i===7) return !isRepairCase() && requiresCourse()
+      if(i===8) return !isRepairCase() && requiresEvidence()
       return true
     }
 
@@ -2948,18 +3002,24 @@
         if(!$('careKasse').value) missing.push('Krankenkasse / Kostenträger')
         if(!$('carePg').value) missing.push('Produktgruppe')
         if(!selectedHimiId()) missing.push('Hilfsmittel / Versorgungsbereich')
+        if(!values.caseKind) missing.push('Vorgangsart')
         missing.push(...missingValues(['patientFirstName','patientLastName','supplyType']))
         if(requiresSide()) missing.push(...missingValues(['side']))
         if($('carePg').value==='24') missing.push(...missingValues(['ampLevel']))
       } else if(i===1){
         missing=missingValues(['rxPresent'])
+        if(isRepairCase() && !values.repairPreperformed) missing.push('Reparatur vorab erfolgt?')
         if(values.rxPresent==='Ja'){
           if(!values.rxFileCaptured) missing.push('Rezeptfoto / Rezeptdatei')
           if(!String(values.rxText||'').trim()) missing.push('Verordnung / Hilfsmitteltext')
-        }else if(values.rxPresent==='Nein'){
+        }else if(values.rxPresent==='Nein' && !isRepairCase()){
           if(!String(values.rxNeededText||'').trim()) missing.push('Verordnungstext / benötigter Rezepttext')
         }
       } else if(i===2){
+        if(isRepairCase()){
+          missing=missingValues(['repairDate','repairTechnician','repairComplaint','repairWork','repairFunctionTest','repairUsable','repairCompleted'])
+          return {ok:missing.length===0,missing}
+        }
         return profileValidation()
       } else if(i===3){
         missing=missingValues(['measureDate'])
@@ -3038,7 +3098,18 @@
       document.querySelectorAll('[data-case-field]').forEach(el=>{
         const key=el.dataset.caseField
         writeCaseField(el,values[key])
-        const save=()=>{values[key]=readCaseField(el);if(key==='supplyType'){syncSituationFields();renderMeasureFields()}if(key==='rxPresent')syncRxPresence();showWizardError('');updateWizardStatus()}
+        const save=()=>{
+          if(el.type==='radio' && !el.checked) return
+          const next=readCaseField(el)
+          if(next!==undefined) values[key]=next
+          if(key==='caseKind') syncCaseKind()
+          if(key==='supplyType'){syncSituationFields();renderMeasureFields()}
+          if(key==='rxPresent') syncRxPresence()
+          if(key==='repairPreperformed'){
+            if($('repairPreperformedMirror')) $('repairPreperformedMirror').value=values.repairPreperformed||''
+          }
+          showWizardError('');updateWizardStatus()
+        }
         el.addEventListener('input',save)
         el.addEventListener('change',save)
       })
@@ -3058,6 +3129,7 @@
       $('newSupplyOverviewButton').addEventListener('click',startNewSupply)
       $('rxFile').addEventListener('change',handleRxFile)
       $('rxCameraFile').addEventListener('change',handleRxFile)
+      syncCaseKind()
       syncRxPresence()
     }
 
@@ -3067,6 +3139,8 @@
       const no=present==='Nein'
       $('rxYesPanel')?.classList.toggle('hidden',!yes)
       $('rxNoPanel')?.classList.toggle('hidden',!no)
+      $('repairPreperformedLabel')?.classList.toggle('hidden',!isRepairCase())
+      if($('repairPreperformedMirror')) $('repairPreperformedMirror').value=isRepairCase()?(values.repairPreperformed||''):''
       if(yes) values.rxNeededText=''
       if(no){
         values.rxText=''
@@ -3373,6 +3447,7 @@
     }
 
     function renderWizard(){
+      syncWizardBranchLabels()
       if(!stepApplicable(wizardIndex)){
         const n=nextApplicableIndex(wizardIndex)
         wizardIndex=n!==wizardIndex?n:previousApplicableIndex(wizardIndex)
@@ -3410,7 +3485,8 @@
       if($('careKasse').value) context.push('<span class="pill">'+escapeHtml($('careKasse').value)+'</span>')
       if($('carePg').value) context.push('<span class="pill">PG '+escapeHtml($('carePg').value)+'</span>')
       if(selectedHimi()) context.push('<span class="pill blue">'+escapeHtml(selectedHimi())+'</span>')
-      if(values.supplyType) context.push('<span class="pill">'+escapeHtml(values.supplyType)+'</span>')
+      if(values.caseKind) context.push('<span class="pill">'+escapeHtml(values.caseKind)+'</span>')
+      if(values.supplyType && values.supplyType!==values.caseKind) context.push('<span class="pill">'+escapeHtml(values.supplyType)+'</span>')
       $('wizardContext').innerHTML=context.length?context.join(''):'<span class="pill">Neuer Vorgang</span>'
 
       const missing=wizardSteps.filter((_,i)=>applicable[i]&&!complete[i]).map(x=>x.name)
@@ -3426,7 +3502,7 @@
       }
 
       const ph=$('profileHint')
-      if(ph){
+      if(ph && !isRepairCase()){
         ph.innerHTML=requiresProfile()
           ?'<strong>Profilerhebung erforderlich</strong>'+(isAokCase()?'Die AOK-/Vertragslogik wird verwendet; vorhandene Pflichtfelder müssen vollständig sein.':'Der hinterlegte PG-Erhebungsbogen muss bearbeitet werden.')
           :'<strong>Für diesen Versorgungspfad nicht erforderlich</strong>Der Schritt wird im Ablauf automatisch übersprungen.'
