@@ -2137,23 +2137,41 @@
     }
 
     function ensureAokPage4SignaturePads(pageBox,textItems,viewport){
+      const sorted=[...(textItems||[])].sort((a,b)=>Math.abs(a.y-b.y)>4?a.y-b.y:a.x-b.x)
+      const lines=[]
+      sorted.forEach(item=>{
+        let line=lines.find(l=>Math.abs(l.y-item.y)<=4)
+        if(!line){line={y:item.y,items:[]};lines.push(line)}
+        line.items.push(item)
+      })
+      const printedLines=lines.map(line=>{
+        const items=line.items.sort((a,b)=>a.x-b.x)
+        return {
+          text:items.map(x=>x.text).join(' ').replace(/\s+/g,' ').trim(),
+          x:Math.min(...items.map(x=>x.x)),
+          y:line.y,
+          w:Math.max(...items.map(x=>x.x+(x.w||0)))-Math.min(...items.map(x=>x.x))
+        }
+      })
+
       const addFromPrintedLabel=(role,regex,key,label)=>{
         if(pageBox.querySelector('[data-signature-role="'+role+'"]')) return
-        const item=(textItems||[]).find(t=>regex.test(String(t.text||'')))
-        if(!item) return
-        const width=Math.max(item.w||0,viewport.width*.45)
-        const height=Math.max(28,viewport.height*.035)
-        appendAokSignaturePad(pageBox,key,label,role,item.x,Math.max(0,item.y-height-5),width,height,viewport)
+        const line=printedLines.find(t=>regex.test(String(t.text||'')))
+        if(!line) return
+        const width=Math.max(line.w||0,viewport.width*.45)
+        const height=Math.max(30,viewport.height*.038)
+        appendAokSignaturePad(pageBox,key,label,role,line.x,Math.max(0,line.y-height-6),width,height,viewport)
       }
+
       addFromPrintedLabel(
         'insured',
-        /Unterschrift.*Versichert|gesetzlichen\s+Vertreter|Bevollmächtigt/i,
+        /Unterschrift.*Versichert|Unterschrift.*gesetzlichen\s+Vertreter|Unterschrift.*Bevollmächtigt/i,
         'aokProfilePdf:insuredSignature',
         'Unterschrift der Versicherten bzw. gesetzlichen Vertretung / Bevollmächtigten'
       )
       addFromPrintedLabel(
         'provider',
-        /Unterschrift.*Hilfsmittelanbieter|Stempel\s+Hilfsmittelanbieter/i,
+        /Unterschrift.*Hilfsmittelanbieter|Unterschrift.*Stempel.*Hilfsmittelanbieter/i,
         'aokProfilePdf:providerSignature',
         'Unterschrift / Stempel Hilfsmittelanbieter'
       )
@@ -2201,8 +2219,7 @@
               const normalizedSignatureLabel=String(nearbyLabel||'').replace(/\s+/g,' ').trim()
               const insuredSignature=/Unterschrift.*Versichert|gesetzlichen\s+Vertreter|Bevollmächtigt/i.test(normalizedSignatureLabel)
               const providerSignature=/Unterschrift.*Hilfsmittelanbieter|Stempel.*Hilfsmittelanbieter/i.test(normalizedSignatureLabel)
-              const legacyInsuredFallback=fieldName==='Text65' && !providerSignature
-              if(insuredSignature || providerSignature || legacyInsuredFallback){
+              if(insuredSignature || providerSignature){
                 const isProvider=providerSignature
                 const signatureKey=isProvider?'aokProfilePdf:providerSignature':'aokProfilePdf:insuredSignature'
                 const signatureLabel=isProvider
