@@ -3099,7 +3099,7 @@
         if(row===1) return {sketch:'main',kind:'vertical',region:'Kniespalt (KS) bis Tibiaende',x:67,y1:44,y2:79}
         if(row===2) return {sketch:'main',kind:'horizontal',region:'M-L suprakondylär',x1:36,x2:65,y:38}
         if(row===3) return {sketch:'main',kind:'horizontal',region:'M-L kondylär',x1:34,x2:66,y:47}
-        if(row===4) return {sketch:'side',kind:'horizontal',region:'A-P-Maß in der 3-er Ebene, locker gemessen',x1:34,x2:68,y:49,refs:true}
+        if(row===4) return {sketch:'main',kind:'apZone',region:'A-P-Maß in der 3-er Ebene, locker gemessen',x1:39,x2:64,y1:27,y2:57}
         if(row===5) return {sketch:'side',kind:'angle',region:'Flexion Knie',cx:51,cy:20,r:16,a1:[38,34,51,20],a2:[51,20,66,5]}
       }
 
@@ -3154,6 +3154,10 @@
           '<line class="m-line" x1="'+profile.a2[0]+'" y1="'+profile.a2[1]+'" x2="'+profile.a2[2]+'" y2="'+profile.a2[3]+'"></line>'+
           '<path class="m-line m-active" d="M '+(profile.cx-profile.r*.72)+' '+(profile.cy+profile.r*.40)+' Q '+profile.cx+' '+(profile.cy-profile.r*.82)+' '+(profile.cx+profile.r*.68)+' '+(profile.cy-profile.r*.48)+'"></path>'+
           dot(profile.cx,profile.cy)
+      }
+      if(profile.kind==='apZone'){
+        return '<line class="m-line m-active" x1="'+profile.x1+'" y1="'+profile.y1+'" x2="'+profile.x1+'" y2="'+profile.y2+'"></line>'+
+          '<line class="m-line m-active" x1="'+profile.x2+'" y1="'+profile.y1+'" x2="'+profile.x2+'" y2="'+profile.y2+'"></line>'
       }
       return ''
     }
