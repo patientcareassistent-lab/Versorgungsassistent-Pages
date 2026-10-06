@@ -83,6 +83,14 @@
     .measure-orientation-guide-html{position:absolute;left:4%;right:4%;height:0;border-top:2px dashed rgba(0,21,122,.7);top:50%;transition:top .32s cubic-bezier(.2,.75,.25,1)}
     .measure-orientation-marker-html{position:absolute;width:12px;height:12px;border-radius:50%;background:#00157A;left:50%;top:50%;transform:translate(-50%,-50%);transition:left .32s cubic-bezier(.2,.75,.25,1),top .32s cubic-bezier(.2,.75,.25,1);box-shadow:0 0 0 2px #fff;z-index:2}
     .measure-orientation-marker-html:after{content:"";position:absolute;inset:-5px;border:2px solid #00157A;border-radius:50%;animation:measurePulseHtml 1.45s ease-out infinite}
+    .measure-orientation-overlay-svg{position:absolute;inset:0;width:100%;height:100%;display:none;overflow:visible}
+    .measure-orientation-overlay-svg .m-line{stroke:#00157A;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .measure-orientation-overlay-svg .m-ref{stroke:#00157A;stroke-width:1.05;fill:none;stroke-dasharray:2.5 2;opacity:.78}
+    .measure-orientation-overlay-svg .m-dot{fill:#00157A;stroke:#fff;stroke-width:.8}
+    .measure-orientation-overlay-svg .m-pulse{fill:none;stroke:#00157A;stroke-width:1.1;transform-origin:center;animation:measureSvgPulse 1.35s ease-out infinite}
+    .measure-orientation-overlay-svg .m-active{animation:measureSvgStroke 1.05s ease-in-out infinite alternate}
+    @keyframes measureSvgPulse{0%{opacity:.9}70%{opacity:0}100%{opacity:0}}
+    @keyframes measureSvgStroke{from{opacity:.68}to{opacity:1}}
     .measure-orientation-loading{padding:28px 12px;text-align:center;color:#667085;font-size:.75rem}
     @keyframes measurePulseHtml{0%{transform:scale(.75);opacity:.9}70%{transform:scale(2.2);opacity:0}100%{transform:scale(2.2);opacity:0}}.measure-orientation-stage svg{display:block;width:100%;max-width:245px;height:auto;overflow:visible}.measure-orientation-stage .body-fill{fill:#eef2f8;stroke:#7e8da6;stroke-width:2}.measure-orientation-stage .landmark{stroke:#aab4c3;stroke-width:1.2;stroke-dasharray:4 4}.measure-orientation-stage .landmark-label{fill:#667085;font-size:8.5px;font-weight:650}.measure-orientation-stage .guide{stroke:#00157A;stroke-width:1.4;stroke-dasharray:4 3;opacity:.65}.measure-orientation-stage .marker-core{fill:#00157A}.measure-orientation-stage .marker-ring{fill:none;stroke:#00157A;stroke-width:2;animation:measurePulse 1.45s ease-out infinite}.measure-orientation-stage .measure-zone{fill:#dfe7ff;opacity:.58;transition:opacity .25s ease}.measure-orientation-stage .orientation-ground{stroke:#98a2b3;stroke-width:2}
     .measure-orientation-stage .aok-outline{fill:#edf0f3;stroke:#5c6675;stroke-width:1.8}.measure-orientation-stage .aok-bone{fill:#fff;stroke:#7d8795;stroke-width:1.45}.measure-orientation-stage .aok-softbone{fill:none;stroke:#a8b0bb;stroke-width:1.15;stroke-dasharray:2.5 2.5}.measure-orientation-stage .aok-band{fill:none;stroke:#778397;stroke-width:1}.measure-orientation-stage .aok-band-label{fill:#344054;font-size:8px;font-weight:800}.measure-orientation-stage .aok-arrow{fill:#344054}.measure-orientation-stage .aok-reference{stroke:#344054;stroke-width:1.4}.measure-orientation-stage .aok-foot{fill:#fff;stroke:#5c6675;stroke-width:1.8}.measure-orientation-stage .aok-accent-label{fill:#00157A;font-size:8px;font-weight:850}.measure-orientation-stage .aok-dim{stroke:#667085;stroke-width:1.1}.measure-orientation-source{margin-top:7px;font-size:.66rem;color:#667085;line-height:1.35}.measure-orientation-source strong{color:#344054}.measure-orientation-readout{margin-top:10px;border:1px solid #dbe2ec;border-radius:10px;padding:9px 10px;background:#fbfcff}.measure-orientation-readout strong{display:block;color:#00157A;font-size:.79rem;line-height:1.35}.measure-orientation-readout span{display:block;margin-top:4px;font-size:.74rem;color:#475467;word-break:break-word}.measure-orientation-value{font-size:.9rem!important;font-weight:800;color:#00157A!important}.measure-active-control{outline:2px solid #00157A!important;outline-offset:1px;background:#f6f8ff!important}.measure-active-cell{background:#f1f5ff!important;box-shadow:inset 3px 0 0 #00157A}.measure-active-cell>span:first-child{color:#00157A}.measure-orientation-hint{margin-top:8px;font-size:.7rem;color:#667085;line-height:1.4}
@@ -2618,6 +2626,7 @@
         el.addEventListener('input',save);el.addEventListener('change',save)
       }
       el.dataset.measureKey=key
+      el.dataset.measureId=String(id)
       el.dataset.measureLabel=label
       if(isMeasure){
         el.dataset.measureValue='true'
@@ -2949,7 +2958,21 @@
           side:{x:.075,y:.565,w:.39,h:.31},
           foot:{x:.50,y:.57,w:.36,h:.145}
         }
-        return {url:'assets/aok-pg24/anlage-5b-ukb.pdf',annex:'5b',crop:crops[sketch]||crops.main}
+        const masks={
+          main:[
+            {x:.045,y:.355,w:.175,h:.095},
+            {x:.675,y:.445,w:.31,h:.455}
+          ],
+          side:[
+            {x:.075,y:.335,w:.205,h:.275},
+            {x:.615,y:.335,w:.235,h:.155},
+            {x:.395,y:.745,w:.22,h:.18}
+          ],
+          foot:[
+            {x:.10,y:.29,w:.245,h:.25}
+          ]
+        }
+        return {url:'assets/aok-pg24/anlage-5b-ukb.pdf',annex:'5b',crop:crops[sketch]||crops.main,masks:masks[sketch]||[]}
       }
       if(code==='FMB02002'){
         const crops={
@@ -3003,6 +3026,17 @@
         const ctx=canvas.getContext('2d')
         ctx.clearRect(0,0,sw,sh)
         ctx.drawImage(source,sx,sy,sw,sh,0,0,sw,sh)
+        ;(cfg.masks||[]).forEach(mask=>{
+          ctx.save()
+          ctx.fillStyle='#fff'
+          ctx.fillRect(
+            Math.round(sw*mask.x),
+            Math.round(sh*mask.y),
+            Math.round(sw*mask.w),
+            Math.round(sh*mask.h)
+          )
+          ctx.restore()
+        })
         canvas.dataset.sketch=sketch
         if(loading) loading.classList.add('hidden')
       }catch(err){
@@ -3017,13 +3051,13 @@
     function renderMeasureOrientation(schema){
       const stage=$('measureOrientationStage')
       if(!stage) return
-      stage.innerHTML='<div class="measure-orientation-crop"><canvas id="measureOrientationCanvas" aria-label="Unveränderter Originalausschnitt aus dem AOK-Maßblatt"></canvas><div id="measureOrientationLoading" class="measure-orientation-loading">Original-AOK-Skizze wird geladen …</div><div class="measure-orientation-overlay"><div id="measureOrientationGuide" class="measure-orientation-guide-html"></div><div id="measureOrientationMarker" class="measure-orientation-marker-html"></div></div></div>'
+      stage.innerHTML='<div class="measure-orientation-crop"><canvas id="measureOrientationCanvas" aria-label="Anatomische Originalskizze aus dem AOK-Maßblatt"></canvas><div id="measureOrientationLoading" class="measure-orientation-loading">Original-AOK-Skizze wird geladen …</div><div class="measure-orientation-overlay"><div id="measureOrientationGuide" class="measure-orientation-guide-html"></div><div id="measureOrientationMarker" class="measure-orientation-marker-html"></div><svg id="measureOrientationOverlaySvg" class="measure-orientation-overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><marker id="measureSvgArrow" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto-start-reverse"><path d="M0,0 L5,2.5 L0,5 z" fill="#00157A"></path></marker></defs><g id="measureOrientationShape"></g></svg></div></div>'
       const title=$('measureOrientationType')
       if(title) title.textContent=schema.code==='FMB02003'?'Unterschenkel':schema.code==='FMB02002'?'Knieexartikulation':'Oberschenkel'
       const src=$('measureOrientationSource')
       if(src){
         const annex=schema.code==='FMB02003'?'5b':schema.code==='FMB02002'?'5c':'5d'
-        src.innerHTML='<strong>Originalskizze:</strong> AOK Baden-Württemberg · Anlage '+annex+' · PG24, Stand 01.09.2026. Der Ausschnitt wird unverändert aus dem Original-PDF gerendert; lediglich Marker und Führungslinie liegen darüber.'
+        src.innerHTML='<strong>Originalskizze:</strong> AOK Baden-Württemberg · Anlage '+annex+' · PG24, Stand 01.09.2026. Die anatomische Originalzeichnung wird aus dem AOK-PDF gerendert. Ausfüllkästchen werden nur in dieser Orientierungsansicht ausgeblendet; Messlinien und Winkel liegen als Animation darüber.'
       }
       const first=$('measureFieldList')?.querySelector('[data-measure-value="true"]')
       if(first) updateMeasureOrientation(schema,first,false)
@@ -3040,16 +3074,104 @@
       return String(el.value||'').trim()
     }
 
+    function ukbMeasureAnimationProfile(schema,id,label){
+      if(schema?.code!=='FMB02003') return null
+      const text=String(label||'').toLowerCase()
+      const sid=String(id||'')
+
+      // 1. Umfangstabelle bleibt bewusst bei der bisherigen Marker-/Linienlogik.
+      if(sid.startsWith('circ:')) return null
+
+      if(sid.startsWith('detail:')){
+        const row=Number(sid.split(':')[1])||0
+        if(row===0) return {sketch:'main',kind:'vertical',region:'Kniespalt (KS) bis Stumpfende / Linerteller',x:67,y1:44,y2:91}
+        if(row===1) return {sketch:'main',kind:'vertical',region:'Kniespalt (KS) bis Tibiaende',x:67,y1:44,y2:79}
+        if(row===2) return {sketch:'main',kind:'horizontal',region:'M-L suprakondylär',x1:36,x2:65,y:38}
+        if(row===3) return {sketch:'main',kind:'horizontal',region:'M-L kondylär',x1:34,x2:66,y:47}
+        if(row===4) return {sketch:'side',kind:'horizontal',region:'A-P-Maß in der 3-er Ebene, locker gemessen',x1:34,x2:68,y:49,refs:true}
+        if(row===5) return {sketch:'side',kind:'angle',region:'Flexion Knie',cx:51,cy:20,r:16,a1:[38,34,51,20],a2:[51,20,66,5]}
+      }
+
+      if(sid==='footer:ksFloor' || /ks\s*[–-]\s*boden/.test(text))
+        return {sketch:'side',kind:'height',region:'KS – Boden',x:79,y1:22,y2:86,refX1:39,refX2:79}
+      if(sid==='footer:footLength' || /fußlänge/.test(text))
+        return {sketch:'side',kind:'footLength',region:'Fußlänge',x1:39,x2:61,y:84}
+      if(sid==='footer:patellaTop' || /höhe oberkante kniescheibe/.test(text))
+        return {sketch:'side',kind:'height',region:'Höhe Oberkante Kniescheibe',x:79,y1:8,y2:86,refX1:40,refX2:79}
+      if(sid==='footer:patellaBottom' || /höhe unterkante kniescheibe/.test(text))
+        return {sketch:'side',kind:'height',region:'Höhe Unterkante Kniescheibe',x:79,y1:20,y2:86,refX1:40,refX2:79}
+      if(sid==='footer:y90' || /y-maß/.test(text))
+        return {sketch:'side',kind:'diagonal',region:'Y-Maß bei 90°',x1:39,y1:86,x2:65,y2:51}
+      if(sid==='footer:pivotDef' || /drehpunkt-boden/.test(text))
+        return {sketch:'side',kind:'height',region:'Drehpunkt – Boden (def. Prothese)',x:80,y1:51,y2:86,refX1:65,refX2:80}
+      if(sid==='footer:heel' || /effektive absatzhöhe/.test(text))
+        return {sketch:'foot',kind:'height',region:'Effektive Absatzhöhe',x:29,y1:52,y2:69,refX1:20,refX2:38}
+      return null
+    }
+
+    function ukbMeasureOverlayMarkup(profile){
+      if(!profile) return ''
+      const arrows=' marker-start="url(#measureSvgArrow)" marker-end="url(#measureSvgArrow)"'
+      const dot=(x,y)=>'<circle class="m-pulse" cx="'+x+'" cy="'+y+'" r="4"></circle><circle class="m-dot" cx="'+x+'" cy="'+y+'" r="1.8"></circle>'
+      if(profile.kind==='vertical'){
+        return '<line class="m-ref" x1="31" y1="'+profile.y1+'" x2="72" y2="'+profile.y1+'"></line>'+
+          '<line class="m-ref" x1="31" y1="'+profile.y2+'" x2="72" y2="'+profile.y2+'"></line>'+
+          '<line class="m-line m-active" x1="'+profile.x+'" y1="'+profile.y1+'" x2="'+profile.x+'" y2="'+profile.y2+'"'+arrows+'></line>'+
+          dot(profile.x,(profile.y1+profile.y2)/2)
+      }
+      if(profile.kind==='horizontal'){
+        return (profile.refs?'<line class="m-ref" x1="'+profile.x1+'" y1="'+(profile.y-10)+'" x2="'+profile.x1+'" y2="'+(profile.y+10)+'"></line><line class="m-ref" x1="'+profile.x2+'" y1="'+(profile.y-10)+'" x2="'+profile.x2+'" y2="'+(profile.y+10)+'"></line>':'')+
+          '<line class="m-line m-active" x1="'+profile.x1+'" y1="'+profile.y+'" x2="'+profile.x2+'" y2="'+profile.y+'"'+arrows+'></line>'+
+          dot((profile.x1+profile.x2)/2,profile.y)
+      }
+      if(profile.kind==='height'){
+        return '<line class="m-ref" x1="'+profile.refX1+'" y1="'+profile.y1+'" x2="'+profile.refX2+'" y2="'+profile.y1+'"></line>'+
+          '<line class="m-ref" x1="'+profile.refX1+'" y1="'+profile.y2+'" x2="'+profile.refX2+'" y2="'+profile.y2+'"></line>'+
+          '<line class="m-line m-active" x1="'+profile.x+'" y1="'+profile.y1+'" x2="'+profile.x+'" y2="'+profile.y2+'"'+arrows+'></line>'+
+          dot(profile.x,(profile.y1+profile.y2)/2)
+      }
+      if(profile.kind==='footLength'){
+        return '<line class="m-ref" x1="'+profile.x1+'" y1="'+(profile.y-9)+'" x2="'+profile.x1+'" y2="'+(profile.y+5)+'"></line>'+
+          '<line class="m-ref" x1="'+profile.x2+'" y1="'+(profile.y-9)+'" x2="'+profile.x2+'" y2="'+(profile.y+5)+'"></line>'+
+          '<line class="m-line m-active" x1="'+profile.x1+'" y1="'+profile.y+'" x2="'+profile.x2+'" y2="'+profile.y+'"'+arrows+'></line>'+
+          dot((profile.x1+profile.x2)/2,profile.y)
+      }
+      if(profile.kind==='diagonal'){
+        return '<line class="m-line m-active" x1="'+profile.x1+'" y1="'+profile.y1+'" x2="'+profile.x2+'" y2="'+profile.y2+'"'+arrows+'></line>'+dot(profile.x2,profile.y2)
+      }
+      if(profile.kind==='angle'){
+        return '<line class="m-line" x1="'+profile.a1[0]+'" y1="'+profile.a1[1]+'" x2="'+profile.a1[2]+'" y2="'+profile.a1[3]+'"></line>'+
+          '<line class="m-line" x1="'+profile.a2[0]+'" y1="'+profile.a2[1]+'" x2="'+profile.a2[2]+'" y2="'+profile.a2[3]+'"></line>'+
+          '<path class="m-line m-active" d="M '+(profile.cx-profile.r*.72)+' '+(profile.cy+profile.r*.40)+' Q '+profile.cx+' '+(profile.cy-profile.r*.82)+' '+(profile.cx+profile.r*.68)+' '+(profile.cy-profile.r*.48)+'"></path>'+
+          dot(profile.cx,profile.cy)
+      }
+      return ''
+    }
+
     function updateMeasureOrientation(schema,el,animate=true){
       if(!el) return
+      const profile=ukbMeasureAnimationProfile(schema,el.dataset.measureId||'',el.dataset.measureLabel||'')
       const marker=$('measureOrientationMarker'),guide=$('measureOrientationGuide')
-      const sketch=el.dataset.measureSketch||'main'
+      const overlaySvg=$('measureOrientationOverlaySvg'),shape=$('measureOrientationShape')
+      const sketch=profile?.sketch||el.dataset.measureSketch||'main'
       const canvas=$('measureOrientationCanvas')
       if(canvas && canvas.dataset.sketch!==sketch) drawOriginalOrientationSketch(schema,sketch)
-      const x=Math.max(2,Math.min(98,Number(el.dataset.measureX)||50))
-      const y=Math.max(2,Math.min(98,Number(el.dataset.measureY)||50))
-      if(marker){marker.style.left=x+'%';marker.style.top=y+'%'}
-      if(guide) guide.style.top=y+'%'
+
+      if(profile){
+        if(marker) marker.style.display='none'
+        if(guide) guide.style.display='none'
+        if(overlaySvg) overlaySvg.style.display='block'
+        if(shape) shape.innerHTML=ukbMeasureOverlayMarkup(profile)
+      }else{
+        if(overlaySvg) overlaySvg.style.display='none'
+        if(shape) shape.innerHTML=''
+        if(marker) marker.style.display=''
+        if(guide) guide.style.display=''
+        const x=Math.max(2,Math.min(98,Number(el.dataset.measureX)||50))
+        const y=Math.max(2,Math.min(98,Number(el.dataset.measureY)||50))
+        if(marker){marker.style.left=x+'%';marker.style.top=y+'%'}
+        if(guide) guide.style.top=y+'%'
+      }
 
       document.querySelectorAll('.measure-active-control').forEach(n=>n.classList.remove('measure-active-control'))
       document.querySelectorAll('.measure-active-cell').forEach(n=>n.classList.remove('measure-active-cell'))
@@ -3058,7 +3180,7 @@
       if(cell) cell.classList.add('measure-active-cell')
 
       const label=el.dataset.measureLabel||'Maß'
-      const region=el.dataset.measureRegion||''
+      const region=profile?.region||el.dataset.measureRegion||''
       const value=measureControlValue(el)
       if($('measureOrientationLabel')) $('measureOrientationLabel').textContent=label
       if($('measureOrientationRegion')) $('measureOrientationRegion').textContent=region
