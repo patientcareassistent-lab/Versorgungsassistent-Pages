@@ -702,6 +702,10 @@
     const formPgPromises = {}
     const loadedFormFieldPgs = new Set()
     const formFieldPgPromises = {}
+    const loadedMeasureProfiles = new Set()
+    const measureProfilePromises = {}
+    const loadedHimiRuleIds = new Set()
+    const himiRulePromises = {}
     const values = {}
     let activeSupplyId = null
     let draftSaveTimer = null
@@ -1138,6 +1142,64 @@
       return ok
     }
 
+    async function ensureMeasureFieldsForProfile(profileId){
+      const key=String(profileId||'')
+      if(!key || loadedMeasureProfiles.has(key)) return true
+      if(measureProfilePromises[key]) return measureProfilePromises[key]
+
+      measureProfilePromises[key]=(async()=>{
+        const response=await supabase.rpc('measure_fields_for_profile',{p_profile:key})
+        if(response.error){
+          showError('appError','Maßfelder konnten nicht geladen werden: '+response.error.message)
+          return false
+        }
+        const rows=Array.isArray(response.data)?response.data:[]
+        data.massfelder=[
+          ...data.massfelder.filter(f=>String(f.Massprofil_ID)!==key),
+          ...rows
+        ]
+        loadedMeasureProfiles.add(key)
+        showError('appError','')
+        return true
+      })().finally(()=>{delete measureProfilePromises[key]})
+
+      const ok=await measureProfilePromises[key]
+      if(ok && selectedHimiMeta()?.Massprofil_ID===key){
+        renderMeasureFields()
+        updateWizardStatus()
+      }
+      return ok
+    }
+
+    async function ensureHimiFormRules(himiId){
+      const key=String(himiId||'')
+      if(!key || loadedHimiRuleIds.has(key)) return true
+      if(himiRulePromises[key]) return himiRulePromises[key]
+
+      himiRulePromises[key]=(async()=>{
+        const response=await supabase.rpc('himi_form_rules_for_himi',{p_himi_id:key})
+        if(response.error){
+          showError('appError','Formularregeln konnten nicht geladen werden: '+response.error.message)
+          return false
+        }
+        const rows=Array.isArray(response.data)?response.data:[]
+        data.himiformularregeln=[
+          ...data.himiformularregeln.filter(r=>String(r.Himi_ID)!==key),
+          ...rows
+        ]
+        loadedHimiRuleIds.add(key)
+        showError('appError','')
+        return true
+      })().finally(()=>{delete himiRulePromises[key]})
+
+      const ok=await himiRulePromises[key]
+      if(ok && selectedHimiId()===key){
+        updateCare()
+        updateWizardStatus()
+      }
+      return ok
+    }
+
     async function start(){
       const {data:{session}} = await supabase.auth.getSession()
       showLoading(false)
@@ -1196,7 +1258,7 @@
         firstError=bootstrap.error.message
       }else{
         const payload=bootstrap.data||{}
-        ;['kassen','produktgruppen','himilogik','massfelder','himiformularregeln'].forEach(key=>{
+        ;['kassen','produktgruppen','himilogik'].forEach(key=>{
           data[key]=Array.isArray(payload[key])?payload[key]:[]
         })
         dataCounts.sources=Number(payload.sourceCount)||0
@@ -1316,9 +1378,6 @@
       if($('carePg').value==='24' && renderPg24SourceMeasureSheet()) return
       if(renderAokPg24MeasureSheet()) return
       const meta=selectedHimiMeta()
-      const fields=meta?.Massprofil_ID
-        ? data.massfelder.filter(x=>x.Massprofil_ID===meta.Massprofil_ID).sort((a,b)=>(a.Sortierung||100)-(b.Sortierung||100))
-        : []
       host.innerHTML=''
       const note=$('measureLogicNote')
       if(!meta){
@@ -1331,6 +1390,16 @@
         note.className='status-card ready';note.innerHTML='<strong>Kein eigener Maßschritt erforderlich</strong>Für diese Auswahl ist im hinterlegten Regelwerk derzeit kein eigener Maßbogen aktiviert.'
         return
       }
+      const profileId=String(meta.Massprofil_ID||'')
+      if(profileId && !loadedMeasureProfiles.has(profileId)){
+        note.className='status-card open'
+        note.innerHTML='<strong>Maßprofil wird geladen</strong>Die benötigten Maßfelder werden für diese Versorgung nachgeladen.'
+        void ensureMeasureFieldsForProfile(profileId)
+        return
+      }
+      const fields=profileId
+        ? data.massfelder.filter(x=>String(x.Massprofil_ID)===profileId).sort((a,b)=>(a.Sortierung||100)-(b.Sortierung||100))
+        : []
       note.className='status-card open'
       note.innerHTML='<strong>'+escapeHtml(meta.Bezeichnung)+'</strong>'+escapeHtml(meta.Hinweis||'Passendes Maßprofil wurde geladen.')
       fields.forEach(f=>{
@@ -1434,6 +1503,11 @@
         return
       }
       const himiId=selectedHimiId()
+      if(himiId && !loadedHimiRuleIds.has(String(himiId))){
+        $('careForm').innerHTML='<option value="">Hilfsmittelregeln werden geladen …</option>'
+        void ensureHimiFormRules(himiId)
+        return
+      }
       const current=$('careForm').value
       const meta=selectedHimiMeta()
       const rules=data.himiformularregeln
