@@ -65,7 +65,7 @@
     .aok-measure-frame-wrap{margin-top:14px;border:1px solid #d9deea;border-radius:13px;overflow:hidden;background:#eef1f6}.aok-measure-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 13px;background:#fff;border-bottom:1px solid #dfe4ef;flex-wrap:wrap}.aok-measure-toolbar strong{color:#00157A}.aok-measure-frame{display:block;width:100%;height:min(1120px,82vh);border:0;background:#fff}.aok-pdf-pages{display:grid;gap:14px;padding:12px;background:#eef1f6}.aok-pdf-page{position:relative;margin:0 auto;width:min(100%,980px);background:#fff;box-shadow:0 1px 5px rgba(15,23,42,.12)}.aok-pdf-page canvas{display:block;width:100%;height:auto}.aok-pdf-input{position:absolute;margin:0!important;padding:0 2px!important;border:0!important;border-radius:2px!important;background:rgba(255,255,255,.12)!important;box-shadow:none!important;color:#111827!important;min-width:0!important;line-height:1!important;z-index:2}.aok-pdf-input:hover{background:rgba(238,242,255,.35)!important;outline:1px dashed rgba(0,21,122,.35)}.aok-pdf-input:focus{background:rgba(255,255,255,.88)!important;outline:2px solid #00157A}.aok-pdf-check{accent-color:#00157A}.aok-pdf-loading{padding:30px;text-align:center;color:#667085;background:#fff}.aok-measure-open{font-size:.82rem}.aok-source-badge{display:inline-flex;align-items:center;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#00157A;font-size:.73rem;font-weight:750}
     .tech-profile{display:grid;gap:14px}.tech-profile-section{border:1px solid #dfe4ef;border-radius:13px;padding:16px;background:#fff}.tech-profile-section h4{margin:0 0 12px;color:#00157A}.tech-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tech-profile-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.tech-profile-field{display:grid;gap:6px;font-size:.82rem;font-weight:700}.tech-profile-field textarea{min-height:78px}.tech-checks{display:flex;gap:8px 14px;flex-wrap:wrap;padding:9px;border:1px solid #d7e0e0;border-radius:10px}.tech-checks label{display:flex;align-items:center;gap:6px;font-size:.79rem;font-weight:500}.tech-checks input{width:auto}.tech-profile-readonly{background:#f7f8fb!important;color:#475467}
     .signature-field{display:grid;gap:6px;grid-column:1/-1}.signature-field-label{font-size:.82rem;font-weight:700;color:#344054}.signature-pad{position:relative;height:116px;border:1px solid #cfd8e3;border-radius:10px;background:#fff;overflow:hidden;touch-action:none}.signature-pad canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}.signature-pad.has-signature{border-color:#00157A;background:#fbfcff}.signature-pad-clear{position:absolute;right:7px;top:7px;z-index:3;padding:5px 8px!important;min-height:0!important;font-size:.68rem!important;background:rgba(255,255,255,.94)!important}.signature-pad-hint{font-size:.7rem;color:#667085;line-height:1.35}
-    .aok-signature-pad{position:absolute!important;margin:0!important;padding:0!important;border:1px solid rgba(0,21,122,.28)!important;border-radius:3px!important;background:rgba(255,255,255,.08)!important;z-index:6;overflow:visible;touch-action:none}.aok-signature-pad canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}.aok-signature-pad.has-signature{background:rgba(255,255,255,.42)!important}.aok-signature-pad .signature-pad-clear{right:-1px;top:-25px}.aok-signature-pad:focus-within{outline:2px solid rgba(0,21,122,.55);outline-offset:1px}
+    .aok-signature-pad{position:absolute!important;margin:0!important;padding:0!important;border:1px solid rgba(0,21,122,.28)!important;border-radius:3px!important;background:rgba(255,255,255,.08)!important;z-index:6;overflow:visible;touch-action:none}.aok-signature-pad canvas{display:block;width:100%;height:100%;touch-action:none;cursor:crosshair}.aok-signature-pad.has-signature{background:rgba(255,255,255,.42)!important}.aok-signature-pad .signature-pad-clear{right:2px;top:2px;padding:2px 6px!important;font-size:.58rem!important;line-height:1.1!important}.aok-signature-pad:focus-within{outline:2px solid rgba(0,21,122,.55);outline-offset:1px}
     .aok-plusm-option{position:absolute!important;margin:0!important;padding:0!important;width:1.75%!important;height:1.28%!important;min-width:0!important;min-height:0!important;appearance:none!important;-webkit-appearance:none!important;border:0!important;border-radius:0!important;background:transparent!important;z-index:5;cursor:pointer}
     .aok-plusm-option:checked{background:radial-gradient(circle at center,#00157A 0 34%,transparent 38%)!important}
     .aok-plusm-option:focus-visible{outline:2px solid #00157A!important;outline-offset:2px}
@@ -2123,13 +2123,13 @@
       return true
     }
 
-    function appendAokSignaturePad(pageBox,key,label,role,left,top,width,height,viewport){
+    function appendAokSignaturePad(pageBox,key,label,role,left,top,width,height,viewport,exact=false){
       if(pageBox.querySelector('[data-signature-role="'+role+'"]')) return
       const pad=createSignaturePad(key,{className:'aok-signature-pad',label,ariaLabel:label})
       pad.style.left=Math.max(0,left/viewport.width*100)+'%'
       pad.style.top=Math.max(0,top/viewport.height*100)+'%'
-      pad.style.width=Math.max(width/viewport.width*100,18)+'%'
-      pad.style.height=Math.max(height/viewport.height*100,3.0)+'%'
+      pad.style.width=(exact ? width/viewport.width*100 : Math.max(width/viewport.width*100,45))+'%'
+      pad.style.height=(exact ? height/viewport.height*100 : Math.max(height/viewport.height*100,1.65))+'%'
       pad.dataset.profileKey=key
       pad.dataset.required='false'
       pad.dataset.signatureRole=role
@@ -2159,8 +2159,8 @@
         const line=printedLines.find(t=>regex.test(String(t.text||'')))
         if(!line) return
         const width=Math.max(line.w||0,viewport.width*.45)
-        const height=Math.max(30,viewport.height*.038)
-        appendAokSignaturePad(pageBox,key,label,role,line.x,Math.max(0,line.y-height-6),width,height,viewport)
+        const height=Math.max(18,viewport.height*.0165)
+        appendAokSignaturePad(pageBox,key,label,role,line.x,Math.max(0,line.y-height-4),width,height,viewport,false)
       }
 
       addFromPrintedLabel(
@@ -2216,21 +2216,17 @@
               return
             }
             if(pageNo===4){
-              const normalizedSignatureLabel=String(nearbyLabel||'').replace(/\s+/g,' ').trim()
-              const insuredSignature=/Unterschrift.*Versichert|gesetzlichen\s+Vertreter|Bevollmächtigt/i.test(normalizedSignatureLabel)
-              const providerSignature=/Unterschrift.*Hilfsmittelanbieter|Stempel.*Hilfsmittelanbieter/i.test(normalizedSignatureLabel)
-              if(insuredSignature || providerSignature){
-                const isProvider=providerSignature
-                const signatureKey=isProvider?'aokProfilePdf:providerSignature':'aokProfilePdf:insuredSignature'
-                const signatureLabel=isProvider
-                  ?'Unterschrift / Stempel Hilfsmittelanbieter'
-                  :'Unterschrift der Versicherten bzw. gesetzlichen Vertretung / Bevollmächtigten'
+              const normalizedFieldName=String(fieldName||'').replace(/\s+/g,' ').trim()
+              const insuredField=/^(?:Textfeld|Text)?\s*67$/i.test(normalizedFieldName)
+              const providerField=/^(?:Textfeld|Text)?\s*69$/i.test(normalizedFieldName)
+              if(insuredField || providerField){
+                const isProvider=providerField
                 appendAokSignaturePad(
                   pageBox,
-                  signatureKey,
-                  signatureLabel,
+                  isProvider?'aokProfilePdf:providerSignature':'aokProfilePdf:insuredSignature',
+                  isProvider?'Unterschrift / Stempel Hilfsmittelanbieter':'Unterschrift der Versicherten bzw. gesetzlichen Vertretung / Bevollmächtigten',
                   isProvider?'provider':'insured',
-                  left,top,width,height,viewport
+                  left,top,width,height,viewport,true
                 )
                 return
               }
