@@ -700,6 +700,7 @@
     let draftSaveTimer = null
     let supplyDraftCache = []
     let autosaveInFlight = Promise.resolve()
+    let lastPersistedSupplyFingerprint = ''
 
     function legacySupplyStorageKey(){
       const uid=currentSession?.user?.id || 'anonymous'
@@ -793,6 +794,19 @@
       return activeSupplyId
     }
 
+    function supplyPersistenceFingerprint(item){
+      return JSON.stringify({
+        id:item.id,
+        wizardIndex:Number(item.wizardIndex)||0,
+        kasse:item.kasse||'',
+        pg:String(item.pg||''),
+        himiId:item.himiId||'',
+        himi:item.himi||'',
+        status:item.status||'Laufend',
+        values:item.values||{}
+      })
+    }
+
     async function autosaveSupplyDraft(){
       const hasContent=Object.keys(values).some(k=>{
         const v=values[k]
@@ -802,12 +816,9 @@
 
       if(!activeSupplyId) return
       const id=activeSupplyId
-      const now=new Date().toISOString()
       const existing=supplyDraftCache.find(x=>x.id===id)
-      const item={
+      const semanticItem={
         id,
-        createdAt:existing?.createdAt||now,
-        updatedAt:now,
         wizardIndex,
         kasse:$('careKasse')?.value||'',
         pg:$('carePg')?.value||'',
@@ -816,8 +827,15 @@
         status:currentSupplyStatus(values,wizardIndex),
         values:{...values}
       }
-      supplyDraftCache=[item,...supplyDraftCache.filter(x=>x.id!==id)].slice(0,250)
-      renderSupplyOverview()
+      const fingerprint=supplyPersistenceFingerprint(semanticItem)
+      if(fingerprint===lastPersistedSupplyFingerprint) return true
+
+      const now=new Date().toISOString()
+      const item={
+        ...semanticItem,
+        createdAt:existing?.createdAt||now,
+        updatedAt:now
+      }
 
       const response=await supabase.from('care_cases').upsert({
         id:item.id,
@@ -837,6 +855,9 @@
         showError('appError','Autosave fehlgeschlagen: '+response.error.message)
         return false
       }
+      lastPersistedSupplyFingerprint=fingerprint
+      supplyDraftCache=[item,...supplyDraftCache.filter(x=>x.id!==id)].slice(0,250)
+      renderSupplyOverview()
       return true
     }
 
@@ -846,7 +867,7 @@
         autosaveInFlight=autosaveInFlight
           .then(()=>autosaveSupplyDraft())
           .catch(err=>showError('appError','Autosave fehlgeschlagen: '+(err?.message||String(err))))
-      },350)
+      },1200)
     }
 
     function formatDraftTime(iso){
@@ -917,6 +938,7 @@
       const item=readSupplyDrafts().find(x=>x.id===id)
       if(!item) return
       activeSupplyId=item.id
+      lastPersistedSupplyFingerprint=supplyPersistenceFingerprint(item)
       Object.keys(values).forEach(k=>delete values[k])
       Object.assign(values,item.values||{})
       if(!values.caseKind) values.caseKind='Neuversorgung'
