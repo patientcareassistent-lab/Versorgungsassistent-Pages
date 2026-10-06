@@ -1019,20 +1019,27 @@
       if(optionalDataPromises[section]) return optionalDataPromises[section]
 
       optionalDataPromises[section]=(async()=>{
-        let defs=[]
-        if(section==='pg26'){
-          defs=[['pg26_positionen','pg26'],['pg26_kalkulation','kalk']]
-        }else if(section==='contractQuestions'){
-          defs=[['contract_questions','contractQuestions'],['contract_knowledge','contractKnowledge'],['contract_knowledge_approved','approvedKnowledge']]
-        }else return true
+        const rpcName=section==='pg26'
+          ? 'pg26_reference_bootstrap'
+          : section==='contractQuestions'
+            ? 'contract_knowledge_bootstrap'
+            : ''
+        if(!rpcName) return true
 
-        const responses=await Promise.all(defs.map(([table])=>supabase.from(table).select('*')))
-        const failed=responses.find(r=>r.error)
-        if(failed?.error){
-          showError('appError','Zusatzdaten konnten nicht geladen werden: '+failed.error.message)
+        const response=await supabase.rpc(rpcName)
+        if(response.error){
+          showError('appError','Zusatzdaten konnten nicht geladen werden: '+response.error.message)
           return false
         }
-        responses.forEach((response,index)=>{data[defs[index][1]]=response.data||[]})
+        const payload=response.data||{}
+        if(section==='pg26'){
+          data.pg26=Array.isArray(payload.pg26)?payload.pg26:[]
+          data.kalk=Array.isArray(payload.kalk)?payload.kalk:[]
+        }else{
+          data.contractQuestions=Array.isArray(payload.contractQuestions)?payload.contractQuestions:[]
+          data.contractKnowledge=Array.isArray(payload.contractKnowledge)?payload.contractKnowledge:[]
+          data.approvedKnowledge=Array.isArray(payload.approvedKnowledge)?payload.approvedKnowledge:[]
+        }
         optionalDataLoaded[section]=true
 
         if(section==='pg26'){
@@ -1105,17 +1112,16 @@
         return
       }
 
-      const defs=[
-        ['kassen','kassen'],['produktgruppen','produktgruppen'],['formulare','formulare'],
-        ['formularfelder','formularfelder'],['quellen','quellen'],
-        ['hilfsmittel_logik','himilogik'],['massfelder','massfelder'],['himi_formular_regeln','himiformularregeln']
-      ]
-      const responses=await Promise.all(defs.map(([table])=>supabase.from(table).select('*')))
+      const bootstrap=await supabase.rpc('care_reference_bootstrap')
       let firstError=''
-      responses.forEach((response,index)=>{
-        data[defs[index][1]]=response.data||[]
-        if(response.error && !firstError) firstError=response.error.message
-      })
+      if(bootstrap.error){
+        firstError=bootstrap.error.message
+      }else{
+        const payload=bootstrap.data||{}
+        ;['kassen','produktgruppen','formulare','formularfelder','quellen','himilogik','massfelder','himiformularregeln'].forEach(key=>{
+          data[key]=Array.isArray(payload[key])?payload[key]:[]
+        })
+      }
       showError('appError',firstError)
 
       await migrateLegacySupplyDrafts()
