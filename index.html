@@ -698,6 +698,8 @@
     const dataCounts = {sources:0}
     const optionalDataLoaded = {pg26:false,contractQuestions:false,sources:false}
     const optionalDataPromises = {}
+    const loadedFormFieldPgs = new Set()
+    const formFieldPgPromises = {}
     const values = {}
     let activeSupplyId = null
     let draftSaveTimer = null
@@ -1068,6 +1070,36 @@
       return optionalDataPromises[section]
     }
 
+    async function ensureFormFieldsForPg(pg){
+      const key=String(pg||'')
+      if(!key) return true
+      if(loadedFormFieldPgs.has(key)) return true
+      if(formFieldPgPromises[key]) return formFieldPgPromises[key]
+
+      formFieldPgPromises[key]=(async()=>{
+        const response=await supabase.rpc('form_fields_for_pg',{p_pg:key})
+        if(response.error){
+          showError('appError','Formularfelder konnten nicht geladen werden: '+response.error.message)
+          return false
+        }
+        const rows=Array.isArray(response.data)?response.data:[]
+        data.formularfelder=[
+          ...data.formularfelder.filter(f=>String(f.PG)!==key),
+          ...rows
+        ]
+        loadedFormFieldPgs.add(key)
+        showError('appError','')
+        return true
+      })().finally(()=>{delete formFieldPgPromises[key]})
+
+      const ok=await formFieldPgPromises[key]
+      if(ok && $('carePg')?.value===key){
+        updateCareFields()
+        updateWizardStatus()
+      }
+      return ok
+    }
+
     async function start(){
       const {data:{session}} = await supabase.auth.getSession()
       showLoading(false)
@@ -1126,7 +1158,7 @@
         firstError=bootstrap.error.message
       }else{
         const payload=bootstrap.data||{}
-        ;['kassen','produktgruppen','formulare','formularfelder','himilogik','massfelder','himiformularregeln'].forEach(key=>{
+        ;['kassen','produktgruppen','formulare','himilogik','massfelder','himiformularregeln'].forEach(key=>{
           data[key]=Array.isArray(payload[key])?payload[key]:[]
         })
         dataCounts.sources=Number(payload.sourceCount)||0
@@ -2916,6 +2948,12 @@
         return
       }
       const pg=$('carePg').value
+      if(pg && !loadedFormFieldPgs.has(String(pg))){
+        $('fieldInfo').textContent='Felddefinitionen werden für PG '+pg+' geladen …'
+        $('fieldList').innerHTML=''
+        void ensureFormFieldsForPg(pg)
+        return
+      }
       const himi=selectedHimi()
       const himiId=selectedHimiId()
       const meta=selectedHimiMeta()
