@@ -695,6 +695,8 @@
     const views = ['overview','care','supplyOverview','forms','contractQuestions','pg26','sources']
     const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Versorgungsübersicht',forms:'Formularregeln',contractQuestions:'Vertragsfragen',pg26:'PG 26',sources:'Quellen'}
     const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[],contractQuestions:[],contractKnowledge:[],approvedKnowledge:[]}
+    const optionalDataLoaded = {pg26:false,contractQuestions:false}
+    const optionalDataPromises = {}
     const values = {}
     let activeSupplyId = null
     let draftSaveTimer = null
@@ -1012,6 +1014,45 @@
     function showLoading(show=true){ $('loading').classList.toggle('hidden',!show) }
     function friendlyUser(email){ return email?.split('@')[0]?.replace(/^mitarbeiter/i,'Mitarbeiter') || 'Tester' }
 
+    async function loadOptionalData(section){
+      if(optionalDataLoaded[section]) return true
+      if(optionalDataPromises[section]) return optionalDataPromises[section]
+
+      optionalDataPromises[section]=(async()=>{
+        let defs=[]
+        if(section==='pg26'){
+          defs=[['pg26_positionen','pg26'],['pg26_kalkulation','kalk']]
+        }else if(section==='contractQuestions'){
+          defs=[['contract_questions','contractQuestions'],['contract_knowledge','contractKnowledge'],['contract_knowledge_approved','approvedKnowledge']]
+        }else return true
+
+        const responses=await Promise.all(defs.map(([table])=>supabase.from(table).select('*')))
+        const failed=responses.find(r=>r.error)
+        if(failed?.error){
+          showError('appError','Zusatzdaten konnten nicht geladen werden: '+failed.error.message)
+          return false
+        }
+        responses.forEach((response,index)=>{data[defs[index][1]]=response.data||[]})
+        optionalDataLoaded[section]=true
+
+        if(section==='pg26'){
+          const current=$('pg26Kasse')?.value||''
+          const kassen=[...new Set(data.pg26.map(x=>x.Kasse).filter(Boolean))].sort()
+          $('pg26Kasse').innerHTML='<option value="">Alle</option>'+kassen.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
+          if(kassen.includes(current)) $('pg26Kasse').value=current
+          renderPg26()
+          $('calcCount').textContent=data.kalk.length+' Positionen'
+          $('calcBody').innerHTML=data.kalk.map(r=>'<tr><td>'+escapeHtml(r.Abschnitt)+'</td><td>'+escapeHtml(r.Art_Nr)+'</td><td>'+escapeHtml(r.Bezeichnung)+'</td><td>'+(r.AZ_gerundet_min?escapeHtml(r.AZ_gerundet_min)+' min':'—')+'</td><td>'+(r.Material_Position_EUR?escapeHtml(r.Material_Position_EUR)+' €':'—')+'</td><td>'+escapeHtml(r.Summe_oder_Regel)+'</td></tr>').join('')
+        }else if(section==='contractQuestions'){
+          renderContractKnowledge($('knowledgeSearch')?.value||'')
+        }
+        showError('appError','')
+        return true
+      })().finally(()=>{delete optionalDataPromises[section]})
+
+      return optionalDataPromises[section]
+    }
+
     async function start(){
       const {data:{session}} = await supabase.auth.getSession()
       showLoading(false)
@@ -1066,9 +1107,8 @@
 
       const defs=[
         ['kassen','kassen'],['produktgruppen','produktgruppen'],['formulare','formulare'],
-        ['formularfelder','formularfelder'],['quellen','quellen'],['pg26_positionen','pg26'],['pg26_kalkulation','kalk'],
-        ['hilfsmittel_logik','himilogik'],['massfelder','massfelder'],['himi_formular_regeln','himiformularregeln'],
-        ['contract_questions','contractQuestions'],['contract_knowledge','contractKnowledge'],['contract_knowledge_approved','approvedKnowledge']
+        ['formularfelder','formularfelder'],['quellen','quellen'],
+        ['hilfsmittel_logik','himilogik'],['massfelder','massfelder'],['himi_formular_regeln','himiformularregeln']
       ]
       const responses=await Promise.all(defs.map(([table])=>supabase.from(table).select('*')))
       let firstError=''
@@ -1223,8 +1263,6 @@
       $('careKasse').innerHTML='<option value="">Bitte wählen</option>'+kassen.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
       $('carePg').innerHTML='<option value="">Bitte wählen</option>'+pgs.map(x=>'<option value="'+escapeHtml(x)+'">PG '+escapeHtml(x)+'</option>').join('')
       populateHimiOptions()
-      const pg26Kassen=[...new Set(data.pg26.map(x=>x.Kasse).filter(Boolean))].sort()
-      $('pg26Kasse').innerHTML='<option value="">Alle</option>'+pg26Kassen.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
     }
 
 
@@ -1286,11 +1324,7 @@
 
       $('productBody').innerHTML=data.produktgruppen.map(r=>'<tr><td><strong>PG '+escapeHtml(r.PG)+'</strong></td><td>'+escapeHtml(r.Generisches_Blatt)+'</td><td><span class="pill">'+escapeHtml(r.Reifegrad)+'</span></td><td>'+escapeHtml(r.Kritischer_Hinweis)+'</td></tr>').join('')
       renderForms('')
-      renderPg26()
-      $('calcCount').textContent=data.kalk.length+' Positionen'
-      $('calcBody').innerHTML=data.kalk.map(r=>'<tr><td>'+escapeHtml(r.Abschnitt)+'</td><td>'+escapeHtml(r.Art_Nr)+'</td><td>'+escapeHtml(r.Bezeichnung)+'</td><td>'+(r.AZ_gerundet_min?escapeHtml(r.AZ_gerundet_min)+' min':'—')+'</td><td>'+(r.Material_Position_EUR?escapeHtml(r.Material_Position_EUR)+' €':'—')+'</td><td>'+escapeHtml(r.Summe_oder_Regel)+'</td></tr>').join('')
       $('sourceGrid').innerHTML=data.quellen.map(r=>'<article class="source"><span class="pill">'+escapeHtml(r.Typ)+'</span><h4>'+escapeHtml(r.Beschreibung)+'</h4><p>'+escapeHtml(r.URL_oder_Datei)+'</p><small>'+escapeHtml(r.Quelle_ID)+'</small></article>').join('')
-      renderContractKnowledge('')
     }
 
     function renderForms(query=''){
@@ -2947,11 +2981,13 @@
     let wizardIndex=0
     let wizardBound=false
 
-    function setView(view){
+    async function setView(view){
       if(view==='supplyOverview') renderSupplyOverview()
       document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view))
       views.forEach(v=>$(v+'View').classList.toggle('hidden',v!==view))
       $('pageTitle').textContent=titles[view]
+      if(view==='pg26') await loadOptionalData('pg26')
+      if(view==='contractQuestions') await loadOptionalData('contractQuestions')
     }
 
     function readCaseField(el){
