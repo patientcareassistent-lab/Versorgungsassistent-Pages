@@ -695,7 +695,8 @@
     const views = ['overview','care','supplyOverview','forms','contractQuestions','pg26','sources']
     const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Versorgungsübersicht',forms:'Formularregeln',contractQuestions:'Vertragsfragen',pg26:'PG 26',sources:'Quellen'}
     const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[],contractQuestions:[],contractKnowledge:[],approvedKnowledge:[]}
-    const optionalDataLoaded = {pg26:false,contractQuestions:false}
+    const dataCounts = {sources:0}
+    const optionalDataLoaded = {pg26:false,contractQuestions:false,sources:false}
     const optionalDataPromises = {}
     const values = {}
     let activeSupplyId = null
@@ -740,6 +741,7 @@
       const response=await supabase
         .from('care_case_overview')
         .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,schema_version,patient_first_name,patient_last_name,patient_name,case_number,insured_no,case_kind')
+        .neq('status','Abgeschlossen')
         .order('updated_at',{ascending:false})
         .limit(250)
       if(response.error){
@@ -1023,7 +1025,9 @@
           ? 'pg26_reference_bootstrap'
           : section==='contractQuestions'
             ? 'contract_knowledge_bootstrap'
-            : ''
+            : section==='sources'
+              ? 'sources_reference_bootstrap'
+              : ''
         if(!rpcName) return true
 
         const response=await supabase.rpc(rpcName)
@@ -1032,7 +1036,9 @@
           return false
         }
         const payload=response.data||{}
-        if(section==='pg26'){
+        if(section==='sources'){
+          data.quellen=Array.isArray(payload)?payload:[]
+        }else if(section==='pg26'){
           data.pg26=Array.isArray(payload.pg26)?payload.pg26:[]
           data.kalk=Array.isArray(payload.kalk)?payload.kalk:[]
         }else{
@@ -1052,6 +1058,8 @@
           $('calcBody').innerHTML=data.kalk.map(r=>'<tr><td>'+escapeHtml(r.Abschnitt)+'</td><td>'+escapeHtml(r.Art_Nr)+'</td><td>'+escapeHtml(r.Bezeichnung)+'</td><td>'+(r.AZ_gerundet_min?escapeHtml(r.AZ_gerundet_min)+' min':'—')+'</td><td>'+(r.Material_Position_EUR?escapeHtml(r.Material_Position_EUR)+' €':'—')+'</td><td>'+escapeHtml(r.Summe_oder_Regel)+'</td></tr>').join('')
         }else if(section==='contractQuestions'){
           renderContractKnowledge($('knowledgeSearch')?.value||'')
+        }else if(section==='sources'){
+          $('sourceGrid').innerHTML=data.quellen.map(r=>'<article class="source"><span class="pill">'+escapeHtml(r.Typ)+'</span><h4>'+escapeHtml(r.Beschreibung)+'</h4><p>'+escapeHtml(r.URL_oder_Datei)+'</p><small>'+escapeHtml(r.Quelle_ID)+'</small></article>').join('')
         }
         showError('appError','')
         return true
@@ -1118,9 +1126,10 @@
         firstError=bootstrap.error.message
       }else{
         const payload=bootstrap.data||{}
-        ;['kassen','produktgruppen','formulare','formularfelder','quellen','himilogik','massfelder','himiformularregeln'].forEach(key=>{
+        ;['kassen','produktgruppen','formulare','formularfelder','himilogik','massfelder','himiformularregeln'].forEach(key=>{
           data[key]=Array.isArray(payload[key])?payload[key]:[]
         })
+        dataCounts.sources=Number(payload.sourceCount)||0
       }
       showError('appError',firstError)
 
@@ -1326,11 +1335,11 @@
       $('metricKassen').textContent=data.kassen.length
       $('metricForms').textContent=data.formulare.length
       $('metricPg').textContent=data.produktgruppen.length
-      $('metricSources').textContent=data.quellen.length
+      $('metricSources').textContent=dataCounts.sources
 
       $('productBody').innerHTML=data.produktgruppen.map(r=>'<tr><td><strong>PG '+escapeHtml(r.PG)+'</strong></td><td>'+escapeHtml(r.Generisches_Blatt)+'</td><td><span class="pill">'+escapeHtml(r.Reifegrad)+'</span></td><td>'+escapeHtml(r.Kritischer_Hinweis)+'</td></tr>').join('')
       renderForms('')
-      $('sourceGrid').innerHTML=data.quellen.map(r=>'<article class="source"><span class="pill">'+escapeHtml(r.Typ)+'</span><h4>'+escapeHtml(r.Beschreibung)+'</h4><p>'+escapeHtml(r.URL_oder_Datei)+'</p><small>'+escapeHtml(r.Quelle_ID)+'</small></article>').join('')
+      if(optionalDataLoaded.sources) $('sourceGrid').innerHTML=data.quellen.map(r=>'<article class="source"><span class="pill">'+escapeHtml(r.Typ)+'</span><h4>'+escapeHtml(r.Beschreibung)+'</h4><p>'+escapeHtml(r.URL_oder_Datei)+'</p><small>'+escapeHtml(r.Quelle_ID)+'</small></article>').join('')
     }
 
     function renderForms(query=''){
@@ -2994,6 +3003,7 @@
       $('pageTitle').textContent=titles[view]
       if(view==='pg26') await loadOptionalData('pg26')
       if(view==='contractQuestions') await loadOptionalData('contractQuestions')
+      if(view==='sources') await loadOptionalData('sources')
     }
 
     function readCaseField(el){
