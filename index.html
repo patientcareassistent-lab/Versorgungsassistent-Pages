@@ -706,6 +706,8 @@
     const measureProfilePromises = {}
     const loadedHimiRuleIds = new Set()
     const himiRulePromises = {}
+    const loadedHimiLogicPgs = new Set()
+    const himiLogicPgPromises = {}
     const values = {}
     let activeSupplyId = null
     let draftSaveTimer = null
@@ -1083,6 +1085,36 @@
       return optionalDataPromises[section]
     }
 
+    async function ensureHimiLogicForPg(pg){
+      const key=String(pg||'')
+      if(!key || loadedHimiLogicPgs.has(key)) return true
+      if(himiLogicPgPromises[key]) return himiLogicPgPromises[key]
+
+      himiLogicPgPromises[key]=(async()=>{
+        const response=await supabase.rpc('himi_logic_for_pg',{p_pg:key})
+        if(response.error){
+          showError('appError','Hilfsmittellogik konnte nicht geladen werden: '+response.error.message)
+          return false
+        }
+        const rows=Array.isArray(response.data)?response.data:[]
+        data.himilogik=[
+          ...data.himilogik.filter(h=>String(h.PG)!==key),
+          ...rows
+        ]
+        loadedHimiLogicPgs.add(key)
+        showError('appError','')
+        return true
+      })().finally(()=>{delete himiLogicPgPromises[key]})
+
+      const ok=await himiLogicPgPromises[key]
+      if(ok && $('carePg')?.value===key){
+        populateHimiOptions()
+        updateCare()
+        renderWizard()
+      }
+      return ok
+    }
+
     async function ensureFormsForPg(pg){
       const key=String(pg||'')
       if(!key || optionalDataLoaded.forms || loadedFormPgs.has(key)) return true
@@ -1258,7 +1290,7 @@
         firstError=bootstrap.error.message
       }else{
         const payload=bootstrap.data||{}
-        ;['kassen','produktgruppen','himilogik'].forEach(key=>{
+        ;['kassen','produktgruppen'].forEach(key=>{
           data[key]=Array.isArray(payload[key])?payload[key]:[]
         })
         dataCounts.sources=Number(payload.sourceCount)||0
@@ -1288,6 +1320,11 @@
 
     function populateHimiOptions(){
       const pg=$('carePg').value
+      if(pg && !loadedHimiLogicPgs.has(String(pg))){
+        $('careHimi').innerHTML='<option value="">Hilfsmittellogik wird geladen …</option>'
+        void ensureHimiLogicForPg(pg)
+        return
+      }
       const dbOptions=data.himilogik.filter(x=>String(x.PG)===String(pg)&&x.Aktiv!==false).sort((a,b)=>(a.Sortierung||100)-(b.Sortierung||100))
       if(dbOptions.length){
         $('careHimi').innerHTML='<option value="">Bitte Hilfsmittel wählen</option>'+dbOptions.map(x=>'<option value="'+escapeHtml(x.Himi_ID)+'">'+escapeHtml(x.Bezeichnung)+'</option>').join('')
