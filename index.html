@@ -2123,6 +2123,42 @@
       return true
     }
 
+    function appendAokSignaturePad(pageBox,key,label,role,left,top,width,height,viewport){
+      if(pageBox.querySelector('[data-signature-role="'+role+'"]')) return
+      const pad=createSignaturePad(key,{className:'aok-signature-pad',label,ariaLabel:label})
+      pad.style.left=Math.max(0,left/viewport.width*100)+'%'
+      pad.style.top=Math.max(0,top/viewport.height*100)+'%'
+      pad.style.width=Math.max(width/viewport.width*100,18)+'%'
+      pad.style.height=Math.max(height/viewport.height*100,3.0)+'%'
+      pad.dataset.profileKey=key
+      pad.dataset.required='false'
+      pad.dataset.signatureRole=role
+      pageBox.appendChild(pad)
+    }
+
+    function ensureAokPage4SignaturePads(pageBox,textItems,viewport){
+      const addFromPrintedLabel=(role,regex,key,label)=>{
+        if(pageBox.querySelector('[data-signature-role="'+role+'"]')) return
+        const item=(textItems||[]).find(t=>regex.test(String(t.text||'')))
+        if(!item) return
+        const width=Math.max(item.w||0,viewport.width*.45)
+        const height=Math.max(28,viewport.height*.035)
+        appendAokSignaturePad(pageBox,key,label,role,item.x,Math.max(0,item.y-height-5),width,height,viewport)
+      }
+      addFromPrintedLabel(
+        'insured',
+        /Unterschrift.*Versichert|gesetzlichen\s+Vertreter|Bevollmächtigt/i,
+        'aokProfilePdf:insuredSignature',
+        'Unterschrift der Versicherten bzw. gesetzlichen Vertretung / Bevollmächtigten'
+      )
+      addFromPrintedLabel(
+        'provider',
+        /Unterschrift.*Hilfsmittelanbieter|Stempel\s+Hilfsmittelanbieter/i,
+        'aokProfilePdf:providerSignature',
+        'Unterschrift / Stempel Hilfsmittelanbieter'
+      )
+    }
+
     async function renderEditableProfilePdf(url,host){
       try{
         const pdfjs=await loadPdfJs()
@@ -2172,15 +2208,13 @@
                 const signatureLabel=isProvider
                   ?'Unterschrift / Stempel Hilfsmittelanbieter'
                   :'Unterschrift der Versicherten bzw. gesetzlichen Vertretung / Bevollmächtigten'
-                const pad=createSignaturePad(signatureKey,{className:'aok-signature-pad',label:signatureLabel,ariaLabel:signatureLabel})
-                pad.style.left=(left/viewport.width*100)+'%'
-                pad.style.top=(top/viewport.height*100)+'%'
-                pad.style.width=Math.max(width/viewport.width*100,12)+'%'
-                pad.style.height=Math.max(height/viewport.height*100,2.5)+'%'
-                pad.dataset.profileKey=signatureKey
-                pad.dataset.required='false'
-                pad.dataset.signatureRole=isProvider?'provider':'insured'
-                pageBox.appendChild(pad)
+                appendAokSignaturePad(
+                  pageBox,
+                  signatureKey,
+                  signatureLabel,
+                  isProvider?'provider':'insured',
+                  left,top,width,height,viewport
+                )
                 return
               }
             }
@@ -2219,6 +2253,7 @@
             pageBox.appendChild(el)
           })
           if(pageNo===2) renderPlusMPage2Overlays(pageBox)
+          if(pageNo===4) ensureAokPage4SignaturePads(pageBox,aiTextItems,viewport)
         }
         updateWizardStatus()
       }catch(err){
