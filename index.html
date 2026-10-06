@@ -142,8 +142,7 @@
     <aside class="sidebar">
       <div class="side-brand"><img class="side-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" /><span class="hidden">Versorgungsassistent</span></div>
       <nav>
-        <button data-view="care" class="active">✚ <span>Versorgung</span></button>
-        <button data-view="supplyOverview">▦ <span>Versorgungsübersicht</span></button>
+        <button data-view="supplyOverview" class="active">▦ <span>Auftragsübersicht</span></button>
         <button data-view="overview">◉ <span>Wissensbasis</span></button>
         <button data-view="forms">▤ <span>Formularregeln</span></button>
         <button data-view="contractQuestions">? <span>Vertragsfragen</span></button>
@@ -155,7 +154,7 @@
 
     <div class="main">
       <header class="topbar">
-        <div><h1 id="pageTitle">Versorgung</h1><p>Fachliche Entscheidungsunterstützung · VN 2.1 · Stand 01.10.2026</p></div>
+        <div><h1 id="pageTitle">Auftragsübersicht</h1><p>Fachliche Entscheidungsunterstützung · VN 2.1 · Stand 01.10.2026</p></div>
         <div class="header-actions"><span class="pill success">🔐 MFA aktiv</span><span id="currentUser" class="user"></span></div>
       </header>
       <main class="content">
@@ -166,8 +165,8 @@
             <section class="card span2">
               <div class="supply-overview-head">
                 <div>
-                  <h2>Versorgungsübersicht</h2>
-                  <p>Übersicht der laufenden beziehungsweise noch nicht abgeschlossenen Versorgungen.</p>
+                  <h2>Auftragsübersicht</h2>
+                  <p>Übersicht der laufenden beziehungsweise noch nicht abgeschlossenen Versorgungsaufträge.</p>
                 </div>
                 <button id="newSupplyOverviewButton" class="primary no-print" type="button">+ Neue Versorgung</button>
               </div>
@@ -224,7 +223,7 @@
             <section class="card span2">
               <div class="wizard-top">
                 <div><h3>Versorgung Schritt für Schritt</h3><p>Ein Vorgang führt durch alle fachlich relevanten Arbeitsschritte. Kasse, Produktgruppe und Versorgungssituation steuern Formular- und Regelhinweise.</p></div>
-                <div class="actions no-print"><button id="newSupplyButton" class="primary">+ Neue Versorgung</button><button id="printButton" class="secondary">Drucken / PDF</button><button id="clearButton" class="secondary">Eingaben leeren</button></div>
+                <div class="actions no-print"><button id="printButton" class="secondary">Drucken / PDF</button><button id="clearButton" class="secondary">Eingaben leeren</button></div>
               </div>
               <div id="wizardContext" class="wizard-context"><span class="pill">Neuer Vorgang</span></div>
             </section>
@@ -693,7 +692,7 @@
 
     const $ = (id) => document.getElementById(id)
     const views = ['overview','care','supplyOverview','forms','contractQuestions','pg26','sources']
-    const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Versorgungsübersicht',forms:'Formularregeln',contractQuestions:'Vertragsfragen',pg26:'PG 26',sources:'Quellen'}
+    const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Auftragsübersicht',forms:'Formularregeln',contractQuestions:'Vertragsfragen',pg26:'PG 26',sources:'Quellen'}
     const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[],contractQuestions:[],contractKnowledge:[],approvedKnowledge:[]}
     const dataCounts = {sources:0,forms:0}
     const optionalDataLoaded = {pg26:false,contractQuestions:false,sources:false,forms:false}
@@ -1308,7 +1307,7 @@
       renderAll()
       updateCare()
       bindWizardInputs()
-      setView('care')
+      setView('supplyOverview')
       renderWizard()
       renderSupplyOverview()
       updateSupplyEditState()
@@ -3752,7 +3751,6 @@
       }))
       $('wizardBack').addEventListener('click',()=>goWizard(previousApplicableIndex(wizardIndex)))
       $('wizardNext').addEventListener('click',advanceWizard)
-      $('newSupplyButton').addEventListener('click',startNewSupply)
       $('newSupplyOverviewButton').addEventListener('click',startNewSupply)
       $('rxFile').addEventListener('change',handleRxFile)
       $('rxCameraFile').addEventListener('change',handleRxFile)
