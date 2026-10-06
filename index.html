@@ -3051,13 +3051,13 @@
     function renderMeasureOrientation(schema){
       const stage=$('measureOrientationStage')
       if(!stage) return
-      stage.innerHTML='<div class="measure-orientation-crop"><canvas id="measureOrientationCanvas" aria-label="Anatomische Originalskizze aus dem AOK-Maßblatt"></canvas><div id="measureOrientationLoading" class="measure-orientation-loading">Original-AOK-Skizze wird geladen …</div><div class="measure-orientation-overlay"><div id="measureOrientationGuide" class="measure-orientation-guide-html"></div><div id="measureOrientationMarker" class="measure-orientation-marker-html"></div><svg id="measureOrientationOverlaySvg" class="measure-orientation-overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><marker id="measureSvgArrow" markerWidth="5" markerHeight="5" refX="2.5" refY="2.5" orient="auto-start-reverse"><path d="M0,0 L5,2.5 L0,5 z" fill="#00157A"></path></marker></defs><g id="measureOrientationShape"></g></svg></div></div>'
+      stage.innerHTML='<div class="measure-orientation-crop"><canvas id="measureOrientationCanvas" aria-label="Anatomische Originalskizze aus dem AOK-Maßblatt"></canvas><div id="measureOrientationLoading" class="measure-orientation-loading">Original-AOK-Skizze wird geladen …</div><div class="measure-orientation-overlay"><div id="measureOrientationGuide" class="measure-orientation-guide-html"></div><div id="measureOrientationMarker" class="measure-orientation-marker-html"></div><svg id="measureOrientationOverlaySvg" class="measure-orientation-overlay-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><g id="measureOrientationShape"></g></svg></div></div>'
       const title=$('measureOrientationType')
       if(title) title.textContent=schema.code==='FMB02003'?'Unterschenkel':schema.code==='FMB02002'?'Knieexartikulation':'Oberschenkel'
       const src=$('measureOrientationSource')
       if(src){
         const annex=schema.code==='FMB02003'?'5b':schema.code==='FMB02002'?'5c':'5d'
-        src.innerHTML='<strong>Originalskizze:</strong> AOK Baden-Württemberg · Anlage '+annex+' · PG24, Stand 01.09.2026. Die anatomische Originalzeichnung wird aus dem AOK-PDF gerendert. Ausfüllkästchen werden nur in dieser Orientierungsansicht ausgeblendet; Messlinien und Winkel liegen als Animation darüber.'
+        src.innerHTML='<strong>Originalskizze:</strong> AOK Baden-Württemberg · Anlage '+annex+' · PG24, Stand 01.09.2026. Die anatomische Originalzeichnung wird aus dem AOK-PDF gerendert. Ausfüllkästchen werden nur in dieser Orientierungsansicht ausgeblendet; Die Verortung des aktiven Maßes wird ohne Richtungs- oder Pfeildarstellung darüber hervorgehoben.'
       }
       const first=$('measureFieldList')?.querySelector('[data-measure-value="true"]')
       if(first) updateMeasureOrientation(schema,first,false)
@@ -3111,33 +3111,32 @@
 
     function ukbMeasureOverlayMarkup(profile){
       if(!profile) return ''
-      const arrows=' marker-start="url(#measureSvgArrow)" marker-end="url(#measureSvgArrow)"'
       const dot=(x,y)=>'<circle class="m-pulse" cx="'+x+'" cy="'+y+'" r="4"></circle><circle class="m-dot" cx="'+x+'" cy="'+y+'" r="1.8"></circle>'
       if(profile.kind==='vertical'){
         return '<line class="m-ref" x1="31" y1="'+profile.y1+'" x2="72" y2="'+profile.y1+'"></line>'+
           '<line class="m-ref" x1="31" y1="'+profile.y2+'" x2="72" y2="'+profile.y2+'"></line>'+
-          '<line class="m-line m-active" x1="'+profile.x+'" y1="'+profile.y1+'" x2="'+profile.x+'" y2="'+profile.y2+'"'+arrows+'></line>'+
+          '<line class="m-line m-active" x1="'+profile.x+'" y1="'+profile.y1+'" x2="'+profile.x+'" y2="'+profile.y2+'"></line>'+
           dot(profile.x,(profile.y1+profile.y2)/2)
       }
       if(profile.kind==='horizontal'){
         return (profile.refs?'<line class="m-ref" x1="'+profile.x1+'" y1="'+(profile.y-10)+'" x2="'+profile.x1+'" y2="'+(profile.y+10)+'"></line><line class="m-ref" x1="'+profile.x2+'" y1="'+(profile.y-10)+'" x2="'+profile.x2+'" y2="'+(profile.y+10)+'"></line>':'')+
-          '<line class="m-line m-active" x1="'+profile.x1+'" y1="'+profile.y+'" x2="'+profile.x2+'" y2="'+profile.y+'"'+arrows+'></line>'+
+          '<line class="m-line m-active" x1="'+profile.x1+'" y1="'+profile.y+'" x2="'+profile.x2+'" y2="'+profile.y+'"></line>'+
           dot((profile.x1+profile.x2)/2,profile.y)
       }
       if(profile.kind==='height'){
         return '<line class="m-ref" x1="'+profile.refX1+'" y1="'+profile.y1+'" x2="'+profile.refX2+'" y2="'+profile.y1+'"></line>'+
           '<line class="m-ref" x1="'+profile.refX1+'" y1="'+profile.y2+'" x2="'+profile.refX2+'" y2="'+profile.y2+'"></line>'+
-          '<line class="m-line m-active" x1="'+profile.x+'" y1="'+profile.y1+'" x2="'+profile.x+'" y2="'+profile.y2+'"'+arrows+'></line>'+
+          '<line class="m-line m-active" x1="'+profile.x+'" y1="'+profile.y1+'" x2="'+profile.x+'" y2="'+profile.y2+'"></line>'+
           dot(profile.x,(profile.y1+profile.y2)/2)
       }
       if(profile.kind==='footLength'){
         return '<line class="m-ref" x1="'+profile.x1+'" y1="'+(profile.y-9)+'" x2="'+profile.x1+'" y2="'+(profile.y+5)+'"></line>'+
           '<line class="m-ref" x1="'+profile.x2+'" y1="'+(profile.y-9)+'" x2="'+profile.x2+'" y2="'+(profile.y+5)+'"></line>'+
-          '<line class="m-line m-active" x1="'+profile.x1+'" y1="'+profile.y+'" x2="'+profile.x2+'" y2="'+profile.y+'"'+arrows+'></line>'+
+          '<line class="m-line m-active" x1="'+profile.x1+'" y1="'+profile.y+'" x2="'+profile.x2+'" y2="'+profile.y+'"></line>'+
           dot((profile.x1+profile.x2)/2,profile.y)
       }
       if(profile.kind==='diagonal'){
-        return '<line class="m-line m-active" x1="'+profile.x1+'" y1="'+profile.y1+'" x2="'+profile.x2+'" y2="'+profile.y2+'"'+arrows+'></line>'+dot(profile.x2,profile.y2)
+        return '<line class="m-line m-active" x1="'+profile.x1+'" y1="'+profile.y1+'" x2="'+profile.x2+'" y2="'+profile.y2+'"></line>'+dot(profile.x2,profile.y2)
       }
       if(profile.kind==='angle'){
         return '<line class="m-line" x1="'+profile.a1[0]+'" y1="'+profile.a1[1]+'" x2="'+profile.a1[2]+'" y2="'+profile.a1[3]+'"></line>'+
