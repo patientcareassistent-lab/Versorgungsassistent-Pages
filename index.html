@@ -712,6 +712,14 @@
     }
 
     function mapCareCaseRow(row){
+      const values=row.payload||{
+        patientFirstName:row.patient_first_name||'',
+        patientLastName:row.patient_last_name||'',
+        patientName:row.patient_name||'',
+        caseNumber:row.case_number||'',
+        insuredNo:row.insured_no||'',
+        caseKind:row.case_kind||''
+      }
       return {
         id:row.id,
         createdAt:row.created_at,
@@ -722,14 +730,14 @@
         himiId:row.himi_id||'',
         himi:row.himi||'',
         status:row.status||'Laufend',
-        values:row.payload||{}
+        values
       }
     }
 
     async function loadSupplyDrafts(){
       const response=await supabase
-        .from('care_cases')
-        .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,payload,schema_version')
+        .from('care_case_overview')
+        .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,schema_version,patient_first_name,patient_last_name,patient_name,case_number,insured_no,case_kind')
         .order('updated_at',{ascending:false})
         .limit(250)
       if(response.error){
@@ -934,9 +942,20 @@
       }).join('')
     }
 
-    function restoreSupplyDraft(id){
-      const item=readSupplyDrafts().find(x=>x.id===id)
+    async function restoreSupplyDraft(id){
+      let item=readSupplyDrafts().find(x=>x.id===id)
       if(!item) return
+      const detail=await supabase
+        .from('care_cases')
+        .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,payload,schema_version')
+        .eq('id',id)
+        .single()
+      if(detail.error){
+        showError('appError','Versorgung konnte nicht geöffnet werden: '+detail.error.message)
+        return
+      }
+      item=mapCareCaseRow(detail.data)
+      supplyDraftCache=[item,...supplyDraftCache.filter(x=>x.id!==id)].slice(0,250)
       activeSupplyId=item.id
       lastPersistedSupplyFingerprint=supplyPersistenceFingerprint(item)
       Object.keys(values).forEach(k=>delete values[k])
