@@ -695,9 +695,11 @@
     const views = ['overview','care','supplyOverview','forms','contractQuestions','pg26','sources']
     const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Versorgungsübersicht',forms:'Formularregeln',contractQuestions:'Vertragsfragen',pg26:'PG 26',sources:'Quellen'}
     const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[],contractQuestions:[],contractKnowledge:[],approvedKnowledge:[]}
-    const dataCounts = {sources:0}
-    const optionalDataLoaded = {pg26:false,contractQuestions:false,sources:false}
+    const dataCounts = {sources:0,forms:0}
+    const optionalDataLoaded = {pg26:false,contractQuestions:false,sources:false,forms:false}
     const optionalDataPromises = {}
+    const loadedFormPgs = new Set()
+    const formPgPromises = {}
     const loadedFormFieldPgs = new Set()
     const formFieldPgPromises = {}
     const values = {}
@@ -1029,7 +1031,9 @@
             ? 'contract_knowledge_bootstrap'
             : section==='sources'
               ? 'sources_reference_bootstrap'
-              : ''
+              : section==='forms'
+                ? 'forms_reference_bootstrap'
+                : ''
         if(!rpcName) return true
 
         const response=await supabase.rpc(rpcName)
@@ -1040,6 +1044,9 @@
         const payload=response.data||{}
         if(section==='sources'){
           data.quellen=Array.isArray(payload)?payload:[]
+        }else if(section==='forms'){
+          data.formulare=Array.isArray(payload)?payload:[]
+          data.formulare.forEach(f=>{if(f?.PG!==undefined&&f?.PG!==null) loadedFormPgs.add(String(f.PG))})
         }else if(section==='pg26'){
           data.pg26=Array.isArray(payload.pg26)?payload.pg26:[]
           data.kalk=Array.isArray(payload.kalk)?payload.kalk:[]
@@ -1062,12 +1069,43 @@
           renderContractKnowledge($('knowledgeSearch')?.value||'')
         }else if(section==='sources'){
           $('sourceGrid').innerHTML=data.quellen.map(r=>'<article class="source"><span class="pill">'+escapeHtml(r.Typ)+'</span><h4>'+escapeHtml(r.Beschreibung)+'</h4><p>'+escapeHtml(r.URL_oder_Datei)+'</p><small>'+escapeHtml(r.Quelle_ID)+'</small></article>').join('')
+        }else if(section==='forms'){
+          renderForms($('formSearch')?.value||'')
         }
         showError('appError','')
         return true
       })().finally(()=>{delete optionalDataPromises[section]})
 
       return optionalDataPromises[section]
+    }
+
+    async function ensureFormsForPg(pg){
+      const key=String(pg||'')
+      if(!key || optionalDataLoaded.forms || loadedFormPgs.has(key)) return true
+      if(formPgPromises[key]) return formPgPromises[key]
+
+      formPgPromises[key]=(async()=>{
+        const response=await supabase.rpc('forms_for_pg',{p_pg:key})
+        if(response.error){
+          showError('appError','Formulardefinitionen konnten nicht geladen werden: '+response.error.message)
+          return false
+        }
+        const rows=Array.isArray(response.data)?response.data:[]
+        data.formulare=[
+          ...data.formulare.filter(f=>String(f.PG)!==key),
+          ...rows
+        ]
+        loadedFormPgs.add(key)
+        showError('appError','')
+        return true
+      })().finally(()=>{delete formPgPromises[key]})
+
+      const ok=await formPgPromises[key]
+      if(ok && $('carePg')?.value===key){
+        updateCare()
+        updateWizardStatus()
+      }
+      return ok
     }
 
     async function ensureFormFieldsForPg(pg){
@@ -1158,10 +1196,11 @@
         firstError=bootstrap.error.message
       }else{
         const payload=bootstrap.data||{}
-        ;['kassen','produktgruppen','formulare','himilogik','massfelder','himiformularregeln'].forEach(key=>{
+        ;['kassen','produktgruppen','himilogik','massfelder','himiformularregeln'].forEach(key=>{
           data[key]=Array.isArray(payload[key])?payload[key]:[]
         })
         dataCounts.sources=Number(payload.sourceCount)||0
+        dataCounts.forms=Number(payload.formCount)||0
       }
       showError('appError',firstError)
 
@@ -1365,12 +1404,12 @@
 
     function renderAll(){
       $('metricKassen').textContent=data.kassen.length
-      $('metricForms').textContent=data.formulare.length
+      $('metricForms').textContent=dataCounts.forms
       $('metricPg').textContent=data.produktgruppen.length
       $('metricSources').textContent=dataCounts.sources
 
       $('productBody').innerHTML=data.produktgruppen.map(r=>'<tr><td><strong>PG '+escapeHtml(r.PG)+'</strong></td><td>'+escapeHtml(r.Generisches_Blatt)+'</td><td><span class="pill">'+escapeHtml(r.Reifegrad)+'</span></td><td>'+escapeHtml(r.Kritischer_Hinweis)+'</td></tr>').join('')
-      renderForms('')
+      if(optionalDataLoaded.forms) renderForms('')
       if(optionalDataLoaded.sources) $('sourceGrid').innerHTML=data.quellen.map(r=>'<article class="source"><span class="pill">'+escapeHtml(r.Typ)+'</span><h4>'+escapeHtml(r.Beschreibung)+'</h4><p>'+escapeHtml(r.URL_oder_Datei)+'</p><small>'+escapeHtml(r.Quelle_ID)+'</small></article>').join('')
     }
 
@@ -1389,6 +1428,11 @@
     function updateCare(){
       const kasse=$('careKasse').value
       const pg=$('carePg').value
+      if(pg && !optionalDataLoaded.forms && !loadedFormPgs.has(String(pg))){
+        $('careForm').innerHTML='<option value="">Formularlogik wird geladen …</option>'
+        void ensureFormsForPg(pg)
+        return
+      }
       const himiId=selectedHimiId()
       const current=$('careForm').value
       const meta=selectedHimiMeta()
@@ -3042,6 +3086,7 @@
       if(view==='pg26') await loadOptionalData('pg26')
       if(view==='contractQuestions') await loadOptionalData('contractQuestions')
       if(view==='sources') await loadOptionalData('sources')
+      if(view==='forms') await loadOptionalData('forms')
     }
 
     function readCaseField(el){
