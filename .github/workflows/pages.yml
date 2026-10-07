@@ -28,8 +28,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RniE --include='*.html' --include='*.js' --include='*.mjs' --include='*.json' --exclude-dir='.git' 'service[_-]?role|sb_secret_|/mnt/data|file://|localhost|127\.0\.0\.1' .; then
-            echo 'Production safety gate failed: secret-like credential or local-only dependency found.'
+          runtime_files=(index.html app.js whispercpp/runtime.js whispercpp/worker.js)
+          if grep -niE 'service[_-]?role|sb_secret_|/mnt/data|file://|localhost|127\.0\.0\.1' "${runtime_files[@]}"; then
+            echo 'Production safety gate failed: secret-like credential or local-only runtime dependency found.'
             exit 1
           fi
           if ! grep -q 'sb_publishable_' index.html app.js; then
@@ -96,9 +97,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf vendor models node_modules
-          mkdir -p vendor/tesseract/core vendor/tesseract/lang vendor/pdfjs vendor/transformers
-          mkdir -p models/onnx-community/whisper-tiny/onnx
+          rm -rf vendor node_modules
+          mkdir -p vendor/tesseract/core vendor/tesseract/lang vendor/pdfjs
 
           npm ci --ignore-scripts --no-fund --no-audit
           npm audit --omit=dev --audit-level=critical
@@ -115,85 +115,99 @@ jobs:
           cp node_modules/pdfjs-dist/build/pdf.min.mjs vendor/pdfjs/pdf.min.mjs
           cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs vendor/pdfjs/pdf.worker.min.mjs
 
-          cp node_modules/@huggingface/transformers/dist/transformers.min.js vendor/transformers/transformers.min.js
-          find node_modules/@huggingface/transformers/dist -maxdepth 1 -type f -name 'ort-*' -exec cp {} vendor/transformers/ \;
-          find node_modules/onnxruntime-web/dist -maxdepth 1 -type f -name 'ort-*' -exec cp {} vendor/transformers/ \;
-
           test -s vendor/supabase.js
           test -s vendor/tesseract/tesseract.esm.min.js
           test -s vendor/tesseract/worker.min.js
           test -s vendor/tesseract/lang/deu.traineddata.gz
           test -s vendor/pdfjs/pdf.min.mjs
           test -s vendor/pdfjs/pdf.worker.min.mjs
-          test -s vendor/transformers/transformers.min.js
-          test -s vendor/transformers/ort-wasm-simd-threaded.asyncify.mjs
 
-          rm -rf node_modules
+          find vendor -type f -print0 | sort -z | xargs -0 sha256sum > vendor/SHA256SUMS
 
-      - name: Fetch pinned Whisper model for same-origin runtime
+      - name: Setup pinned Emscripten toolchain
+        uses: emscripten-core/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021
+
+      - name: Build pinned single-thread whisper.cpp WebAssembly
         shell: bash
         run: |
           set -euo pipefail
-          MODEL_DIR="models/onnx-community/whisper-tiny"
-          REV="ff4177021cc41f7db950912b73ea4fdf7d01d8e7"
-          BASE="https://huggingface.co/onnx-community/whisper-tiny/resolve/$REV"
+          WHISPER_CPP_REV="d1be6fde11ac6e0407606b4e42fe72d34add8037"
+          rm -rf .whisper-src .whisper-build
+          git clone --quiet https://github.com/ggml-org/whisper.cpp.git .whisper-src
+          git -C .whisper-src checkout --quiet "$WHISPER_CPP_REV"
 
-          files=(
-            "added_tokens.json"
-            "config.json"
-            "generation_config.json"
-            "merges.txt"
-            "normalizer.json"
-            "preprocessor_config.json"
-            "quantize_config.json"
-            "special_tokens_map.json"
-            "tokenizer.json"
-            "tokenizer_config.json"
-            "vocab.json"
-            "onnx/encoder_model_quantized.onnx"
-            "onnx/decoder_model_merged_quantized.onnx"
-          )
+          cp whispercpp/emscripten.cpp .whisper-src/examples/whisper.wasm/emscripten.cpp
+          cp whispercpp/CMakeLists.txt .whisper-src/examples/whisper.wasm/CMakeLists.txt
 
-          for file in "${files[@]}"; do
-            mkdir -p "$MODEL_DIR/$(dirname "$file")"
-            curl --fail --location --silent --show-error --retry 3 --retry-delay 2 \
-              "$BASE/$file?download=true" \
-              --output "$MODEL_DIR/$file"
-            test -s "$MODEL_DIR/$file"
-          done
+          emcmake cmake -S .whisper-src -B .whisper-build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DWHISPER_BUILD_TESTS=OFF \
+            -DWHISPER_BUILD_EXAMPLES=ON \
+            -DWHISPER_BUILD_SERVER=OFF \
+            -DWHISPER_WASM_SINGLE_FILE=ON
+          cmake --build .whisper-build --target libmain --parallel 2
 
-          echo "2af4a414ca47aa30f61246017e5fe82b0a8d229281d1255ba666a2a7f6b84d19  $MODEL_DIR/onnx/encoder_model_quantized.onnx" | sha256sum -c -
-          echo "25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3  $MODEL_DIR/onnx/decoder_model_merged_quantized.onnx" | sha256sum -c -
+          cp .whisper-build/bin/libmain.js whispercpp/whisper.js
+          test -s whispercpp/whisper.js
+          grep -q "whisper_factory" whispercpp/whisper.js
+          printf '%s\n' "$WHISPER_CPP_REV" > whispercpp/UPSTREAM_REVISION
 
-          printf '%s\n' "$REV" > "$MODEL_DIR/UPSTREAM_REVISION"
-          find "$MODEL_DIR" -type f -print0 | sort -z | xargs -0 sha256sum > "$MODEL_DIR/SHA256SUMS"
-          find vendor -type f -print0 | sort -z | xargs -0 sha256sum > vendor/SHA256SUMS
+          rm -rf .whisper-src .whisper-build
+
+      - name: Fetch pinned multilingual whisper.cpp model
+        shell: bash
+        run: |
+          set -euo pipefail
+          MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin?download=true"
+          curl --fail --location --silent --show-error --retry 3 --retry-delay 2 \
+            "$MODEL_URL" \
+            --output whispercpp/ggml-tiny-q5_1.bin
+
+          test -s whispercpp/ggml-tiny-q5_1.bin
+          echo "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7  whispercpp/ggml-tiny-q5_1.bin" | sha256sum -c -
+
+          sha256sum whispercpp/ggml-tiny-q5_1.bin > whispercpp/MODEL_SHA256
+          sha256sum whispercpp/whisper.js whispercpp/runtime.js whispercpp/worker.js > whispercpp/RUNTIME_SHA256
           sha256sum package-lock.json > DEPENDENCY_LOCK_SHA256
+
       - name: Runtime dependency gate
         shell: bash
         run: |
           set -euo pipefail
           node --check app.js
+          node --check whispercpp/runtime.js
+          node --check whispercpp/worker.js
           python3 - <<'PY'
           from pathlib import Path
-          import re, sys
+          import json, re, sys
 
-          files = [Path('index.html'), Path('app.js')]
+          runtime_files = [
+              Path('index.html'),
+              Path('app.js'),
+              Path('whispercpp/runtime.js'),
+              Path('whispercpp/worker.js'),
+          ]
+          failures = []
           checks = [
               ('remote dynamic import', re.compile(r'''import\s*\(\s*["']https://''', re.I)),
               ('remote static import', re.compile(r'''from\s*["']https://''', re.I)),
               ('remote script source', re.compile(r'''<script\b[^>]*\bsrc\s*=\s*["']https://''', re.I)),
           ]
-          failures = []
-          for path in files:
+
+          for path in runtime_files:
               source = path.read_text(encoding='utf-8')
               for label, pattern in checks:
                   if pattern.search(source):
                       failures.append(f'{path}: {label}')
+              if 'huggingface.co' in source.lower() or 'hf.co' in source.lower():
+                  failures.append(f'{path}: runtime Hugging Face access remains')
 
           html = Path('index.html').read_text(encoding='utf-8')
           app = Path('app.js').read_text(encoding='utf-8')
           css = Path('styles.css').read_text(encoding='utf-8')
+          cpp = Path('whispercpp/emscripten.cpp').read_text(encoding='utf-8')
+          cmake = Path('whispercpp/CMakeLists.txt').read_text(encoding='utf-8')
+          pkg = json.loads(Path('package.json').read_text(encoding='utf-8'))
 
           if re.search(r'''<script\b(?![^>]*\bsrc\s*=)[^>]*>''', html, re.I):
               failures.append('index.html: inline script block')
@@ -211,19 +225,27 @@ jobs:
               failures.append('index.html: hardened script-src CSP missing')
           if "style-src 'self'; style-src-elem 'self'; style-src-attr 'none';" not in html:
               failures.append('index.html: strict style CSP missing')
-          if 'huggingface.co' in html.lower() or 'hf.co' in html.lower():
-              failures.append('index.html: runtime Hugging Face network access still allowed')
-          if 'allowRemoteModels=false' not in app:
-              failures.append('app.js: Transformers remote models are not disabled')
-          if "localModelPath=new URL('./models/',import.meta.url).href" not in app:
-              failures.append('app.js: local model path missing')
-          if "dtype:{encoder_model:'q8',decoder_model_merged:'q8'}" not in app:
-              failures.append('app.js: Whisper dtype is not pinned')
+          if '<script src="./whispercpp/runtime.js"></script>' not in html:
+              failures.append('index.html: whisper.cpp adapter missing')
+          if 'coi-serviceworker.js' in html:
+              failures.append('index.html: obsolete COOP/COEP service worker still referenced')
+          if 'WhisperCppRuntime' not in app:
+              failures.append('app.js: whisper.cpp runtime integration missing')
+          if 'params.n_threads = 1;' not in cpp:
+              failures.append('whispercpp: single-thread inference is not enforced')
+          if 'USE_PTHREADS' in cmake:
+              failures.append('whispercpp: pthread build flag is still enabled')
+          if "MODULARIZE=1" not in cmake or "ENVIRONMENT='worker'" not in cmake:
+              failures.append('whispercpp: dedicated-worker WASM build flags missing')
+          if '@huggingface/transformers' in (pkg.get('dependencies') or {}):
+              failures.append('package.json: unused Transformers.js dependency remains')
 
           required = [
-              Path('models/onnx-community/whisper-tiny/onnx/encoder_model_quantized.onnx'),
-              Path('models/onnx-community/whisper-tiny/onnx/decoder_model_merged_quantized.onnx'),
-              Path('models/onnx-community/whisper-tiny/UPSTREAM_REVISION'),
+              Path('whispercpp/whisper.js'),
+              Path('whispercpp/ggml-tiny-q5_1.bin'),
+              Path('whispercpp/UPSTREAM_REVISION'),
+              Path('whispercpp/MODEL_SHA256'),
+              Path('whispercpp/RUNTIME_SHA256'),
               Path('vendor/SHA256SUMS'),
               Path('DEPENDENCY_LOCK_SHA256'),
               Path('styles.css'),
@@ -239,6 +261,16 @@ jobs:
               sys.exit(1)
           print('Runtime dependency gate passed.')
           PY
+
+      - name: Install Chromium for production regression gate
+        run: npx playwright install --with-deps chromium
+
+      - name: Run production browser regression gate
+        env:
+          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+          E2E_TOTP_SECRET: ${{ secrets.E2E_TOTP_SECRET }}
+        run: npm run test:e2e
 
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3

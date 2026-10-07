@@ -1074,23 +1074,15 @@
     }
 
     async function getProfileAsr(){
+      if(!window.WhisperCppRuntime){
+        throw new Error('Die lokale whisper.cpp-Laufzeit ist nicht verfügbar.')
+      }
+      window.WhisperCppRuntime.setStatusHandler(text=>profileAiSetStatus(text))
       if(!profileAsrPromise){
-        profileAiSetStatus('Lokales KI-Sprachmodell wird geladen … Beim ersten Mal kann das etwas dauern.')
-        profileAsrPromise=import('./vendor/transformers/transformers.min.js').then(async mod=>{
-          if(mod.env){
-            mod.env.useBrowserCache=true
-            mod.env.allowRemoteModels=false
-            mod.env.allowLocalModels=true
-            mod.env.localModelPath=new URL('./models/',import.meta.url).href
-            if(mod.env.backends?.onnx?.wasm){
-              mod.env.backends.onnx.wasm.wasmPaths=new URL('./vendor/transformers/',import.meta.url).href
-            }
-          }
-          return mod.pipeline('automatic-speech-recognition','onnx-community/whisper-tiny',{
-            device:'wasm',
-            dtype:{encoder_model:'q8',decoder_model_merged:'q8'}
-          })
-        }).catch(err=>{profileAsrPromise=null;throw err})
+        profileAiSetStatus('Lokale whisper.cpp-Spracherkennung wird vorbereitet … Beim ersten Einsatz wird das Modell geladen.')
+        profileAsrPromise=window.WhisperCppRuntime.warmup()
+          .then(()=>window.WhisperCppRuntime)
+          .catch(err=>{profileAsrPromise=null;throw err})
       }
       return profileAsrPromise
     }
@@ -1123,9 +1115,8 @@
     async function transcribeProfileAudio(blob){
       const audio=await audioBlobToMono16k(blob)
       const asr=await getProfileAsr()
-      profileAiSetStatus('KI-Transkription läuft lokal im Browser …')
-      const result=await asr(audio,{language:'german',task:'transcribe',chunk_length_s:30,stride_length_s:5})
-      return String(result?.text||'').trim()
+      profileAiSetStatus('KI-Transkription läuft vollständig lokal mit whisper.cpp/WebAssembly …')
+      return asr.transcribe(audio,'de')
     }
 
     function profileControlLabel(el){
@@ -1389,7 +1380,7 @@
       renderProfileAiSuggestions([])
       const q=$('profileAiQuestion')
       if(q) q.innerHTML='<strong>Geführte Abfrage</strong><span>„Nächste offene Frage“ auswählen oder auf „Aufnahme starten“ klicken.</span>'
-      profileAiSetStatus('Bereit. Beim ersten Einsatz wird das lokale Sprachmodell einmalig in den Browser geladen.')
+      profileAiSetStatus('Bereit. Die Spracheingabe läuft lokal mit whisper.cpp/WebAssembly; beim ersten Einsatz wird das Modell einmalig geladen.')
     }
 
     function profilePdfPrefill(){
