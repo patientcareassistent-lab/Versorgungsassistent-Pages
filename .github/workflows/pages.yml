@@ -297,7 +297,6 @@ jobs:
             dist/app.js
             dist/styles.css
             dist/brand-logo.jpg
-            dist/.nojekyll
             dist/vendor/supabase.js
             dist/vendor/tesseract/tesseract.esm.min.js
             dist/vendor/pdfjs/pdf.min.mjs
@@ -308,6 +307,7 @@ jobs:
             dist/assets/aok-pg24/anlage-4-profilerhebungsbogen.pdf
           )
           for file in "${required[@]}"; do test -s "$file" || { echo "Missing production artifact: $file"; exit 1; }; done
+          test -e dist/.nojekyll || { echo "Missing production artifact: dist/.nojekyll"; exit 1; }
 
           forbidden=(dist/.github dist/docs dist/tests dist/projektportal dist/package.json dist/package-lock.json dist/playwright.config.cjs)
           for path in "${forbidden[@]}"; do
