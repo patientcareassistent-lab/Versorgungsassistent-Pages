@@ -8,8 +8,28 @@ const H={
   "x-content-type-options":"nosniff",
   "referrer-policy":"no-referrer"
 };
-const out=(status:number,body:Record<string,unknown>)=>
-  new Response(JSON.stringify(body),{status,headers:H});
+const DEFAULT_ALLOWED_ORIGINS=["https://patientcareassistent-lab.github.io"];
+
+function allowedOrigins(){
+  const configured=(Deno.env.get("ARCHIVE_ALLOWED_ORIGINS")||"")
+    .split(",").map(x=>x.trim()).filter(Boolean);
+  return new Set([...DEFAULT_ALLOWED_ORIGINS,...configured]);
+}
+function originAllowed(req:Request){
+  const origin=req.headers.get("origin")||"";
+  return !origin||allowedOrigins().has(origin);
+}
+function corsHeaders(req:Request){
+  const origin=req.headers.get("origin")||"";
+  if(!origin||!originAllowed(req)) return {};
+  return {
+    "access-control-allow-origin":origin,
+    "access-control-allow-methods":"POST, OPTIONS",
+    "access-control-allow-headers":"authorization, x-client-info, apikey, content-type",
+    "access-control-max-age":"600",
+    "vary":"Origin"
+  };
+}
 
 function claims(token:string){
   try{
@@ -55,6 +75,17 @@ function completionProblems(row:Record<string,unknown>,payload:Record<string,unk
 }
 
 Deno.serve(async(req:Request)=>{
+  if(!originAllowed(req)){
+    return new Response(JSON.stringify({error:"origin_not_allowed"}),{
+      status:403,
+      headers:{...H,"vary":"Origin"}
+    });
+  }
+  if(req.method==="OPTIONS"){
+    return new Response(null,{status:204,headers:{...corsHeaders(req),"cache-control":"no-store"}});
+  }
+  const out=(status:number,body:Record<string,unknown>)=>
+    new Response(JSON.stringify(body),{status,headers:{...H,...corsHeaders(req)}});
   if(req.method!=="POST") return out(405,{error:"method_not_allowed"});
 
   const length=Number(req.headers.get("content-length")||"0");
