@@ -45,9 +45,23 @@ test('Whisper runtime and q8 model load and execute without Hugging Face runtime
     if (mod.env.backends?.onnx?.wasm) {
       mod.env.backends.onnx.wasm.wasmPaths = new URL('./vendor/transformers/', location.href).href
     }
-    const asr = await mod.pipeline('automatic-speech-recognition', 'onnx-community/whisper-tiny', {
-      device: 'wasm',
-      dtype: { encoder_model: 'q8', decoder_model_merged: 'q8' }
+    const modelId = 'onnx-community/whisper-tiny'
+    const localOnly = { local_files_only: true }
+    const [tokenizer, processor, model] = await Promise.all([
+      mod.AutoTokenizer.from_pretrained(modelId, localOnly),
+      mod.AutoProcessor.from_pretrained(modelId, localOnly),
+      mod.AutoModelForSpeechSeq2Seq.from_pretrained(modelId, {
+        ...localOnly,
+        device: 'wasm',
+        dtype: { encoder_model: 'q8', decoder_model_merged: 'q8' }
+      })
+    ])
+    if (!processor?.feature_extractor) throw new Error('Local Whisper processor is missing feature_extractor')
+    const asr = new mod.AutomaticSpeechRecognitionPipeline({
+      task: 'automatic-speech-recognition',
+      model,
+      tokenizer,
+      processor
     })
     const output = await asr(new Float32Array(16000))
     if (typeof asr.dispose === 'function') await asr.dispose()

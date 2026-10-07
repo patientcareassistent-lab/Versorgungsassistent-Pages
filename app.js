@@ -1086,9 +1086,23 @@
               mod.env.backends.onnx.wasm.wasmPaths=new URL('./vendor/transformers/',import.meta.url).href
             }
           }
-          return mod.pipeline('automatic-speech-recognition','onnx-community/whisper-tiny',{
-            device:'wasm',
-            dtype:{encoder_model:'q8',decoder_model_merged:'q8'}
+          const modelId='onnx-community/whisper-tiny'
+          const localOnly={local_files_only:true}
+          const [tokenizer,processor,model]=await Promise.all([
+            mod.AutoTokenizer.from_pretrained(modelId,localOnly),
+            mod.AutoProcessor.from_pretrained(modelId,localOnly),
+            mod.AutoModelForSpeechSeq2Seq.from_pretrained(modelId,{
+              ...localOnly,
+              device:'wasm',
+              dtype:{encoder_model:'q8',decoder_model_merged:'q8'}
+            })
+          ])
+          if(!processor?.feature_extractor) throw new Error('Lokaler Whisper-Prozessor konnte nicht geladen werden.')
+          return new mod.AutomaticSpeechRecognitionPipeline({
+            task:'automatic-speech-recognition',
+            model,
+            tokenizer,
+            processor
           })
         }).catch(err=>{profileAsrPromise=null;throw err})
       }
