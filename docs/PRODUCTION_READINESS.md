@@ -34,6 +34,9 @@ Der Versorgungsassistent ist als statische GitHub-Pages-Anwendung mit Supabase-B
 - `care_case_overview` ist `security_invoker` und besitzt für `authenticated` nur noch `SELECT`.
 - `anon` besitzt keine Tabellenrechte auf Patientenvorgänge.
 - Audit- und Revisionsdaten sind für Frontend-Rollen nicht direkt lesbar.
+- `last_modified_by` ist nach Bereinigung eines Alt-Datensatzes `NOT NULL`; serverseitige/systemische Updates können den letzten Bearbeiter nicht mehr versehentlich auf `NULL` setzen.
+- `payload` muss serverseitig ein JSON-Objekt bleiben und ist pro Vorgang auf 512 KiB begrenzt; `schema_version` ist auf 1–100 begrenzt.
+- Vollständige Payload-Revisionen werden innerhalb derselben Bearbeitungssitzung (gleicher Benutzer, Status und Wizard-Schritt, maximal 5 Minuten Abstand) zusammengefasst. Audit-Ereignisse bleiben separat erhalten. Das reduziert Datenbankwachstum im Free-Plan deutlich, ohne die fachlichen Zustandswechsel zu verlieren.
 
 ## Browser- und Sitzungsdaten
 
