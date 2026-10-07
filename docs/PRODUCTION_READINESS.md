@@ -67,7 +67,7 @@ Die Rezeptbrücke ist fachlich nicht Bestandteil dieses Projekts und wurde bei d
 
 ## Wiederherstellungsprüfung
 
-Am 07.10.2026 wurde die Revisionsarchitektur erweitert: jede neue INSERT-/UPDATE-Revision enthält zusätzlich einen vollständigen `row_snapshot` des Versorgungsdatensatzes. Für alle 30 bestehenden Versorgungen wurde die jeweils letzte Revision mit einem vollständigen aktuellen Snapshot hinterlegt.
+Am 07.10.2026 wurde die Revisionsarchitektur erweitert: jede neue INSERT-/UPDATE-Revision enthält zusätzlich einen kompakten Metadaten-Snapshot (`row_snapshot`); der bereits vorhandene `payload` bleibt separat gespeichert. Zusammen bilden beide Bestandteile einen vollständig rekonstruierbaren fachlichen Versorgungsdatensatz. Für alle 30 bestehenden Versorgungen wurde die jeweils letzte Revision entsprechend nachgerüstet.
 
 Ein transaktionaler Restore-Drill bestätigte 0 fehlende Snapshots und 0 Abweichungen im vollständigen fachlichen Datensatz. `updated_at` und `last_modified_by` werden bei einer tatsächlichen Wiederherstellung bewusst neu erzeugt und sind deshalb nicht Teil des fachlichen Vergleichs. Ein zusätzlicher Rollback-Test erzeugte bei einer temporären Änderung genau eine neue, vollständige Revision. Sämtliche Drill-Änderungen wurden zurückgerollt.
 
