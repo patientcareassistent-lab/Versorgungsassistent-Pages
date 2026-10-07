@@ -1062,6 +1062,9 @@
     let profileAiStream=null
     let profileAiChunks=[]
     let profileAsrPromise=null
+    let profileAsrWorker=null
+    let profileAsrSequence=0
+    const profileAsrPending=new Map()
     let profileGuidedTarget=null
     let profileGuidedIndex=-1
     let profileAiSuggestionState=[]
@@ -1074,40 +1077,60 @@
     }
 
     async function getProfileAsr(){
+      if(!window.crossOriginIsolated){
+        throw new Error('Die lokale Spracheingabe wird noch vorbereitet. Bitte die Seite einmal neu laden.')
+      }
       if(!profileAsrPromise){
-        profileAiSetStatus('Lokales KI-Sprachmodell wird geladen … Beim ersten Mal kann das etwas dauern.')
-        profileAsrPromise=import('./vendor/transformers/transformers.min.js').then(async mod=>{
-          if(mod.env){
-            mod.env.useBrowserCache=true
-            mod.env.allowRemoteModels=false
-            mod.env.allowLocalModels=true
-            mod.env.localModelPath=new URL('./models/',import.meta.url).href
-            if(mod.env.backends?.onnx?.wasm){
-              mod.env.backends.onnx.wasm.wasmPaths=new URL('./vendor/transformers/',import.meta.url).href
+        profileAiSetStatus('Lokale whisper.cpp-Spracherkennung wird vorbereitet … Beim ersten Einsatz wird das Modell geladen.')
+        profileAsrPromise=Promise.resolve().then(()=>{
+          profileAsrWorker=new Worker(
+            new URL('./whispercpp/worker.js',import.meta.url),
+            {name:'versorgungsassistent-whisper'}
+          )
+          profileAsrWorker.addEventListener('message',event=>{
+            const msg=event.data||{}
+            if(msg.type==='status' && msg.text){
+              profileAiSetStatus(msg.text)
+              return
+            }
+            if(msg.type==='ready'){
+              profileAiSetStatus('Lokales Sprachmodell ist bereit.','ready')
+              return
+            }
+            if(msg.type==='result' || msg.type==='error'){
+              const pending=profileAsrPending.get(msg.id)
+              if(!pending) return
+              profileAsrPending.delete(msg.id)
+              if(msg.type==='result') pending.resolve(String(msg.text||'').trim())
+              else pending.reject(new Error(msg.message||'Lokale Transkription fehlgeschlagen.'))
+            }
+          })
+          profileAsrWorker.addEventListener('error',event=>{
+            const error=new Error(event?.message||'Lokale whisper.cpp-Laufzeit ist abgestürzt.')
+            for(const pending of profileAsrPending.values()) pending.reject(error)
+            profileAsrPending.clear()
+            try{profileAsrWorker?.terminate()}catch(_){}
+            profileAsrWorker=null
+            profileAsrPromise=null
+          })
+          return {
+            transcribe(audio){
+              return new Promise((resolve,reject)=>{
+                const id='asr-'+(++profileAsrSequence)
+                profileAsrPending.set(id,{resolve,reject})
+                profileAsrWorker.postMessage(
+                  {type:'transcribe',id,audio,language:'de'},
+                  [audio.buffer]
+                )
+              })
             }
           }
-          const modelId='onnx-community/whisper-tiny'
-          const localOnly={local_files_only:true}
-          const modelBase=new URL('./models/'+modelId+'/',import.meta.url)
-          const [tokenizerJson,tokenizerConfig,processor,model]=await Promise.all([
-            fetch(new URL('tokenizer.json',modelBase)).then(r=>{if(!r.ok) throw new Error('Lokaler Whisper-Tokenizer fehlt.');return r.json()}),
-            fetch(new URL('tokenizer_config.json',modelBase)).then(r=>{if(!r.ok) throw new Error('Lokale Whisper-Tokenizer-Konfiguration fehlt.');return r.json()}),
-            mod.AutoProcessor.from_pretrained(modelId,localOnly),
-            mod.AutoModelForSpeechSeq2Seq.from_pretrained(modelId,{
-              ...localOnly,
-              device:'wasm',
-              dtype:{encoder_model:'q8',decoder_model_merged:'q8'}
-            })
-          ])
-          const tokenizer=new mod.WhisperTokenizer(tokenizerJson,tokenizerConfig)
-          if(!processor?.feature_extractor) throw new Error('Lokaler Whisper-Prozessor konnte nicht geladen werden.')
-          return new mod.AutomaticSpeechRecognitionPipeline({
-            task:'automatic-speech-recognition',
-            model,
-            tokenizer,
-            processor
-          })
-        }).catch(err=>{profileAsrPromise=null;throw err})
+        }).catch(err=>{
+          profileAsrPromise=null
+          try{profileAsrWorker?.terminate()}catch(_){}
+          profileAsrWorker=null
+          throw err
+        })
       }
       return profileAsrPromise
     }
@@ -1140,9 +1163,8 @@
     async function transcribeProfileAudio(blob){
       const audio=await audioBlobToMono16k(blob)
       const asr=await getProfileAsr()
-      profileAiSetStatus('KI-Transkription läuft lokal im Browser …')
-      const result=await asr(audio,{language:'german',task:'transcribe',chunk_length_s:30,stride_length_s:5})
-      return String(result?.text||'').trim()
+      profileAiSetStatus('KI-Transkription läuft vollständig lokal mit whisper.cpp/WebAssembly …')
+      return asr.transcribe(audio)
     }
 
     function profileControlLabel(el){
@@ -1406,7 +1428,7 @@
       renderProfileAiSuggestions([])
       const q=$('profileAiQuestion')
       if(q) q.innerHTML='<strong>Geführte Abfrage</strong><span>„Nächste offene Frage“ auswählen oder auf „Aufnahme starten“ klicken.</span>'
-      profileAiSetStatus('Bereit. Beim ersten Einsatz wird das lokale Sprachmodell einmalig in den Browser geladen.')
+      profileAiSetStatus('Bereit. Die Spracheingabe läuft lokal mit whisper.cpp/WebAssembly; beim ersten Einsatz wird das Modell einmalig geladen.')
     }
 
     function profilePdfPrefill(){
