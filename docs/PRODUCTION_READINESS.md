@@ -62,6 +62,10 @@ Folgende Versorgungsassistent-Endpunkte liefern nur noch `410 Gone` und verlange
 
 Die Rezeptbrücke ist fachlich nicht Bestandteil dieses Projekts und wurde bei dieser Härtungsrunde nicht verändert.
 
+## Wiederherstellungsprüfung
+
+Am 07.10.2026 wurde ein transaktionaler Restore-Drill aus `app_private.care_case_revisions` durchgeführt. Alle 30 aktuellen Versorgungen konnten in einer temporären Tabelle aus der jeweils letzten Revision rekonstruiert werden; es gab 0 fehlende Revisionen und 0 Abweichungen bei Status, Wizard-Index oder Payload. Der Drill wurde vollständig zurückgerollt und hat keine Produktivdaten verändert.
+
 ## Security Advisor
 
 Als verbleibender Security-Advisor-Hinweis wird `Leaked Password Protection Disabled` gemeldet. Im Free-Plan wird dieses Restrisiko derzeit durch verpflichtendes MFA/AAL2 und die zusätzliche Freigabeliste kompensiert.
@@ -80,7 +84,7 @@ Diese Objekte sind nicht die produktive Patientendatenschnittstelle. Ungenutzte 
 Die technische Web-/Free-Plan-Kompatibilität ersetzt keine datenschutzrechtliche Produktivfreigabe. Vor echtem Regelbetrieb mit Gesundheitsdaten bleiben insbesondere:
 
 - finale AVV/DPA-, DSFA-, TOM- und VVT-Freigaben,
-- ein dokumentierter Wiederherstellungs-/Restore-Test,
+- regelmäßige Wiederholungen des dokumentierten Restore-Drills,
 - verbindliche Aufbewahrungs- und Löschregeln,
 - Bestätigung der GitHub-Branch-Protection durch einen Repository-Admin; über die verfügbare GitHub-App war dieser Admin-Endpunkt nicht lesbar,
 - regelmäßige kontrollierte Dependency- und Security-Advisor-Prüfung.
