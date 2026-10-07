@@ -123,3 +123,36 @@ test('team-visible foreign supplies open read-only instead of failing on save', 
   await page.locator('.wizard-step[data-step="1"]').click()
   await expect(page.locator('.wizard-panel[data-panel="1"]')).toBeVisible()
 })
+
+
+test('team overview paginates beyond 250 open supplies', async ({ page }) => {
+  await installSupabaseMock(page, { mode: 'signed-in' })
+  await page.addInitScript(() => {
+    const rows = Array.from({ length: 275 }, (_, i) => ({
+      id: '30000000-0000-4000-8000-' + String(i).padStart(12, '0'),
+      owner_user_id: i % 2 === 0
+        ? '11111111-1111-4111-8111-111111111111'
+        : '22222222-2222-4222-8222-222222222222',
+      created_at: '2026-10-07T10:00:00.000Z',
+      updated_at: new Date(Date.UTC(2026, 9, 7, 10, 0, i % 60)).toISOString(),
+      wizard_index: 0,
+      insurer: 'Privat',
+      product_group: '10',
+      himi_id: 'Gehstock / Unterarmgehstütze',
+      himi: 'Gehstock / Unterarmgehstütze',
+      status: 'Laufend',
+      schema_version: 1,
+      payload: {
+        patientFirstName: 'Fall',
+        patientLastName: String(i).padStart(3, '0'),
+        caseKind: 'Neuversorgung',
+        supplyType: 'Post-OP'
+      }
+    }))
+    localStorage.setItem('va:e2e:mock-care-cases', JSON.stringify(rows))
+  })
+
+  await page.goto('/index.html')
+  await expect(page.locator('#supplyOverviewView')).toBeVisible()
+  await expect(page.locator('#supplyOverviewBody [data-supply-id]')).toHaveCount(275)
+})
