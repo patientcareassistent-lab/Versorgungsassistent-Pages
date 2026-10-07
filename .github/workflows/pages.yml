@@ -117,6 +117,7 @@ jobs:
 
           cp node_modules/@huggingface/transformers/dist/transformers.min.js vendor/transformers/transformers.min.js
           find node_modules/@huggingface/transformers/dist -maxdepth 1 -type f -name 'ort-*' -exec cp {} vendor/transformers/ \;
+          find node_modules/onnxruntime-web/dist -maxdepth 1 -type f -name 'ort-*' -exec cp {} vendor/transformers/ \;
 
           test -s vendor/supabase.js
           test -s vendor/tesseract/tesseract.esm.min.js
@@ -125,6 +126,7 @@ jobs:
           test -s vendor/pdfjs/pdf.min.mjs
           test -s vendor/pdfjs/pdf.worker.min.mjs
           test -s vendor/transformers/transformers.min.js
+          test -s vendor/transformers/ort-wasm-simd-threaded.asyncify.mjs
 
           rm -rf node_modules
 

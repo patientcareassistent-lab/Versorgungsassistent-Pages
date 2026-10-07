@@ -11,7 +11,7 @@
     const runtimeStyleCache = new Map()
     const runtimeStyleSlots = new WeakMap()
     const runtimeStyleAllowedProperties = new Set(['left','top','width','height','font-size'])
-    const runtimeStyleValuePattern = /^-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:px|%)$/
+    const runtimeStyleValuePattern = /^-?(?:\d+(?:\.\d+)?|\.\d+)(?:px|%)$/
     let runtimeStyleSeq = 0
 
     function applyRuntimeStyle(el,slot,declarations){
