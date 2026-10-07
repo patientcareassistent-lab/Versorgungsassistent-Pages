@@ -27,6 +27,7 @@ async function installSupabaseMock(page, options = {}) {
       let payload = null
       let filters = []
       let limitValue = null
+      let rangeValue = null
 
       const builder = {
         select() { return builder },
@@ -34,6 +35,7 @@ async function installSupabaseMock(page, options = {}) {
         eq(column, value) { filters.push({ type: 'eq', column, value }); return builder },
         order() { return builder },
         limit(value) { limitValue = Number(value) || null; return builder },
+        range(from, to) { rangeValue = [Number(from) || 0, Number(to) || 0]; return builder },
         upsert(value) {
           operation = 'upsert'
           payload = value
@@ -68,6 +70,7 @@ async function installSupabaseMock(page, options = {}) {
           if (filter.type === 'neq') result = result.filter(row => String(row?.[filter.column] ?? '') !== String(filter.value))
           if (filter.type === 'eq') result = result.filter(row => String(row?.[filter.column] ?? '') === String(filter.value))
         }
+        if (rangeValue) result = result.slice(rangeValue[0], rangeValue[1] + 1)
         if (limitValue) result = result.slice(0, limitValue)
         return result
       }
