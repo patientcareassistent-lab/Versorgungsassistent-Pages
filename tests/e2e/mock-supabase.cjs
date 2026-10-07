@@ -34,7 +34,20 @@ async function installSupabaseMock(page, options = {}) {
         eq(column, value) { filters.push({ type: 'eq', column, value }); return builder },
         order() { return builder },
         limit(value) { limitValue = Number(value) || null; return builder },
-        upsert(value) { operation = 'upsert'; payload = value; return builder },
+        upsert(value) {
+          operation = 'upsert'
+          payload = value
+          if (table === 'care_cases') {
+            const rows = readRows()
+            normalizeRows(value).forEach(item => {
+              const index = rows.findIndex(row => row.id === item.id)
+              if (index >= 0) rows[index] = { ...rows[index], ...item }
+              else rows.push({ ...item })
+            })
+            writeRows(rows)
+          }
+          return builder
+        },
         insert(value) { operation = 'insert'; payload = value; return builder },
         update(value) { operation = 'update'; payload = value; return builder },
         delete() { operation = 'delete'; return builder },
@@ -61,17 +74,7 @@ async function installSupabaseMock(page, options = {}) {
 
       function execute() {
         if (operation === 'upsert') {
-          const incoming = normalizeRows(payload)
-          if (table === 'care_cases') {
-            const rows = readRows()
-            incoming.forEach(item => {
-              const index = rows.findIndex(row => row.id === item.id)
-              if (index >= 0) rows[index] = { ...rows[index], ...item }
-              else rows.push({ ...item })
-            })
-            writeRows(rows)
-          }
-          return { data: incoming, error: null }
+          return { data: normalizeRows(payload), error: null }
         }
 
         if (operation === 'insert') {

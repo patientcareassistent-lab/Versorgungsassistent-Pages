@@ -3357,7 +3357,11 @@
     }
 
     async function recognizeImageSource(source){
-      const {createWorker}=await import('./vendor/tesseract/tesseract.esm.min.js')
+      const tesseractModule=await import('./vendor/tesseract/tesseract.esm.min.js')
+      const createWorker=tesseractModule.createWorker
+        || tesseractModule.default?.createWorker
+        || (typeof tesseractModule.default==='function'?tesseractModule.default:null)
+      if(typeof createWorker!=='function') throw new Error('Lokale OCR-Laufzeit konnte nicht initialisiert werden.')
       const worker=await createWorker('deu',1,{
         workerPath:new URL('./vendor/tesseract/worker.min.js',import.meta.url).href,
         corePath:new URL('./vendor/tesseract/core/',import.meta.url).href,
