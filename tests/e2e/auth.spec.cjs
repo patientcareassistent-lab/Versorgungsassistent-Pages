@@ -111,6 +111,25 @@ test('Supabase auth tokens are not persisted in localStorage or parsed from the 
   expect(source).not.toContain('detectSessionInUrl: true')
 })
 
+test('framed application navigation is blocked before authentication UI can run', async ({ page }) => {
+  await page.goto('/index.html')
+  await page.evaluate(() => {
+    const frame = document.createElement('iframe')
+    frame.id = 'clickjacking-probe'
+    frame.src = '/index.html'
+    document.body.appendChild(frame)
+  })
+
+  await expect.poll(async () => page.evaluate(() => {
+    const frame = document.querySelector('#clickjacking-probe')
+    try { return frame?.contentWindow?.location?.href || '' } catch (_) { return 'cross-origin' }
+  }), { timeout: 10000 }).toBe('about:blank')
+
+  const html = await (await page.request.get('/index.html')).text()
+  expect(html.indexOf('./frame-guard.js')).toBeGreaterThan(0)
+  expect(html.indexOf('./frame-guard.js')).toBeLessThan(html.indexOf('./whispercpp/runtime.js'))
+})
+
 test('document shell remains structurally complete after hardening', async ({ page }) => {
   await page.goto('/index.html')
   await expect(page.locator('#contractQuestionList')).toHaveCount(1)
