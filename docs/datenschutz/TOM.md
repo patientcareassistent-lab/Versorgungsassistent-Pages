@@ -29,7 +29,7 @@ Für den Versorgungsassistenten ist mindestens jährlich sowie nach wesentlichen
 
 Die Anwendung kommuniziert über HTTPS/TLS. Patientenvorgänge werden nicht mehr regulär im Browser-`localStorage` gespeichert. Supabase dokumentiert Verschlüsselung und Sicherheitskontrollen seiner Plattform; die konkrete vertragliche Zusicherung ist über das gültige DPA/Leistungsbeschreibung zu dokumentieren.
 
-Die Anwendung verwendet derzeit externe JavaScript-Abhängigkeiten. Für Produktivbetrieb mit echten Patientendaten ist die Abhängigkeitssicherheit zu prüfen; bevorzugt sollen kritische Laufzeitabhängigkeiten selbst gehostet oder anderweitig gegen Supply-Chain-Manipulation abgesichert werden.
+Die ausführbaren Browser-Laufzeitabhängigkeiten werden seit 07.10.2026 beim GitHub-Pages-Build in das statische Site-Artefakt übernommen und anschließend same-origin ausgeliefert. Eine Content-Security-Policy erlaubt ausführbaren JavaScript-Code nur noch von der eigenen Origin; Remote-JavaScript-Imports und Inline-Scriptblöcke werden zusätzlich durch ein Deployment-Gate verhindert. OCR-Worker, Tesseract-Core/WASM, deutsches Sprachmodell, PDF.js, Supabase JS sowie Transformers.js/ONNX-WASM werden lokal aus dem Deployment ausgeliefert. Die Spracheingabe darf weiterhin Modelldateien von Hugging Face nachladen; dieser verbleibende Netzbezug ist separat zu bewerten. Reproduzierbare Dependency-Lockfiles und fest vorgegebene Integritätswerte sind die nächste Härtungsstufe.
 
 ## Protokollierung
 
