@@ -23,20 +23,9 @@ Umgesetzt:
 - Der bereits vorhandene Production-Safety-Gate blockiert lokale Entwicklungs-Pfade und Secret-/Service-Role-Marker.
 - Für die beim Build erzeugten Vendor-Dateien wird eine SHA-256-Liste in `vendor/SHA256SUMS` erzeugt.
 
-## Weiterhin bewusst erlaubt
+## Laufzeit-Netzwerkgrenzen
 
-Die lokale Spracherkennung lädt das Whisper-Modell derzeit bei Bedarf von Hugging Face. Die ausführbare Transformers.js-/ONNX-Laufzeit ist bereits same-origin; die CSP erlaubt für Modelldateien Verbindungen zu Hugging-Face-/HF-Domains.
-
-Supabase API- und WebSocket-Verbindungen bleiben ausschließlich zum produktiven Projekt `pypljdyqjpdkismbwuag.supabase.co` erlaubt.
-
-## Nächste Härtungsstufen
-
-1. Reproduzierbare Vendor-Builds mit committed Lockfile und festgehaltenen Integritätswerten statt nur exakt gepinnter Top-Level-Pakete.
-2. Whisper-Modell vollständig same-origin bereitstellen oder die Spracheingabe bis dahin als optionales Feature mit klarer Netzabhängigkeit kennzeichnen.
-3. Inline-Styles schrittweise entfernen, um `style-src 'unsafe-inline'` aus der CSP entfernen zu können.
-4. Hosting-Option mit kontrollierbaren HTTP-Security-Headers prüfen. GitHub Pages erlaubt keine frei konfigurierbaren Response-Header; die aktuelle CSP wird deshalb als HTML-Meta-Policy ausgeliefert.
-5. Browserbasierte Regressionstests für Login, MFA, OCR, PDF-Maßblatt, Spracheingabe und Supabase-Autosave automatisieren.
-
+Supabase API- und WebSocket-Verbindungen bleiben auf das produktive Projekt `pypljdyqjpdkismbwuag.supabase.co` begrenzt. Das Whisper-Modell wird seit Phase 2 beim Build fest gepinnt, geprüft und same-origin ausgeliefert; Hugging-Face-Domains sind nicht mehr in der Laufzeit-CSP freigegeben.
 
 
 ## Phase 2 – Reproduzierbare Abhängigkeiten und lokales Whisper-Modell
@@ -58,9 +47,23 @@ Umgesetzt am 07.10.2026:
 
 Damit besteht für OCR, PDF-Verarbeitung, Supabase-JavaScript-Laufzeit, Transformers-/ONNX-Runtime und Whisper-Sprachmodell kein ausführbarer bzw. modellbezogener CDN-/Hub-Laufzeitzugriff mehr. Externe Netzwerkverbindungen der Anwendung sind in der CSP im Wesentlichen auf das produktive Supabase-Projekt begrenzt.
 
+## Phase 3 – Strikte Style-CSP ohne `unsafe-inline`
+
+Umgesetzt am 07.10.2026:
+
+- Der vollständige statische CSS-Bestand wurde aus `index.html` in `styles.css` ausgelagert.
+- Alle verbliebenen statischen `style="..."`-Attribute wurden durch CSS-Klassen ersetzt.
+- Alle JavaScript-Zuweisungen über `.style.*` wurden entfernt.
+- Dynamische PDF-/Maßblatt-Geometrien und Fortschrittsbreiten werden über validierte CSS-Regeln in das bereits same-origin geladene Stylesheet eingefügt. Erlaubt sind dabei ausschließlich `left`, `top`, `width`, `height` und `font-size` mit numerischen `px`-/`%`-Werten.
+- Sichtbarkeit wird über bestehende CSS-Klassen statt Inline-Styles gesteuert.
+- Die CSP verwendet nun `style-src 'self'; style-src-elem 'self'; style-src-attr 'none'`. `'unsafe-inline'` ist für Styles vollständig entfernt.
+- Der Deployment-Gate blockiert künftig Inline-`<style>`-Blöcke, `style=`-Attribute, JavaScript-`.style`-Mutationen, Remote-CSS-Abhängigkeiten und eine Lockerung der strikten Style-CSP.
+- Zusätzlich prüft `node --check app.js` die JavaScript-Syntax vor jedem Deployment.
+
+Der Produktions-Deploy mit der strikten Style-CSP und sämtlichen bestehenden Supply-Chain-Gates ist erfolgreich durchgelaufen.
+
 ## Verbleibende Härtung
 
-- Inline-Styles schrittweise in eine statische CSS-Datei überführen und danach `style-src 'unsafe-inline'` entfernen.
 - Automatisierte Browser-Regressionstests für MFA, Versorgungsspeicherung, OCR, PDF-Maßblätter und Spracheingabe ergänzen.
 - Abhängigkeitsupdates kontrolliert über einen Review-/Updateprozess statt automatisch durchführen.
-- Hosting mit frei konfigurierbaren HTTP-Sicherheitsheadern als spätere Option bewerten.
+- Hosting mit frei konfigurierbaren HTTP-Sicherheitsheadern als spätere Option bewerten. GitHub Pages liefert die CSP derzeit als HTML-Meta-Policy aus.
