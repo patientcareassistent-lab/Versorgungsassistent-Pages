@@ -3917,11 +3917,21 @@
     $('loginForm').addEventListener('submit',async(event)=>{
       event.preventDefault(); showError('loginError','')
       const username=$('username').value.trim().toLowerCase()
-      if(!['mitarbeiter1','mitarbeiter2','mitarbeiter3'].includes(username)){ showError('loginError','Unbekannter Benutzer.'); return }
+      if(!/^[a-z0-9._-]{1,64}$/.test(username)){
+        showError('loginError','Anmeldung fehlgeschlagen.')
+        return
+      }
       $('loginButton').disabled=true
-      const result=await supabase.auth.signInWithPassword({email:username+'@versorgungsassistent.test',password:$('password').value})
+      const result=await supabase.auth.signInWithPassword({
+        email:username+'@versorgungsassistent.test',
+        password:$('password').value
+      })
       $('loginButton').disabled=false
-      if(result.error){ showError('loginError',result.error.message); return }
+      if(result.error){
+        $('password').value=''
+        showError('loginError','Anmeldung fehlgeschlagen.')
+        return
+      }
       $('password').value=''
       await handleSession(result.data.session)
     })
