@@ -404,6 +404,40 @@
     }
     let currentSession = null
     let factorId = ''
+    const IDLE_TIMEOUT_MS=30*60*1000
+    let lastUserActivityAt=Date.now()
+    let idleGuardTimer=null
+
+    function markUserActivity(){
+      lastUserActivityAt=Date.now()
+    }
+
+    function stopIdleSessionGuard(){
+      if(idleGuardTimer) clearInterval(idleGuardTimer)
+      idleGuardTimer=null
+    }
+
+    async function enforceIdleSession(){
+      if(!currentSession) return
+      if(Date.now()-lastUserActivityAt<IDLE_TIMEOUT_MS) return
+      stopIdleSessionGuard()
+      try{ await supabase.auth.signOut() }catch(_){}
+      currentSession=null
+      showLogin()
+      showError('loginError','Sitzung wegen Inaktivität beendet. Bitte erneut anmelden.')
+    }
+
+    function startIdleSessionGuard(){
+      markUserActivity()
+      if(!idleGuardTimer) idleGuardTimer=setInterval(()=>{ void enforceIdleSession() },60000)
+    }
+
+    ;['pointerdown','keydown','input','touchstart'].forEach(type=>{
+      document.addEventListener(type,()=>{ if(currentSession) markUserActivity() },{passive:true})
+    })
+    document.addEventListener('visibilitychange',()=>{
+      if(document.visibilityState==='visible') void enforceIdleSession()
+    })
 
     function escapeHtml(value){
       return String(value ?? '—').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))
@@ -714,6 +748,7 @@
 
       $('currentUser').textContent=friendlyUser(session.user.email)
       $('auth').classList.add('hidden'); $('app').classList.remove('hidden')
+      startIdleSessionGuard()
       showLoading(false)
       populateSelectors()
       renderAll()
@@ -4002,7 +4037,10 @@
     $('contractQuestionForm').addEventListener('submit',submitContractQuestion)
 
     supabase.auth.onAuthStateChange((event,session)=>{
-      if(event==='SIGNED_OUT') showLogin()
+      if(event==='SIGNED_OUT'){
+        stopIdleSessionGuard()
+        showLogin()
+      }
       currentSession=session
     })
 
