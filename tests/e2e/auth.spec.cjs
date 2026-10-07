@@ -28,12 +28,12 @@ test('login surface and strict CSP render without inline styles', async ({ page 
   expect(cspErrors).toEqual([])
 })
 
-test('unknown usernames are rejected before authentication', async ({ page }) => {
+test('malformed usernames fail with a generic message', async ({ page }) => {
   await page.goto('/index.html')
-  await page.locator('#username').fill('fremder-user')
+  await page.locator('#username').fill('bad name')
   await page.locator('#password').fill('test')
   await page.locator('#loginButton').click()
-  await expect(page.locator('#loginError')).toContainText('Unbekannter Benutzer')
+  await expect(page.locator('#loginError')).toContainText('Anmeldung fehlgeschlagen')
   await expect(page.locator('#mfaPane')).toBeHidden()
 })
 
