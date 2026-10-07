@@ -7,6 +7,7 @@
     runtimeReject = reject
   })
   let modelPromise = null
+  let scriptPromise = null
 
   const moduleConfig = {
     print: () => {},
@@ -20,12 +21,30 @@
   }
   window.Module = moduleConfig
 
+  function ensureEngineScript() {
+    if (scriptPromise) return scriptPromise
+    scriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = './whispercpp/whisper.js'
+      script.async = true
+      script.addEventListener('load', resolve, { once: true })
+      script.addEventListener('error', () => {
+        const error = new Error('whisper.cpp WebAssembly-Script konnte nicht geladen werden.')
+        runtimeReject(error)
+        reject(error)
+      }, { once: true })
+      document.head.appendChild(script)
+    })
+    return scriptPromise
+  }
+
   async function ensureModel() {
     if (modelPromise) return modelPromise
     modelPromise = (async () => {
       if (!window.crossOriginIsolated) {
         throw new Error('Cross-Origin-Isolation ist für whisper.cpp noch nicht aktiv.')
       }
+      await ensureEngineScript()
       const module = await runtimeReady
       const response = await fetch('./whispercpp/ggml-tiny-q5_1.bin', { cache: 'force-cache' })
       if (!response.ok) {
