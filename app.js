@@ -3120,7 +3120,7 @@
       const path=currentSession.user.id+'/'+activeSupplyId+'/'+safeFolder+'/'+prepared.meta.id+'.jpg'
       const upload=await supabase.storage.from(REPAIR_PHOTO_BUCKET).upload(path,prepared.blob,{
         contentType:'image/jpeg',
-        cacheControl:'3600',
+        cacheControl:'0',
         upsert:false
       })
       if(upload.error) throw upload.error
@@ -3132,9 +3132,9 @@
       if(!photo?.path) return ''
       const cached=repairPhotoUrlCache.get(photo.path)
       if(cached?.expiresAt>Date.now()+30000) return cached.url
-      const signed=await supabase.storage.from(REPAIR_PHOTO_BUCKET).createSignedUrl(photo.path,3600)
+      const signed=await supabase.storage.from(REPAIR_PHOTO_BUCKET).createSignedUrl(photo.path,300)
       if(signed.error) throw signed.error
-      repairPhotoUrlCache.set(photo.path,{url:signed.data.signedUrl,expiresAt:Date.now()+3500000})
+      repairPhotoUrlCache.set(photo.path,{url:signed.data.signedUrl,expiresAt:Date.now()+240000})
       return signed.data.signedUrl
     }
 
