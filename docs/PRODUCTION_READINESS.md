@@ -75,6 +75,17 @@ Ein transaktionaler Restore-Drill bestätigte 0 fehlende Snapshots und 0 Abweich
 - Der vorbereitete Retention-Purge verlangt jetzt eine dokumentierte Begründung und bricht ab, solange zu fälligen Fällen noch Reparaturbilder im privaten Storage liegen. Ein Dry-Run am 07.10.2026 ergab 0 fällige Fälle.
 - Die teamweite offene Versorgungsliste besitzt einen eigenen partiellen Index auf `updated_at DESC` für nicht abgeschlossene Fälle.
 
+## Externe Archivierung
+
+- Der Backend-Dienst `archive-care-case` ist JWT-geschützt und prüft zusätzlich gültige Benutzer-Sitzung, MFA/AAL2, aktive App-Mitgliedschaft und Eigentümerschaft am Vorgang.
+- Eine Archivierung wird im Frontend erst freigegeben, wenn alle für den Versorgungspfad relevanten Arbeitsschritte vollständig sind. Der Backend-Dienst verlangt zusätzlich Abschlussstatus, Abgabe-Bestätigungen und Abrechnungsstatus.
+- Bildreferenzen werden serverseitig gegen Eigentümer, Vorgangs-ID und erlaubte Unterordner validiert; maximal 4 Reparatur- und 10 Etikettbilder werden akzeptiert.
+- Archivläufe werden in `app_private.care_case_archives` als PENDING/READY/FAILED geführt. Wiederholungen nutzen dieselbe Archiv-ID; ein bereits READY archivierter Vorgang wird idempotent behandelt.
+- Der finale Statuswechsel auf `Abgeschlossen` erfolgt im Benutzerkontext statt über den Service-Role-Kontext, damit Audit-Akteur und letzter Bearbeiter nachvollziehbar bleiben.
+- Archivindex und operative Aufbewahrungsmetadaten werden synchronisiert. Ein lokaler Purge wird blockiert, solange noch ein externer Archiveintrag oder private Reparaturbilder vorhanden sind.
+- Der Funktionsquelltext ist unter `supabase/functions/archive-care-case/index.ts` im Repository versioniert, wird aber nicht in das öffentliche Pages-`dist` aufgenommen.
+- Zum Prüfzeitpunkt existierten 0 erfolgreiche Archiveinträge. Die produktive Konfiguration des externen R2-Backends kann aus dem Frontend nicht verlässlich festgestellt werden und bleibt ein eigener Freigabepunkt.
+
 ## Security Advisor
 
 Als verbleibender Security-Advisor-Hinweis wird `Leaked Password Protection Disabled` gemeldet. Im Free-Plan wird dieses Restrisiko derzeit durch verpflichtendes MFA/AAL2 und die zusätzliche Freigabeliste kompensiert.
@@ -94,7 +105,8 @@ Die technische Web-/Free-Plan-Kompatibilität ersetzt keine datenschutzrechtlich
 
 - finale AVV/DPA-, DSFA-, TOM- und VVT-Freigaben,
 - regelmäßige Wiederholungen des dokumentierten Restore-Drills,
-- verbindliche Aufbewahrungs- und Löschregeln,
+- verbindliche Aufbewahrungs- und Löschregeln einschließlich externer Archivobjekte,
+- formale Freigabe der Cloudflare-R2-Nutzung (DPA/AVV, Region/Transfers, private Bucket-Konfiguration, Lösch-/Restore-Prozess) oder Deaktivierung der Archivfunktion,
 - Bestätigung der GitHub-Branch-Protection durch einen Repository-Admin; über die verfügbare GitHub-App war dieser Admin-Endpunkt nicht lesbar,
 - regelmäßige kontrollierte Dependency- und Security-Advisor-Prüfung.
 
