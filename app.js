@@ -3380,6 +3380,8 @@
       const counter=$('repairPhotoCounter')
       if(counter) counter.textContent='Fotos werden vorbereitet und sicher gespeichert …'
       try{
+        const parentSaved=await persistActiveSupplyNow()
+        if(!parentSaved) throw new Error('Versorgung konnte vor dem Foto-Upload nicht sicher gespeichert werden.')
         for(const file of todo){
           const prepared=await compressRepairPhoto(file)
           const photo=await uploadRepairPhoto(prepared)
@@ -3488,6 +3490,8 @@
       const counter=$('repairLabelCounter')
       if(counter) counter.textContent='Etikett-Fotos werden vorbereitet und sicher gespeichert …'
       try{
+        const parentSaved=await persistActiveSupplyNow()
+        if(!parentSaved) throw new Error('Versorgung konnte vor dem Etikett-Upload nicht sicher gespeichert werden.')
         for(const file of todo){
           const prepared=await compressRepairPhoto(file)
           const photo=await uploadRepairPhoto(prepared,'labels')
