@@ -15,7 +15,8 @@ Der Versorgungsassistent ist als statische GitHub-Pages-Anwendung mit Supabase-B
 - Das Frontend besitzt keine Laufzeitabhängigkeit auf `localhost`, `file://`, `/mnt/data` oder eine lokale SQLite-Datei.
 - Im Frontend wird ausschließlich ein Supabase Publishable Key verwendet; kein `service_role`-/Secret-Key liegt im Browsercode.
 - Der GitHub-Pages-Workflow enthält Production-, Runtime- und Browser-Regression-Gates.
-- Das veröffentlichte Pages-Artefakt wird inzwischen explizit in `dist/` aufgebaut. Entwicklungsdateien, Tests, Projektdokumentation und das alte `projektportal/` werden nicht mehr als Website ausgeliefert.
+- Das veröffentlichte Pages-Artefakt wird inzwischen explizit in `dist/` aufgebaut. Entwicklungsdateien, Tests, Projektdokumentation, Supabase-Funktionsquellen und das alte `projektportal/` werden nicht mehr als Website ausgeliefert.
+- Jeder Produktionsbuild erzeugt `BUILD_INFO.txt` mit Commit/Repository/Workflow-Run sowie `RELEASE_SHA256SUMS`; sämtliche Dateien im Release-Artefakt werden vor Upload erneut per SHA-256 verifiziert.
 - Verwendete GitHub Actions sind auf konkrete Commit-SHAs gepinnt.
 - AOK-PG24-Quelldokumente werden beim Build fail-closed geprüft: fehlender Abruf, fehlende Anlage oder ungültiger PDF-Download verhindert das Deployment.
 
@@ -85,6 +86,9 @@ Ein transaktionaler Restore-Drill bestätigte 0 fehlende Snapshots und 0 Abweich
 - Archivindex und operative Aufbewahrungsmetadaten werden synchronisiert. Ein lokaler Purge wird blockiert, solange noch ein externer Archiveintrag oder private Reparaturbilder vorhanden sind.
 - Der Funktionsquelltext ist unter `supabase/functions/archive-care-case/index.ts` im Repository versioniert, wird aber nicht in das öffentliche Pages-`dist` aufgenommen. Supabase-JS und AWS-S3-Client sind im Funktionsquelltext auf konkrete Versionen gepinnt; Änderungen unter `supabase/**` lösen künftig keinen unnötigen GitHub-Pages-Neubuild aus.
 - Zum Prüfzeitpunkt existierten 0 erfolgreiche Archiveinträge. Die produktive Konfiguration des externen R2-Backends kann aus dem Frontend nicht verlässlich festgestellt werden und bleibt ein eigener Freigabepunkt.
+- Zusätzlich ist `verify-care-case-archive` eingerichtet. Die Funktion lädt Hauptarchiv und referenzierte Bildobjekte serverseitig aus R2, prüft SHA-256, Manifestidentität, Fall-/Archiv-ID und Bildobjekte und schreibt das Ergebnis als `UNVERIFIED`/`VERIFIED`/`FAILED` in den privaten Archivindex. Es werden keine Patientendaten an den Browser zurückgegeben.
+- Die externe Löschkette ist zweistufig vorbereitet: `delete-care-case-archive` kann nur von einem aktiven App-Mitglied mit Rolle `admin`, MFA/AAL2, fälliger Aufbewahrungsfrist, inaktivem Legal Hold und zuvor `VERIFIED`-Archiv ausgeführt werden. Danach bleibt die kontrollierte Datenbanklöschung als separater Schritt. Aktuell existiert kein aktives `admin`-Mitglied; die destructive Archivlöschung ist damit derzeit praktisch nicht ausführbar.
+- Externe Archivlöschungen erhalten eine eigene private Auditspur in `app_private.care_case_archive_delete_log`; zum Prüfzeitpunkt enthält sie 0 Einträge.
 
 ## Security Advisor
 
