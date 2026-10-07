@@ -1,6 +1,7 @@
 #
-# Versorgungsassistent browser binding for whisper.cpp
-# Based on the upstream whisper.wasm Emscripten target, pinned by CI.
+# Versorgungsassistent browser binding for whisper.cpp.
+# Uses the upstream whisper.wasm pthread architecture and a self-hosted
+# cross-origin-isolation service worker.
 #
 
 set(TARGET libmain)
@@ -17,8 +18,6 @@ target_link_libraries(${TARGET} PRIVATE
 
 set_target_properties(${TARGET} PROPERTIES LINK_FLAGS " \
     --bind \
-    -s MODULARIZE=1 \
-    -s EXPORT_NAME='whisper_factory' \
     -s USE_PTHREADS=1 \
     -s PTHREAD_POOL_SIZE=4 \
     -s PTHREAD_POOL_SIZE_STRICT=0 \
@@ -27,5 +26,4 @@ set_target_properties(${TARGET} PROPERTIES LINK_FLAGS " \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s FORCE_FILESYSTEM=1 \
     -s SINGLE_FILE=1 \
-    -s ENVIRONMENT='web,worker' \
 ")
