@@ -19,6 +19,7 @@ Datenfluss:
 7. RLS erlaubt aktiven MFA/AAL2-Mitgliedern Team-READ; Änderungen bleiben an den jeweiligen Eigentümer gebunden.
 8. Änderungen erzeugen Audit- und Revisionsdaten im privaten Schema.
 9. Bei Abschluss wird eine Aufbewahrungsfrist vorgemerkt; Löschung erfolgt kontrolliert nach Freigabe des Löschkonzepts.
+10. Optional kann ein vollständig bearbeiteter eigener Vorgang über einen geschützten Backend-Dienst in ein externes R2-Archiv kopiert werden. Dabei werden Fallstand, Revisions-/Auditdaten und referenzierte Reparaturbilder übertragen; eine solche externe Archivierung erfordert vor echter Nutzung eine gesonderte Dienstleister-/Transfer-/Löschfreigabe.
 
 ## 3. Erforderlichkeit und Verhältnismäßigkeit
 
@@ -28,7 +29,7 @@ Vor Produktivfreigabe muss die verantwortliche Stelle für jede Datenkategorie p
 
 ## 4. Hauptrisiken
 
-Unbefugter Zugriff auf Gesundheitsdaten; Kontoübernahme; fehlerhafte Rechtevergabe; XSS/Supply-Chain-Manipulation im statischen Frontend; Verlust oder unzulässige Veränderung von Versorgungsdokumentation; zu lange oder zu kurze Speicherung; unzulässige Weitergabe; fehlerhafte OCR, die fachlich ungeprüft übernommen wird; fehlende Nachvollziehbarkeit von Änderungen; Zugriff bei Geräteverlust; Drittland-/Subprozessor-Risiken.
+Unbefugter Zugriff auf Gesundheitsdaten; Kontoübernahme; fehlerhafte Rechtevergabe; XSS/Supply-Chain-Manipulation im statischen Frontend; Verlust oder unzulässige Veränderung von Versorgungsdokumentation; zu lange oder zu kurze Speicherung; unzulässige Weitergabe; fehlerhafte OCR, die fachlich ungeprüft übernommen wird; fehlende Nachvollziehbarkeit von Änderungen; Zugriff bei Geräteverlust; Drittland-/Subprozessor-Risiken; bei Nutzung des optionalen externen Archivs zusätzlich Fehlkonfiguration des Objektbuckets, unvollständige Löschung über mehrere Speicherorte oder nicht ausreichend geregelte internationale Datenübermittlung.
 
 ## 5. Maßnahmen
 
@@ -40,6 +41,7 @@ Folgende Punkte sind vor echter Patientennutzung verbindlich zu schließen oder 
 - Verantwortliche Stelle, DSB und Rechtsgrundlagen eintragen/freigeben.
 - Endgültige Lösch-/Aufbewahrungsfristen bestätigen.
 - Supabase-DPA/AVV und Unterauftragsverarbeiter prüfen/akzeptieren.
+- Falls das externe R2-Archiv genutzt werden soll: Cloudflare-Vertrags-/DPA-, Datenregions-, Transfer-, Lösch- und Wiederherstellungsprozess ausdrücklich prüfen und freigeben; andernfalls die Archivfunktion für den Produktivbetrieb deaktiviert lassen.
 - GitHub Pages als Produktivhoster datenschutzrechtlich und sicherheitstechnisch freigeben oder durch geeigneteres Hosting ersetzen.
 - Externe JavaScript-Laufzeitabhängigkeiten selbst hosten oder mit einem gleichwertigen Supply-Chain-Schutz versehen.
 - Schutz gegen kompromittierte Passwörter in Supabase aktivieren, sofern verfügbar.
