@@ -22,7 +22,7 @@ Der Versorgungsassistent ist als statische GitHub-Pages-Anwendung mit Supabase-B
 ## Patientenvorgänge / Zugriffsschutz
 
 - Patientenvorgänge liegen in `public.care_cases`; RLS ist aktiviert.
-- Zugriff erfordert authentifizierten Benutzer, aktive Freigabe in `app_private.app_members`, kein anonymes Konto und MFA/AAL2.
+- Zugriff erfordert authentifizierten Benutzer, aktive Freigabe in `app_private.app_members`, kein anonymes Konto und MFA/AAL2. Bereits vor Anzeige bzw. Neueinrichtung des MFA-Schritts wird serverseitig geprüft, ob das Passwort-authentifizierte Konto überhaupt aktives App-Mitglied ist.
 - Es existieren aktuell 3 Auth-Benutzer, 3 aktive App-Mitglieder, keine verwaisten Mitgliedschaften und 3 Benutzer mit verifiziertem TOTP.
 - Team-Sichtbarkeit ist umgesetzt: jeder freigegebene Mitarbeiter kann alle offenen Versorgungen lesen.
 - Änderungen an einer Versorgung bleiben dem jeweiligen Ersteller vorbehalten.
@@ -77,13 +77,13 @@ Ein transaktionaler Restore-Drill bestätigte 0 fehlende Snapshots und 0 Abweich
 
 ## Externe Archivierung
 
-- Der Backend-Dienst `archive-care-case` ist JWT-geschützt und prüft zusätzlich gültige Benutzer-Sitzung, MFA/AAL2, aktive App-Mitgliedschaft und Eigentümerschaft am Vorgang.
+- Der Backend-Dienst `archive-care-case` ist JWT-geschützt und prüft zusätzlich gültige Benutzer-Sitzung, MFA/AAL2, aktive App-Mitgliedschaft und Eigentümerschaft am Vorgang. Browser-CORS ist auf die vorgesehene GitHub-Pages-Origin bzw. explizit konfigurierte Zusatz-Origin beschränkt.
 - Eine Archivierung wird im Frontend erst freigegeben, wenn alle für den Versorgungspfad relevanten Arbeitsschritte vollständig sind. Der Backend-Dienst verlangt zusätzlich Abschlussstatus, Abgabe-Bestätigungen und Abrechnungsstatus.
 - Bildreferenzen werden serverseitig gegen Eigentümer, Vorgangs-ID und erlaubte Unterordner validiert; maximal 4 Reparatur- und 10 Etikettbilder werden akzeptiert.
 - Archivläufe werden in `app_private.care_case_archives` als PENDING/READY/FAILED geführt. Wiederholungen nutzen dieselbe Archiv-ID; ein bereits READY archivierter Vorgang wird idempotent behandelt.
 - Der finale Statuswechsel auf `Abgeschlossen` erfolgt im Benutzerkontext statt über den Service-Role-Kontext, damit Audit-Akteur und letzter Bearbeiter nachvollziehbar bleiben.
 - Archivindex und operative Aufbewahrungsmetadaten werden synchronisiert. Ein lokaler Purge wird blockiert, solange noch ein externer Archiveintrag oder private Reparaturbilder vorhanden sind.
-- Der Funktionsquelltext ist unter `supabase/functions/archive-care-case/index.ts` im Repository versioniert, wird aber nicht in das öffentliche Pages-`dist` aufgenommen.
+- Der Funktionsquelltext ist unter `supabase/functions/archive-care-case/index.ts` im Repository versioniert, wird aber nicht in das öffentliche Pages-`dist` aufgenommen. Supabase-JS und AWS-S3-Client sind im Funktionsquelltext auf konkrete Versionen gepinnt; Änderungen unter `supabase/**` lösen künftig keinen unnötigen GitHub-Pages-Neubuild aus.
 - Zum Prüfzeitpunkt existierten 0 erfolgreiche Archiveinträge. Die produktive Konfiguration des externen R2-Backends kann aus dem Frontend nicht verlässlich festgestellt werden und bleibt ein eigener Freigabepunkt.
 
 ## Security Advisor
