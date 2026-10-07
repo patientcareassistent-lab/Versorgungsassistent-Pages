@@ -177,28 +177,30 @@ jobs:
 
           files = [Path('index.html'), Path('app.js')]
           checks = [
-              ('remote dynamic import', re.compile(r'import\s*\(\s*["\\\']https://', re.I)),
-              ('remote static import', re.compile(r'from\s*["\\\']https://', re.I)),
-              ('remote script source', re.compile(r'<script\\b[^>]*\\bsrc\s*=\s*["\\\']https://', re.I)),
+              ('remote dynamic import', re.compile(r'''import\s*\(\s*["']https://''', re.I)),
+              ('remote static import', re.compile(r'''from\s*["']https://''', re.I)),
+              ('remote script source', re.compile(r'''<script\b[^>]*\bsrc\s*=\s*["']https://''', re.I)),
           ]
           failures = []
           for path in files:
-              text = path.read_text(encoding='utf-8')
+              source = path.read_text(encoding='utf-8')
               for label, pattern in checks:
-                  if pattern.search(text):
+                  if pattern.search(source):
                       failures.append(f'{path}: {label}')
+
           html = Path('index.html').read_text(encoding='utf-8')
           app = Path('app.js').read_text(encoding='utf-8')
           css = Path('styles.css').read_text(encoding='utf-8')
-          if re.search(r'<script\\b(?![^>]*\\bsrc\s*=)[^>]*>', html, re.I):
+
+          if re.search(r'''<script\b(?![^>]*\bsrc\s*=)[^>]*>''', html, re.I):
               failures.append('index.html: inline script block')
-          if re.search(r'<style\\b', html, re.I):
+          if re.search(r'<style\b', html, re.I):
               failures.append('index.html: inline style block')
-          if re.search(r'\\sstyle\\s*=', html, re.I):
+          if re.search(r'\sstyle\s*=', html, re.I):
               failures.append('index.html: inline style attribute')
-          if re.search(r'\\.style\\b|setAttribute\\(\\s*["\\\']style["\\\']|cssText', app):
+          if re.search(r'''\.style\b|setAttribute\(\s*["']style["']|cssText''', app):
               failures.append('app.js: runtime inline style mutation')
-          if re.search(r'@import\\s+|url\\(\\s*["\\\']?https?://', css, re.I):
+          if re.search(r'''@import\s+|url\(\s*["']?https?://''', css, re.I):
               failures.append('styles.css: remote stylesheet dependency')
           if '<link id="appStyles" rel="stylesheet" href="./styles.css" />' not in html:
               failures.append('index.html: external application stylesheet missing')
@@ -214,16 +216,19 @@ jobs:
               failures.append('app.js: local model path missing')
           if "dtype:{encoder_model:'q8',decoder_model_merged:'q8'}" not in app:
               failures.append('app.js: Whisper dtype is not pinned')
+
           required = [
               Path('models/onnx-community/whisper-tiny/onnx/encoder_model_quantized.onnx'),
               Path('models/onnx-community/whisper-tiny/onnx/decoder_model_merged_quantized.onnx'),
               Path('models/onnx-community/whisper-tiny/UPSTREAM_REVISION'),
               Path('vendor/SHA256SUMS'),
               Path('DEPENDENCY_LOCK_SHA256'),
+              Path('styles.css'),
           ]
           for path in required:
               if not path.exists() or path.stat().st_size == 0:
                   failures.append(f'missing build artifact: {path}')
+
           if failures:
               print('Runtime dependency gate failed:')
               for item in failures:
