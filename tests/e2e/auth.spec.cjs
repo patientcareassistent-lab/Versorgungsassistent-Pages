@@ -82,6 +82,13 @@ test('password login remains gated by MFA before the app opens', async ({ page }
 })
 
 
+test('authenticated browser sessions have a 30 minute inactivity timeout', async ({ page }) => {
+  const source = await (await page.request.get('/app.js')).text()
+  expect(source).toContain('const IDLE_TIMEOUT_MS=30*60*1000')
+  expect(source).toContain('Sitzung wegen Inaktivität beendet')
+  expect(source).toContain('supabase.auth.signOut()')
+})
+
 test('legacy persistent Supabase auth token is removed during startup', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('sb-pypljdyqjpdkismbwuag-auth-token', 'legacy-token')
