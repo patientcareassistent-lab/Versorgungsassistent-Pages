@@ -3312,7 +3312,7 @@
         const target=Number(b.dataset.step)
         const blocker=firstBlockingIndex()
         if(!stepApplicable(target)) return
-        if(target>blocker){
+        if(!activeSupplyIsReadOnly() && target>blocker){
           showWizardError('Dieser Schritt ist noch gesperrt. Bitte zuerst abschließen:',[wizardSteps[blocker].name])
           return
         }
