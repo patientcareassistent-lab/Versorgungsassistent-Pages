@@ -3,7 +3,14 @@
     const supabase = createClient(
       'https://pypljdyqjpdkismbwuag.supabase.co',
       'sb_publishable_dyiVrJQX8HYWKrWxJzqLmw_RmFAWJRI',
-      { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false,
+          storage: window.sessionStorage
+        }
+      }
     )
 
     const $ = (id) => document.getElementById(id)
