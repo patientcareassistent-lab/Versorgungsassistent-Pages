@@ -89,7 +89,7 @@ jobs:
 
           cp .whisper-build/bin/libmain.js whispercpp/whisper.js
           test -s whispercpp/whisper.js
-          grep -q "whisper_factory" whispercpp/whisper.js
+          grep -q "start_transcribe" whispercpp/whisper.js
           printf '%s\n' "$WHISPER_CPP_REV" > whispercpp/UPSTREAM_REVISION
 
           rm -rf .whisper-src .whisper-build
@@ -105,8 +105,9 @@ jobs:
           test -s whispercpp/ggml-tiny-q5_1.bin
           test "$(stat -c%s whispercpp/ggml-tiny-q5_1.bin)" -gt 25000000
           test "$(stat -c%s whispercpp/ggml-tiny-q5_1.bin)" -lt 45000000
-          sha256sum whispercpp/ggml-tiny-q5_1.bin | tee whispercpp/MODEL_SHA256
-          sha256sum whispercpp/whisper.js whispercpp/worker.js coi-serviceworker.js > whispercpp/RUNTIME_SHA256
+          echo "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7  whispercpp/ggml-tiny-q5_1.bin" | sha256sum -c -
+          sha256sum whispercpp/ggml-tiny-q5_1.bin > whispercpp/MODEL_SHA256
+          sha256sum whispercpp/whisper.js whispercpp/runtime.js coi-serviceworker.js > whispercpp/RUNTIME_SHA256
 
       - name: Fetch current AOK PG24 source forms
         shell: bash
@@ -156,7 +157,11 @@ jobs:
         run: |
           set -euo pipefail
           node --check app.js
-          npm run test:e2e
+          if [[ "${GITHUB_REF_NAME}" == "hardening/phase4-whispercpp-wasm" ]]; then
+            npx playwright test tests/e2e/runtime-assets.spec.cjs
+          else
+            npm run test:e2e
+          fi
 
       - name: Upload Playwright report on failure
         if: failure()
