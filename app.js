@@ -412,6 +412,36 @@
       lastUserActivityAt=Date.now()
     }
 
+    function clearSensitiveRuntimeState(){
+      clearTimeout(draftSaveTimer)
+      draftSaveTimer=null
+      activeSupplyId=null
+      supplyDraftCache=[]
+      lastPersistedSupplyFingerprint=''
+      Object.keys(values).forEach(key=>delete values[key])
+      try{ repairPhotoUrlCache.clear() }catch(_){}
+
+      document.querySelectorAll('#careView input,#careView textarea').forEach(el=>{
+        if(el.type==='checkbox'||el.type==='radio') el.checked=false
+        else {
+          try{ el.value='' }catch(_){}
+        }
+      })
+      document.querySelectorAll('#careView select').forEach(el=>{ el.selectedIndex=0 })
+      document.querySelectorAll('#careView canvas').forEach(canvas=>{
+        try{ canvas.width=canvas.width }catch(_){}
+      })
+
+      ;['fieldList','measureFieldList','repairPhotoGallery','repairLabelGallery'].forEach(id=>{
+        const el=$(id)
+        if(el) el.replaceChildren()
+      })
+      if($('supplyOverviewBody')) $('supplyOverviewBody').replaceChildren()
+      if($('currentUser')) $('currentUser').textContent=''
+      if($('rxOcrRaw')) $('rxOcrRaw').value=''
+      if($('profileAiTranscript')) $('profileAiTranscript').value=''
+    }
+
     function stopIdleSessionGuard(){
       if(idleGuardTimer) clearInterval(idleGuardTimer)
       idleGuardTimer=null
@@ -421,6 +451,7 @@
       if(!currentSession) return
       if(Date.now()-lastUserActivityAt<IDLE_TIMEOUT_MS) return
       stopIdleSessionGuard()
+      clearSensitiveRuntimeState()
       try{ await supabase.auth.signOut() }catch(_){}
       currentSession=null
       showLogin()
@@ -4067,6 +4098,7 @@
     supabase.auth.onAuthStateChange((event,session)=>{
       if(event==='SIGNED_OUT'){
         stopIdleSessionGuard()
+        clearSensitiveRuntimeState()
         showLogin()
       }
       currentSession=session
