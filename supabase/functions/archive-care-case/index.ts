@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3@3";
+import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3@3.1147.0";
 
 const H={
   "content-type":"application/json; charset=utf-8",
