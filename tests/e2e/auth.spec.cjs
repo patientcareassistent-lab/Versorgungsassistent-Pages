@@ -57,7 +57,7 @@ test('password login remains gated by MFA before the app opens', async ({ page }
   await installSupabaseMock(page, { mode: 'login' })
   await page.goto('/index.html')
 
-  await page.locator('#username').fill('Mitarbeiter3')
+  await page.locator('#username').fill('e2e-user')
   await page.locator('#password').fill('test')
   await page.locator('#loginButton').click()
 
@@ -74,7 +74,7 @@ test('password login remains gated by MFA before the app opens', async ({ page }
   await page.locator('#verifyButton').click()
   await expect(page.locator('#app')).toBeVisible()
   await expect(page.locator('#supplyOverviewView')).toBeVisible()
-  await expect(page.locator('#currentUser')).toContainText('Mitarbeiter3')
+  await expect(page.locator('#currentUser')).toContainText('e2e-user')
   await expect(page.locator('#password')).toHaveValue('')
   await expect(page.locator('#otp')).toHaveValue('')
   await expect(page.locator('#secretDetails')).toBeHidden()
