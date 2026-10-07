@@ -4056,9 +4056,8 @@
 
     async function archiveActiveSupply(){
       if(!supplyHasEditableContext()) return
-      const item=activeSupplyRecord()
       const patient=([values.patientFirstName,values.patientLastName].filter(Boolean).join(' ')||values.patientName||values.caseNumber||'diese Versorgung')
-      if(!window.confirm('Versorgung „'+patient+'“ archivieren? Sie wird danach aus der Liste der offenen Versorgungen ausgeblendet.')) return
+      if(!window.confirm('Versorgung „'+patient+'“ extern archivieren? Der aktuelle Stand, die Revisionshistorie und zugehörige Bilder werden zuerst in das geschützte Archiv kopiert.')) return
 
       const button=$('archiveSupplyButton')
       const oldText=button?.textContent||'Archivieren'
@@ -4069,14 +4068,21 @@
         const saved=await persistActiveSupplyNow()
         if(!saved) throw new Error('Der aktuelle Stand konnte vor der Archivierung nicht gespeichert werden.')
 
-        const completedAt=new Date().toISOString()
-        const result=await supabase
-          .from('care_cases')
-          .update({status:'Abgeschlossen',completed_at:completedAt})
-          .eq('id',activeSupplyId)
-          .select('id')
-          .single()
-        if(result.error) throw result.error
+        const result=await supabase.functions.invoke('archive-care-case',{body:{care_case_id:activeSupplyId}})
+        if(result.error){
+          let detail=result.error.message||'Archivierungsdienst nicht erreichbar.'
+          try{
+            const context=result.error.context
+            if(context?.json){
+              const body=await context.json()
+              if(body?.error==='archive_backend_not_configured') detail='Das externe R2-Archiv ist serverseitig noch nicht konfiguriert.'
+              else if(body?.detail) detail=body.detail
+              else if(body?.error) detail=body.error
+            }
+          }catch(_){}
+          throw new Error(detail)
+        }
+        if(!result.data?.ok) throw new Error(result.data?.error||'Archivierung wurde nicht bestätigt.')
 
         const archivedId=activeSupplyId
         supplyDraftCache=supplyDraftCache.filter(x=>x.id!==archivedId)
@@ -4088,7 +4094,7 @@
         showError('appError','')
       }catch(err){
         console.error(err)
-        showWizardError('Archivierung fehlgeschlagen. Die Versorgung bleibt geöffnet.',[err?.message||String(err)])
+        showWizardError('Archivierung fehlgeschlagen. Die Versorgung bleibt im operativen Bestand.',[err?.message||String(err)])
       }finally{
         if(button){button.textContent=oldText;updateSupplyEditState()}
       }
