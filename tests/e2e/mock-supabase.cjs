@@ -6,7 +6,7 @@ async function installSupabaseMock(page, options = {}) {
     const SESSION = {
       user: {
         id: '11111111-1111-4111-8111-111111111111',
-        email: 'mitarbeiter3@versorgungsassistent.test'
+        email: 'e2e-user@versorgungsassistent.test'
       }
     }
     let session = mode === 'signed-in' ? SESSION : null
