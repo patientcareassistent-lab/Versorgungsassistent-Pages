@@ -47,8 +47,10 @@ test('Whisper runtime and q8 model load and execute without Hugging Face runtime
     }
     const modelId = 'onnx-community/whisper-tiny'
     const localOnly = { local_files_only: true }
-    const [tokenizer, processor, model] = await Promise.all([
-      mod.AutoTokenizer.from_pretrained(modelId, localOnly),
+    const modelBase = new URL('./models/' + modelId + '/', location.href)
+    const [tokenizerJson, tokenizerConfig, processor, model] = await Promise.all([
+      fetch(new URL('tokenizer.json', modelBase)).then(r => { if (!r.ok) throw new Error('Local tokenizer.json missing'); return r.json() }),
+      fetch(new URL('tokenizer_config.json', modelBase)).then(r => { if (!r.ok) throw new Error('Local tokenizer_config.json missing'); return r.json() }),
       mod.AutoProcessor.from_pretrained(modelId, localOnly),
       mod.AutoModelForSpeechSeq2Seq.from_pretrained(modelId, {
         ...localOnly,
@@ -56,6 +58,7 @@ test('Whisper runtime and q8 model load and execute without Hugging Face runtime
         dtype: { encoder_model: 'q8', decoder_model_merged: 'q8' }
       })
     ])
+    const tokenizer = new mod.WhisperTokenizer(tokenizerJson, tokenizerConfig)
     if (!processor?.feature_extractor) throw new Error('Local Whisper processor is missing feature_extractor')
     const asr = new mod.AutomaticSpeechRecognitionPipeline({
       task: 'automatic-speech-recognition',
