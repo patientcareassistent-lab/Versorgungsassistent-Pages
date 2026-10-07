@@ -57,3 +57,10 @@ test('local Tesseract OCR recognizes a generated prescription image', async ({ p
   expect(raw.toUpperCase()).toContain('PROTHESE')
   expect(await page.locator('[style]').count()).toBe(0)
 })
+
+test('prescription OCR runtime has explicit decode and canvas limits', async ({ page }) => {
+  const source = await (await page.request.get('/app.js')).text()
+  expect(source).toContain('const RX_OCR_MAX_PIXELS=12000000')
+  expect(source).toContain('const RX_OCR_MAX_SIDE=3500')
+  expect(source).toContain('const RX_IMAGE_MAX_DECODE_PIXELS=50000000')
+})
