@@ -29,7 +29,7 @@ test('PDF.js renders a pinned AOK source form entirely same-origin', async ({ pa
 })
 
 test('whisper.cpp WASM transcribes entirely same-origin in a cross-origin-isolated page', async ({ page }) => {
-  test.setTimeout(240000)
+  test.setTimeout(180000)
   const remoteRuntimeRequests = []
   page.on('request', request => {
     if (/huggingface\.co|\.hf\.co|esm\.sh|cdn\.jsdelivr\.net|unpkg\.com/i.test(request.url())) {
@@ -41,54 +41,32 @@ test('whisper.cpp WASM transcribes entirely same-origin in a cross-origin-isolat
   await page.waitForFunction(() => window.crossOriginIsolated === true, null, { timeout: 20000 })
 
   const assetState = await page.evaluate(async () => {
-    const [runtime, model, worker] = await Promise.all([
+    const [runtime, model, adapter] = await Promise.all([
       fetch('./whispercpp/whisper.js'),
       fetch('./whispercpp/ggml-tiny-q5_1.bin'),
-      fetch('./whispercpp/worker.js'),
+      fetch('./whispercpp/runtime.js'),
     ])
     return {
       isolated: window.crossOriginIsolated,
       runtimeOk: runtime.ok,
-      runtimeBytes: Number(runtime.headers.get('content-length') || 0),
       modelOk: model.ok,
       modelBytes: Number(model.headers.get('content-length') || 0),
-      workerOk: worker.ok,
+      adapterOk: adapter.ok,
     }
   })
 
   expect(assetState.isolated).toBe(true)
   expect(assetState.runtimeOk).toBe(true)
   expect(assetState.modelOk).toBe(true)
-  expect(assetState.workerOk).toBe(true)
+  expect(assetState.adapterOk).toBe(true)
   expect(assetState.modelBytes).toBeGreaterThan(25000000)
 
-  const result = await page.evaluate(() => new Promise((resolve, reject) => {
-    const worker = new Worker('./whispercpp/worker.js', { name: 'whispercpp-regression' })
-    const timeout = setTimeout(() => {
-      worker.terminate()
-      reject(new Error('whisper.cpp regression timed out'))
-    }, 180000)
-
-    worker.addEventListener('message', event => {
-      const msg = event.data || {}
-      if (msg.type === 'error' && msg.id === 'regression') {
-        clearTimeout(timeout)
-        worker.terminate()
-        reject(new Error(msg.message || 'whisper.cpp worker failed'))
-      }
-      if (msg.type === 'result' && msg.id === 'regression') {
-        clearTimeout(timeout)
-        worker.terminate()
-        resolve({ text: String(msg.text || ''), isolated: window.crossOriginIsolated })
-      }
-    })
-
-    const silence = new Float32Array(16000)
-    worker.postMessage(
-      { type: 'transcribe', id: 'regression', audio: silence, language: 'de' },
-      [silence.buffer]
-    )
-  }))
+  const result = await page.evaluate(async () => {
+    if (!window.WhisperCppRuntime) throw new Error('WhisperCppRuntime missing')
+    await window.WhisperCppRuntime.warmup()
+    const text = await window.WhisperCppRuntime.transcribe(new Float32Array(16000), 'de')
+    return { text, isolated: window.crossOriginIsolated }
+  })
 
   expect(result.isolated).toBe(true)
   expect(typeof result.text).toBe('string')
