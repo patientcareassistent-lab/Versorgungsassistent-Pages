@@ -1037,11 +1037,16 @@
         profileAsrPromise=import('./vendor/transformers/transformers.min.js').then(async mod=>{
           if(mod.env){
             mod.env.useBrowserCache=true
+            mod.env.allowRemoteModels=false
+            mod.env.localModelPath=new URL('./models/',import.meta.url).href
             if(mod.env.backends?.onnx?.wasm){
               mod.env.backends.onnx.wasm.wasmPaths=new URL('./vendor/transformers/',import.meta.url).href
             }
           }
-          return mod.pipeline('automatic-speech-recognition','onnx-community/whisper-tiny',{device:'wasm'})
+          return mod.pipeline('automatic-speech-recognition','onnx-community/whisper-tiny',{
+            device:'wasm',
+            dtype:{encoder_model:'q8',decoder_model_merged:'q8'}
+          })
         }).catch(err=>{profileAsrPromise=null;throw err})
       }
       return profileAsrPromise
