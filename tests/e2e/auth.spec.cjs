@@ -37,6 +37,22 @@ test('malformed usernames fail with a generic message', async ({ page }) => {
   await expect(page.locator('#mfaPane')).toBeHidden()
 })
 
+test('core reference data failure keeps the application closed', async ({ page }) => {
+  await installSupabaseMock(page, { mode: 'signed-in', failBootstrap: true })
+  await page.goto('/index.html')
+  await expect(page.locator('#app')).toBeHidden()
+  await expect(page.locator('#auth')).toBeVisible()
+  await expect(page.locator('#loginError')).toContainText('fachliche Datenbasis')
+})
+
+test('care case load failure keeps the application closed', async ({ page }) => {
+  await installSupabaseMock(page, { mode: 'signed-in', failCases: true })
+  await page.goto('/index.html')
+  await expect(page.locator('#app')).toBeHidden()
+  await expect(page.locator('#auth')).toBeVisible()
+  await expect(page.locator('#loginError')).toContainText('Versorgungsübersicht')
+})
+
 test('password login remains gated by MFA before the app opens', async ({ page }) => {
   await installSupabaseMock(page, { mode: 'login' })
   await page.goto('/index.html')
