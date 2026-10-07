@@ -41,7 +41,10 @@ async function installSupabaseMock(page, options = {}) {
         upsert(value) {
           operation = 'upsert'
           payload = value
-          if (table === 'care_cases') {
+          if (table === 'care_cases' && localStorage.getItem('va:e2e:fail-next-care-upsert') === '1') {
+            localStorage.removeItem('va:e2e:fail-next-care-upsert')
+            operation = 'upsert-fail'
+          } else if (table === 'care_cases') {
             const rows = readRows()
             normalizeRows(value).forEach(item => {
               const index = rows.findIndex(row => row.id === item.id)
@@ -78,6 +81,10 @@ async function installSupabaseMock(page, options = {}) {
       }
 
       function execute() {
+        if (operation === 'upsert-fail') {
+          return { data: null, error: { message: 'simulated care case save failure' } }
+        }
+
         if (operation === 'upsert') {
           return { data: normalizeRows(payload), error: null }
         }
@@ -167,9 +174,24 @@ async function installSupabaseMock(page, options = {}) {
       from(table) { return makeQueryBuilder(table) },
       storage: {
         from() {
+          const readStoragePaths = () => {
+            try {
+              const parsed = JSON.parse(localStorage.getItem('va:e2e:mock-storage-paths') || '[]')
+              return Array.isArray(parsed) ? parsed : []
+            } catch (_) { return [] }
+          }
+          const writeStoragePaths = paths => localStorage.setItem('va:e2e:mock-storage-paths', JSON.stringify(paths))
           return {
-            async upload(path) { return { data: { path }, error: null } },
-            async remove() { return { data: [], error: null } },
+            async upload(path) {
+              writeStoragePaths([...new Set([...readStoragePaths(), path])])
+              return { data: { path }, error: null }
+            },
+            async remove(paths) {
+              const removeSet = new Set(paths || [])
+              writeStoragePaths(readStoragePaths().filter(path => !removeSet.has(path)))
+              localStorage.setItem('va:e2e:last-storage-remove', JSON.stringify(paths || []))
+              return { data: [], error: null }
+            },
             async createSignedUrl(path) { return { data: { signedUrl: 'data:text/plain,' + encodeURIComponent(path) }, error: null } },
             getPublicUrl(path) { return { data: { publicUrl: 'data:text/plain,' + encodeURIComponent(path) } } }
           }
