@@ -4047,10 +4047,51 @@
         el.disabled=!editable
       })
       if($('clearButton')) $('clearButton').disabled=!editable
+      if($('archiveSupplyButton')) $('archiveSupplyButton').disabled=!editable
       if($('printButton')) $('printButton').disabled=!hasContext
       if($('readOnlyBanner')) $('readOnlyBanner').classList.toggle('hidden',!activeSupplyIsReadOnly())
       document.querySelectorAll('.wizard-step').forEach(el=>{ if(!hasContext) el.disabled=true })
       if($('wizardNext')) $('wizardNext').disabled=!hasContext
+    }
+
+    async function archiveActiveSupply(){
+      if(!supplyHasEditableContext()) return
+      const item=activeSupplyRecord()
+      const patient=([values.patientFirstName,values.patientLastName].filter(Boolean).join(' ')||values.patientName||values.caseNumber||'diese Versorgung')
+      if(!window.confirm('Versorgung „'+patient+'“ archivieren? Sie wird danach aus der Liste der offenen Versorgungen ausgeblendet.')) return
+
+      const button=$('archiveSupplyButton')
+      const oldText=button?.textContent||'Archivieren'
+      if(button){button.disabled=true;button.textContent='Archivierung …'}
+      showWizardError('')
+
+      try{
+        const saved=await persistActiveSupplyNow()
+        if(!saved) throw new Error('Der aktuelle Stand konnte vor der Archivierung nicht gespeichert werden.')
+
+        const completedAt=new Date().toISOString()
+        const result=await supabase
+          .from('care_cases')
+          .update({status:'Abgeschlossen',completed_at:completedAt})
+          .eq('id',activeSupplyId)
+          .select('id')
+          .single()
+        if(result.error) throw result.error
+
+        const archivedId=activeSupplyId
+        supplyDraftCache=supplyDraftCache.filter(x=>x.id!==archivedId)
+        activeSupplyId=null
+        lastPersistedSupplyFingerprint=''
+        renderSupplyOverview()
+        resetWizard()
+        setView('supplyOverview')
+        showError('appError','')
+      }catch(err){
+        console.error(err)
+        showWizardError('Archivierung fehlgeschlagen. Die Versorgung bleibt geöffnet.',[err?.message||String(err)])
+      }finally{
+        if(button){button.textContent=oldText;updateSupplyEditState()}
+      }
     }
 
     function clearCurrentSupplyInputs(){
@@ -4209,6 +4250,7 @@
     $('careHimi').addEventListener('change',()=>{values.himiId=$('careHimi').value;syncPg24Level();syncSituationFields();updateCare();showWizardError('');renderWizard()})
     $('careForm').addEventListener('change',()=>{updateCareFields();showWizardError('');renderWizard()})
     $('printButton').addEventListener('click',()=>window.print())
+    $('archiveSupplyButton').addEventListener('click',archiveActiveSupply)
     $('clearButton').addEventListener('click',clearCurrentSupplyInputs)
     $('profileAiMode').addEventListener('change',()=>{
       profileGuidedTarget=null;profileGuidedIndex=-1;renderProfileAiSuggestions([])
