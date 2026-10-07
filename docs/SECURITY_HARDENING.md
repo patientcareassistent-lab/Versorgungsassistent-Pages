@@ -115,3 +115,18 @@ Umgesetzt am 07.10.2026:
 - Branch Protection / Ruleset-Schutz für `main` muss mit Repository-Adminrechten bestätigt bzw. eingerichtet werden; über die eingesetzte GitHub-App war die Protection-API nicht lesbar.
 - Wiederherstellungs-/Restore-Test und verbindliche Lösch-/Aufbewahrungsfreigabe stehen noch aus.
 - Das öffentliche GitHub-Repository enthält weiterhin historische Entwicklungs-/Dokumentationsdateien im Quellstand; sie werden nicht mehr als Pages-Artefakt ausgeliefert. Eine Trennung in öffentliches Deployment-Repo und private Entwicklungsdokumentation ist als organisatorische Härtung sinnvoll.
+
+
+## Phase 6 – Datenintegrität und Sitzungsgrenzen
+
+Umgesetzt am 07.10.2026:
+
+- Authentifizierte Browsersitzungen werden nach 30 Minuten Inaktivität automatisch beendet; aktive Nutzung setzt den Timer zurück.
+- Die Login-Oberfläche veröffentlicht keine feste Liste gültiger Tester-Benutzernamen mehr und verwendet bei Anmeldefehlern eine generische Fehlermeldung.
+- Der Kernstart ist fail-closed: fehlende Referenzdaten, eine fehlgeschlagene Migration lokaler Alt-Entwürfe oder eine nicht ladbare Versorgungsübersicht verhindern das Öffnen der Anwendung.
+- Rezept-OCR begrenzt Dateigröße, dekodierte Bildauflösung und OCR-Canvas-Größe, um Speicher-/CPU-Spitzen bei sehr großen Bildern oder PDF-Seiten zu begrenzen.
+- care_cases.payload muss ein JSON-Objekt sein und ist auf 512 KiB je Vorgang begrenzt; schema_version ist auf 1–100 begrenzt und last_modified_by ist NOT NULL.
+- Vollständige Revisions-Snapshots werden bei schnellen Autosaves innerhalb derselben Bearbeitungssitzung zusammengeführt; die separate Auditspur bleibt bestehen. Dadurch sinkt das langfristige Datenbankwachstum im Free-Plan.
+- Der Besitzer-Fremdschlüssel von care_cases verwendet jetzt ON DELETE RESTRICT, damit das Entfernen eines Auth-Kontos keine Patientenvorgänge kaskadierend löschen kann.
+- Der vorbereitete Retention-Purge verlangt eine Begründung und verweigert die Löschung, solange zu einem fälligen Vorgang noch Reparaturbilder im privaten Storage liegen.
+- Für die teamweite offene Auftragsübersicht existiert ein partieller Index auf updated_at DESC für nicht abgeschlossene Vorgänge.
