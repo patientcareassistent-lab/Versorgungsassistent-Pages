@@ -24,6 +24,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Production safety gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE --include='*.html' --include='*.js' --include='*.mjs' --include='*.json' --exclude-dir='.git' 'service[_-]?role|sb_secret_|/mnt/data|file://|localhost|127\.0\.0\.1' .; then
+            echo 'Production safety gate failed: secret-like credential or local-only dependency found.'
+            exit 1
+          fi
+          if ! grep -q 'sb_publishable_' index.html; then
+            echo 'Production safety gate failed: expected Supabase publishable key marker not found.'
+            exit 1
+          fi
+          echo 'Production safety gate passed.'
+
+
       - name: Configure Pages
         uses: actions/configure-pages@v6
 
