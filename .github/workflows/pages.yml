@@ -55,7 +55,7 @@ jobs:
           try:
               raw=urllib.request.urlopen(req,timeout=30).read().decode('utf-8','ignore')
           except Exception as e:
-              print('AOK page fetch failed:',e); raise SystemExit(0)
+              print('AOK page fetch failed:',e); raise SystemExit(1)
           anchors=re.findall(r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',raw,re.I|re.S)
           wanted={
             'Anlage 4':'anlage-4-profilerhebungsbogen.pdf',
@@ -75,6 +75,9 @@ jobs:
                       if '.pdf' in url.lower():
                           found[target]=url
           print('AOK PG24 assets found:',sorted(found))
+          missing=[target for target in wanted.values() if target not in found]
+          if missing:
+              raise SystemExit('Missing AOK PG24 assets: '+', '.join(missing))
           for target,url in found.items():
               try:
                   out=os.path.join('assets/aok-pg24',target)
@@ -85,6 +88,7 @@ jobs:
                       print('downloaded',target,len(data))
               except Exception as e:
                   print('download failed',target,e)
+                  raise
           PY
 
       - name: Setup pinned Node toolchain
