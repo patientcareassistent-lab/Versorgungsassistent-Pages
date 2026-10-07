@@ -4,45 +4,84 @@ Stand: 07.10.2026
 
 ## Ergebnis
 
-Der Versorgungsassistent ist als statische GitHub-Pages-Anwendung mit Supabase-Backend vollständig webbasiert. Für den laufenden technischen Umfang ist die Architektur mit GitHub Pages und Supabase Free kompatibel.
+Der Versorgungsassistent ist als statische GitHub-Pages-Anwendung mit Supabase-Backend vollständig webbasiert. Für den laufenden technischen Umfang ist die Architektur mit GitHub Pages und Supabase Free kompatibel. Der aktuelle Stand wurde nach der Team-Sichtbarkeitsänderung erneut technisch tief geprüft und gehärtet.
 
 ## Verifizierter Betriebsstand
 
 - GitHub Pages wird aus dem Branch `main` per GitHub Actions veröffentlicht.
 - Das Supabase-Projekt `Versorgungsassistent` ist aktiv, Region `eu-central-1`.
 - Die Supabase-Organisation läuft im Tarif `free / tier_free`.
-- Aktuelle PostgreSQL-Datenbankgröße bei der Prüfung: ca. 41 MB. Die dokumentierte Free-Plan-Grenze für den Übergang in Read-only liegt bei 500 MB.
+- Aktuelle PostgreSQL-Datenbankgröße bei der Prüfung: ca. 41 MB.
 - Das Frontend besitzt keine Laufzeitabhängigkeit auf `localhost`, `file://`, `/mnt/data` oder eine lokale SQLite-Datei.
 - Im Frontend wird ausschließlich ein Supabase Publishable Key verwendet; kein `service_role`-/Secret-Key liegt im Browsercode.
-- Der GitHub-Pages-Workflow enthält seit 07.10.2026 ein Production Safety Gate. Es blockiert Deployments bei Secret-Key-Markern oder lokalen Laufzeitpfaden.
+- Der GitHub-Pages-Workflow enthält Production-, Runtime- und Browser-Regression-Gates.
+- Das veröffentlichte Pages-Artefakt wird inzwischen explizit in `dist/` aufgebaut. Entwicklungsdateien, Tests, Projektdokumentation und das alte `projektportal/` werden nicht mehr als Website ausgeliefert.
+- Verwendete GitHub Actions sind auf konkrete Commit-SHAs gepinnt.
+- AOK-PG24-Quelldokumente werden beim Build fail-closed geprüft: fehlender Abruf, fehlende Anlage oder ungültiger PDF-Download verhindert das Deployment.
 
 ## Patientenvorgänge / Zugriffsschutz
 
-- Patientenvorgänge liegen in `public.care_cases`.
-- RLS ist aktiviert.
+- Patientenvorgänge liegen in `public.care_cases`; RLS ist aktiviert.
 - Zugriff erfordert authentifizierten Benutzer, aktive Freigabe in `app_private.app_members`, kein anonymes Konto und MFA/AAL2.
-- AAL1 wurde geprüft: `current_access()` verweigert Zugriff und Patientenvorgänge sind nicht sichtbar.
-- AAL2 wurde geprüft: `current_access()` erlaubt einem aktiv freigegebenen Benutzer den Zugriff.
-- Ein transaktionaler Insert-/Update-Test für `care_cases` erzeugte erwartungsgemäß zwei Audit-Ereignisse und zwei Revisionen. Der Test wurde vollständig zurückgerollt; es blieben keine Testdaten zurück.
+- Es existieren aktuell 3 Auth-Benutzer, 3 aktive App-Mitglieder, keine verwaisten Mitgliedschaften und 3 Benutzer mit verifiziertem TOTP.
+- Team-Sichtbarkeit ist umgesetzt: jeder freigegebene Mitarbeiter kann alle offenen Versorgungen lesen.
+- Änderungen an einer Versorgung bleiben dem jeweiligen Ersteller vorbehalten.
+- Fremde Versorgungen werden im Frontend ausdrücklich im Nur-Lesen-Modus geöffnet; Drucken bleibt möglich.
+- Reparatur- und Etikettfotos sind ebenfalls teamweit lesbar, Upload und Löschen bleiben owner-only.
+- Live-RLS-Test mit AAL2: ein geprüfter Mitarbeiter sah 30 Vorgänge, davon 4 eigene und 26 fremde, sowie alle 4 vorhandenen Reparaturbildobjekte.
+- Gegenprobe mit AAL1: 0 sichtbare Vorgänge und 0 sichtbare Reparaturbildobjekte.
+- Ein fremder UPDATE-Versuch ergab 0 geänderte Datensätze.
+- `care_case_overview` ist `security_invoker` und besitzt für `authenticated` nur noch `SELECT`.
 - `anon` besitzt keine Tabellenrechte auf Patientenvorgänge.
 - Audit- und Revisionsdaten sind für Frontend-Rollen nicht direkt lesbar.
 
+## Browser- und Sitzungsdaten
+
+- Supabase-Auth wird nur noch in `sessionStorage` gehalten; das Schließen der Browsersitzung beendet die lokale Persistenz.
+- `detectSessionInUrl` ist deaktiviert.
+- Legacy-Auth-Tokens aus der früheren LocalStorage-Konfiguration werden beim Start entfernt.
+- Passwort, OTP und ein gegebenenfalls angezeigtes TOTP-Enrolment-Secret werden nach erfolgreicher Authentisierung aus dem DOM geleert.
+- Patientenname und Versichertennummer verwenden kein Browser-Autocomplete.
+- Reparaturbilder werden mit `cacheControl: 0` hochgeladen; signierte Anzeige-URLs sind auf 5 Minuten begrenzt und werden nur kurzzeitig im Arbeitsspeicher wiederverwendet.
+
+## Teamübersicht / Skalierung
+
+- Die offene Versorgungsliste wird paginiert aus Supabase geladen und ist nicht mehr auf die ersten 250 Vorgänge begrenzt.
+- Ein Browser-Regressionstest deckt explizit mehr als 250 offene Team-Vorgänge ab.
+
+## Stillgelegte Altpfade
+
+Folgende Versorgungsassistent-Endpunkte liefern nur noch `410 Gone` und verlangen zusätzlich JWT:
+
+- `reference-import-once`
+- `versorgungsassistent`
+- `versorgungsassistent-js`
+- `versorgungsassistent-css`
+
+`provision-test-users-once` und `reference-snapshot-maintenance` waren bereits auf `410 Gone` gestellt.
+
+Die Rezeptbrücke ist fachlich nicht Bestandteil dieses Projekts und wurde bei dieser Härtungsrunde nicht verändert.
+
 ## Security Advisor
 
-Am 07.10.2026 wurden `pg_trgm` und `unaccent` aus dem Schema `public` in `extensions` verschoben. Die abhängige Funktion `public.rb_search_supply` wurde auf `extensions.unaccent` angepasst. Der frühere Security-Advisor-Hinweis „Extension in Public“ ist damit beseitigt.
-
-Als verbleibender Security-Advisor-Hinweis wird „Leaked Password Protection Disabled“ gemeldet. Laut aktueller Supabase-Dokumentation ist diese Funktion erst ab Pro verfügbar. Im Free-Plan wird dieses Restrisiko durch verpflichtendes MFA/AAL2 und die zusätzliche Freigabeliste kompensiert. Das ist eine dokumentierte Tarifgrenze, kein Konfigurationsfehler des Projekts.
+Als verbleibender Security-Advisor-Hinweis wird `Leaked Password Protection Disabled` gemeldet. Im Free-Plan wird dieses Restrisiko derzeit durch verpflichtendes MFA/AAL2 und die zusätzliche Freigabeliste kompensiert.
 
 ## Performance Advisor
 
 Die verbleibenden Hinweise sind INFO-Meldungen:
 
-- Tabellen ohne Primary Key befinden sich in `reference_stage` und `reference_backup_20261006`.
+- Tabellen ohne Primary Key befinden sich überwiegend in `reference_stage` und `reference_backup_20261006`.
 - Mehrere Indizes werden aktuell als ungenutzt gemeldet.
 
-Diese Objekte sind nicht die produktive Patientendatenschnittstelle. Stage-/Backup-Schemata haben keine Rechte für `anon` oder `authenticated`. Ungenutzte Indizes werden bei der aktuell jungen Datenbank nicht allein aufgrund kurzfristiger Statistik entfernt.
+Diese Objekte sind nicht die produktive Patientendatenschnittstelle. Ungenutzte Indizes werden bei der aktuell jungen Datenbank nicht allein aufgrund kurzfristiger Statistik entfernt.
 
-## Noch offene Freigabepunkte außerhalb der Free-Plan-Technik
+## Noch offene Freigabepunkte
 
-Die technische Web-/Free-Plan-Kompatibilität ersetzt keine datenschutzrechtliche Produktivfreigabe. Vor echtem Regelbetrieb mit Gesundheitsdaten bleiben insbesondere DPA/AVV, DSFA/TOM-Freigaben, Aufbewahrungsfristen, Wiederherstellungstest sowie die Bewertung der extern geladenen JavaScript-/OCR-Abhängigkeiten zu entscheiden.
+Die technische Web-/Free-Plan-Kompatibilität ersetzt keine datenschutzrechtliche Produktivfreigabe. Vor echtem Regelbetrieb mit Gesundheitsdaten bleiben insbesondere:
+
+- finale AVV/DPA-, DSFA-, TOM- und VVT-Freigaben,
+- ein dokumentierter Wiederherstellungs-/Restore-Test,
+- verbindliche Aufbewahrungs- und Löschregeln,
+- Bestätigung der GitHub-Branch-Protection durch einen Repository-Admin; über die verfügbare GitHub-App war dieser Admin-Endpunkt nicht lesbar,
+- regelmäßige kontrollierte Dependency- und Security-Advisor-Prüfung.
 
