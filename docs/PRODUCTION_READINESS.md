@@ -35,6 +35,7 @@ Der Versorgungsassistent ist als statische GitHub-Pages-Anwendung mit Supabase-B
 - `anon` besitzt keine Tabellenrechte auf Patientenvorgänge.
 - Audit- und Revisionsdaten sind für Frontend-Rollen nicht direkt lesbar.
 - `last_modified_by` ist nach Bereinigung eines Alt-Datensatzes `NOT NULL`; serverseitige/systemische Updates können den letzten Bearbeiter nicht mehr versehentlich auf `NULL` setzen.
+- Das Löschen eines Supabase-Auth-Benutzers kann dessen Versorgungsfälle nicht mehr per FK-Kaskade löschen (`owner_user_id` verwendet `ON DELETE RESTRICT`).
 - `payload` muss serverseitig ein JSON-Objekt bleiben und ist pro Vorgang auf 512 KiB begrenzt; `schema_version` ist auf 1–100 begrenzt.
 - Vollständige Payload-Revisionen werden innerhalb derselben Bearbeitungssitzung (gleicher Benutzer, Status und Wizard-Schritt, maximal 5 Minuten Abstand) zusammengefasst. Audit-Ereignisse bleiben separat erhalten. Das reduziert Datenbankwachstum im Free-Plan deutlich, ohne die fachlichen Zustandswechsel zu verlieren.
 
@@ -70,6 +71,9 @@ Die Rezeptbrücke ist fachlich nicht Bestandteil dieses Projekts und wurde bei d
 Am 07.10.2026 wurde die Revisionsarchitektur erweitert: jede neue INSERT-/UPDATE-Revision enthält zusätzlich einen kompakten Metadaten-Snapshot (`row_snapshot`); der bereits vorhandene `payload` bleibt separat gespeichert. Zusammen bilden beide Bestandteile einen vollständig rekonstruierbaren fachlichen Versorgungsdatensatz. Für alle 30 bestehenden Versorgungen wurde die jeweils letzte Revision entsprechend nachgerüstet.
 
 Ein transaktionaler Restore-Drill bestätigte 0 fehlende Snapshots und 0 Abweichungen im vollständigen fachlichen Datensatz. `updated_at` und `last_modified_by` werden bei einer tatsächlichen Wiederherstellung bewusst neu erzeugt und sind deshalb nicht Teil des fachlichen Vergleichs. Ein zusätzlicher Rollback-Test erzeugte bei einer temporären Änderung genau eine neue, vollständige Revision. Sämtliche Drill-Änderungen wurden zurückgerollt.
+
+- Der vorbereitete Retention-Purge verlangt jetzt eine dokumentierte Begründung und bricht ab, solange zu fälligen Fällen noch Reparaturbilder im privaten Storage liegen. Ein Dry-Run am 07.10.2026 ergab 0 fällige Fälle.
+- Die teamweite offene Versorgungsliste besitzt einen eigenen partiellen Index auf `updated_at DESC` für nicht abgeschlossene Fälle.
 
 ## Security Advisor
 
