@@ -1,6 +1,8 @@
 async function installSupabaseMock(page, options = {}) {
   const mode = options.mode || 'signed-in'
-  await page.addInitScript(({ mode }) => {
+  const failBootstrap = options.failBootstrap === true
+  const failCases = options.failCases === true
+  await page.addInitScript(({ mode, failBootstrap, failCases }) => {
     const SESSION = {
       user: {
         id: '11111111-1111-4111-8111-111111111111',
@@ -90,6 +92,9 @@ async function installSupabaseMock(page, options = {}) {
         }
 
         if (table === 'care_case_overview' || table === 'care_cases') {
+          if (failCases && operation === 'select') {
+            return { data: null, error: { message: 'simulated care case load failure' } }
+          }
           const rows = readRows().map(row => ({
             ...row,
             patient_first_name: row.payload?.patientFirstName || '',
@@ -153,6 +158,9 @@ async function installSupabaseMock(page, options = {}) {
         }
       },
       rpc(name) {
+        if (failBootstrap && name === 'care_reference_bootstrap') {
+          return Promise.resolve({ data: null, error: { message: 'simulated bootstrap failure' } })
+        }
         const data = Object.prototype.hasOwnProperty.call(rpcPayloads, name) ? rpcPayloads[name] : []
         return Promise.resolve({ data, error: null })
       },
@@ -181,7 +189,7 @@ async function installSupabaseMock(page, options = {}) {
         })
       }
     })
-  }, { mode })
+  }, { mode, failBootstrap, failCases })
 }
 
 module.exports = { installSupabaseMock }
