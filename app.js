@@ -1080,6 +1080,7 @@
           if(mod.env){
             mod.env.useBrowserCache=true
             mod.env.allowRemoteModels=false
+            mod.env.allowLocalModels=true
             mod.env.localModelPath=new URL('./models/',import.meta.url).href
             if(mod.env.backends?.onnx?.wasm){
               mod.env.backends.onnx.wasm.wasmPaths=new URL('./vendor/transformers/',import.meta.url).href
