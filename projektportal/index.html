@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projektportal – Geschäftsführerübersicht</title>
+<style>
+:root{
+  --bg:#f4f6f8;
+  --panel:#ffffff;
+  --text:#18212f;
+  --muted:#667085;
+  --line:#e4e7ec;
+  --brand:#0f5c4a;
+  --brand2:#177d65;
+  --soft:#eef7f4;
+  --green:#16a34a;
+  --yellow:#d79b00;
+  --red:#dc2626;
+  --blue:#2563eb;
+  --shadow:0 8px 28px rgba(16,24,40,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}
+.app{display:grid;grid-template-columns:320px 1fr;min-height:100vh}
+.sidebar{background:#10231f;color:#fff;padding:18px 14px;position:sticky;top:0;height:100vh;overflow:auto}
+.logo{display:flex;align-items:center;gap:10px;padding:8px 10px 18px;border-bottom:1px solid rgba(255,255,255,.12);margin-bottom:14px}
+.logo-mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#45b598,#0f5c4a);display:grid;place-items:center;font-weight:800}
+.logo h1{font-size:18px;margin:0}
+.logo small{display:block;color:#a8c6bd;margin-top:2px}
+.search{width:100%;background:#17332c;border:1px solid #2b4c43;color:#fff;border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.tree-title{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8fb0a7;padding:9px 10px}
+.tree{font-size:14px}
+.tree-item{margin:2px 0}
+.tree-row{display:flex;align-items:center;gap:7px;padding:9px 10px;border-radius:9px;cursor:pointer;transition:.15s}
+.tree-row:hover{background:#173b32}
+.tree-row.active{background:#1d4f43}
+.chev{width:16px;text-align:center;color:#a9c7bf}
+.folder{width:18px}
+.tree-children{padding-left:20px}
+.badge-dot{width:8px;height:8px;border-radius:50%;margin-left:auto}
+.g{background:var(--green)} .y{background:#f2b620}.r{background:#ef4444}
+.sidebar-footer{margin-top:24px;border-top:1px solid rgba(255,255,255,.12);padding:16px 10px;color:#a8c6bd;font-size:12px;line-height:1.5}
+.main{min-width:0}
+.topbar{height:68px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:5}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.view-toggle{display:flex;background:#f2f4f7;padding:4px;border-radius:10px}
+.view-toggle button{border:0;background:transparent;padding:8px 12px;border-radius:7px;cursor:pointer;color:#475467}
+.view-toggle button.active{background:#fff;box-shadow:0 1px 3px rgba(16,24,40,.12);color:#111827;font-weight:650}
+.user{display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:#e6f4ef;color:#0f5c4a;display:grid;place-items:center;font-weight:700}
+.content{padding:26px 28px 60px;max-width:1600px;margin:auto}
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;margin-bottom:22px}
+.page-head h2{margin:0 0 5px;font-size:28px}
+.page-head p{margin:0;color:var(--muted)}
+.actions{display:flex;gap:8px}
+.btn{border:1px solid var(--line);background:#fff;padding:9px 13px;border-radius:9px;cursor:pointer;font-weight:600;color:#344054}
+.btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:0 2px 8px rgba(16,24,40,.03)}
+.kpi .label{font-size:12px;color:var(--muted);margin-bottom:7px}
+.kpi .value{font-size:27px;font-weight:750}
+.kpi .sub{font-size:12px;color:var(--muted);margin-top:5px}
+.kpi.alert .value{color:var(--red)}
+.kpi.warn .value{color:var(--yellow)}
+.grid-2{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 8px rgba(16,24,40,.03);overflow:hidden}
+.card-head{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.card-head h3{margin:0;font-size:16px}
+.card-body{padding:16px 18px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#667085;padding:10px;border-bottom:1px solid var(--line);background:#fafafa}
+td{padding:12px 10px;border-bottom:1px solid #f0f2f4;font-size:13px;vertical-align:middle}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#fbfdfc}
+.status{display:inline-flex;align-items:center;gap:6px;font-weight:650}
+.status i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.progress{height:7px;background:#e9edf0;border-radius:99px;overflow:hidden;min-width:90px}
+.progress span{display:block;height:100%;background:var(--brand2);border-radius:99px}
+.attn{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#fff3f0;color:#b42318}
+.attn.none{background:#ecfdf3;color:#067647}
+.decision{border:1px solid #f2d4ce;border-left:4px solid var(--red);border-radius:10px;padding:12px 13px;margin-bottom:10px}
+.decision:last-child{margin-bottom:0}
+.decision .eyebrow{font-size:11px;color:#b42318;font-weight:700;text-transform:uppercase}
+.decision strong{display:block;margin:4px 0 6px}
+.decision small{color:var(--muted)}
+.timeline-mini{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f0f2f4}
+.timeline-mini:last-child{border-bottom:0}
+.date-chip{font-size:11px;background:#f2f4f7;border-radius:7px;padding:5px 7px;color:#475467;min-width:52px;text-align:center}
+.hidden{display:none!important}
+.project-head{background:linear-gradient(135deg,#113b31,#0f5c4a);color:#fff;border-radius:16px;padding:22px 24px;margin-bottom:16px;box-shadow:var(--shadow)}
+.project-head-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+.project-head h2{margin:0 0 8px;font-size:27px}
+.project-head .meta{display:flex;flex-wrap:wrap;gap:16px;color:#cae1da;font-size:13px}
+.big-progress{margin-top:18px}
+.big-progress .bar{height:10px;background:rgba(255,255,255,.18);border-radius:999px;overflow:hidden}
+.big-progress .bar span{display:block;height:100%;background:#7ad6bc}
+.big-progress .row{display:flex;justify-content:space-between;font-size:12px;color:#d9ebe6;margin-bottom:7px}
+.tabs{display:flex;gap:4px;background:#fff;border:1px solid var(--line);padding:5px;border-radius:12px;margin-bottom:16px;overflow:auto}
+.tabs button{border:0;background:transparent;padding:9px 13px;border-radius:8px;color:#475467;cursor:pointer;white-space:nowrap}
+.tabs button.active{background:var(--soft);color:var(--brand);font-weight:700}
+.project-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+.goal{border:1px solid var(--line);border-radius:10px;padding:13px;margin-bottom:10px}
+.goal:last-child{margin-bottom:0}
+.goal-top{display:flex;justify-content:space-between;gap:15px;align-items:center}
+.goal-title{font-weight:650}
+.goal small{color:var(--muted)}
+.subtree .node{border-left:2px solid #d9e7e2;padding-left:12px;margin:10px 0}
+.subtree .node > div:first-child{display:flex;align-items:center;gap:8px;font-weight:650}
+.subtree .children{margin-left:18px}
+.pill{padding:4px 7px;border-radius:999px;font-size:11px;font-weight:700}
+.pill.green{background:#ecfdf3;color:#067647}
+.pill.yellow{background:#fffaeb;color:#b54708}
+.pill.red{background:#fef3f2;color:#b42318}
+.task-list .task{display:grid;grid-template-columns:22px 1fr 130px 100px;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid #f0f2f4}
+.task:last-child{border-bottom:0}
+.check{width:18px;height:18px;border:1.5px solid #98a2b3;border-radius:5px;display:grid;place-items:center;font-size:12px}
+.check.done{background:#e6f4ef;border-color:#2f8c71;color:#176b55}
+.person{display:flex;align-items:center;gap:8px}
+.person .mini{width:25px;height:25px;border-radius:50%;background:#edf2f7;display:grid;place-items:center;font-size:10px;font-weight:700}
+.notice{background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px;font-size:13px;color:#854d0e}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.mobile-nav{display:none}
+@media(max-width:1100px){
+ .app{grid-template-columns:260px 1fr}
+ .kpis{grid-template-columns:repeat(3,1fr)}
+ .grid-2,.project-grid{grid-template-columns:1fr}
+}
+@media(max-width:780px){
+ .app{display:block}
+ .sidebar{display:none}
+ .mobile-nav{display:block}
+ .content{padding:18px 14px 40px}
+ .topbar{padding:0 14px}
+ .kpis{grid-template-columns:repeat(2,1fr)}
+ .page-head{align-items:flex-start;flex-direction:column}
+ .task-list .task{grid-template-columns:22px 1fr}
+ .task-list .task .person,.task-list .task .due{grid-column:2}
+}
+</style>
+
+<style id="brillinger-ottobock-brand">
+@import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700;800&display=swap');
+
+:root{
+  --bg:#f6f7f9;
+  --panel:#ffffff;
+  --text:#000000;
+  --muted:#5f6978;
+  --line:#dfe3e8;
+  --brand:#00157A;
+  --brand2:#39B1C3;
+  --soft:#eef8fb;
+  --oxygen:#C1E6EF;
+  --earth:#CED4DC;
+  --green:#90D116;
+  --yellow:#F6B73C;
+  --red:#FF3A40;
+  --blue:#00157A;
+  --shadow:0 10px 28px rgba(0,21,122,.08);
+}
+
+html,body{font-family:"Work Sans",Arial,sans-serif}
+body{background:var(--bg);color:#111827}
+.app{background:var(--bg)}
+
+.sidebar{
+  background:#ffffff;
+  color:#111827;
+  border-right:1px solid var(--line);
+  padding:0 14px 18px;
+}
+.sidebar:before{
+  content:"";
+  display:block;
+  height:7px;
+  margin:0 -14px 14px;
+  background:linear-gradient(90deg,#00157A 0 72%,#39B1C3 72% 100%);
+}
+.logo{
+  border-bottom:1px solid var(--line);
+  padding:9px 8px 20px;
+  margin-bottom:14px;
+}
+.logo-mark{
+  width:46px;height:46px;border-radius:50%;
+  background:#00157A;
+  color:#fff;
+  font-size:0;
+  position:relative;
+  box-shadow:none;
+}
+.logo-mark:before{
+  content:"";
+  width:20px;height:20px;
+  border:5px solid #fff;
+  border-radius:50%;
+  position:absolute;
+  inset:0;
+  margin:auto;
+}
+.logo h1{
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:-.03em;
+  color:#000;
+}
+.logo h1:after{
+  content:"  ottobock.care";
+  display:block;
+  color:#00157A;
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:0;
+  margin-top:1px;
+}
+.logo small{
+  color:#667085;
+  margin-top:6px;
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+
+.search{
+  background:#f7f8fa;
+  border:1px solid #d8dde4;
+  color:#111827;
+  border-radius:6px;
+  padding:11px 12px;
+}
+.search::placeholder{color:#98a2b3}
+.tree-title{color:#7b8492;font-weight:700}
+.tree-row{
+  border-radius:4px;
+  color:#2a3441;
+  padding:10px 10px;
+}
+.tree-row:hover{background:#eef8fb;color:#00157A}
+.tree-row.active{
+  background:#00157A;
+  color:#fff;
+}
+.tree-row.active .chev{color:#fff}
+.chev{color:#7b8492}
+.sidebar-footer{
+  border-top:1px solid var(--line);
+  color:#667085;
+}
+.badge-dot{width:9px;height:9px}
+.g{background:#90D116}.y{background:#F6B73C}.r{background:#FF3A40}
+
+.topbar{
+  height:72px;
+  background:#fff;
+  border-bottom:1px solid var(--line);
+  box-shadow:0 1px 0 rgba(0,0,0,.02);
+}
+.topbar:before{
+  content:"";
+  position:absolute;
+  top:0;left:0;right:0;
+  height:4px;
+  background:#00157A;
+}
+.view-toggle{background:#f1f3f6;border-radius:5px;padding:3px}
+.view-toggle button{border-radius:3px}
+.view-toggle button.active{
+  color:#00157A;
+  box-shadow:none;
+  border:1px solid #d9dfe6;
+}
+.avatar{
+  background:#00157A;
+  color:#fff;
+  border-radius:50%;
+}
+
+.content{padding-top:30px}
+.page-head h2{
+  color:#00157A;
+  font-size:32px;
+  letter-spacing:-.03em;
+}
+.page-head p{font-size:14px}
+.btn{
+  border-radius:4px;
+  border:1px solid #cfd6df;
+  background:#fff;
+  color:#00157A;
+}
+.btn:hover{background:#f5fbfc}
+.btn.primary{
+  background:#00157A;
+  color:#fff;
+  border-color:#00157A;
+}
+.btn.primary:hover{background:#071e8d}
+
+.kpis{gap:14px}
+.kpi{
+  border-radius:6px;
+  border:1px solid #e1e5ea;
+  box-shadow:none;
+  padding:17px 17px 15px;
+  position:relative;
+  overflow:hidden;
+}
+.kpi:before{
+  content:"";
+  position:absolute;
+  left:0;top:0;bottom:0;
+  width:4px;
+  background:#00157A;
+}
+.kpi.alert:before{background:#FF3A40}
+.kpi.warn:before{background:#F6B73C}
+.kpi .label{
+  color:#657080;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.035em;
+}
+.kpi .value{
+  color:#00157A;
+  font-size:30px;
+  letter-spacing:-.04em;
+}
+.kpi.alert .value{color:#FF3A40}
+.kpi.warn .value{color:#9B6800}
+
+.card{
+  border-radius:6px;
+  border:1px solid #dde2e8;
+  box-shadow:none;
+}
+.card-head{
+  padding:17px 19px;
+  border-bottom:1px solid #e3e7eb;
+  background:#fff;
+}
+.card-head h3{
+  color:#00157A;
+  font-weight:700;
+  font-size:17px;
+}
+th{
+  background:#f6f7f9;
+  color:#596474;
+  border-bottom:1px solid #dce2e8;
+  font-weight:700;
+}
+tbody tr:hover{background:#f1f9fb}
+.progress{background:#e8edf1}
+.progress span{background:#39B1C3}
+.status i{width:10px;height:10px}
+
+.attn{
+  background:#fff0f0;
+  color:#b9141a;
+  border-radius:3px;
+}
+.attn.none{background:#f1f7e8;color:#4f7600}
+
+.decision{
+  border-radius:4px;
+  border:1px solid #ffd0d2;
+  border-left:4px solid #FF3A40;
+}
+.decision .eyebrow{color:#c91f25}
+
+.project-head{
+  background:#C1E6EF;
+  color:#000;
+  border-radius:6px;
+  box-shadow:none;
+  border:1px solid #a8d8e4;
+  position:relative;
+  overflow:hidden;
+}
+.project-head:after{
+  content:"";
+  position:absolute;
+  width:180px;height:180px;
+  border:22px solid rgba(0,21,122,.08);
+  border-radius:50%;
+  right:-55px;top:-85px;
+  pointer-events:none;
+}
+.project-head h2{color:#00157A}
+.project-head .meta{color:#344054}
+.project-head .meta strong{color:#000}
+.big-progress .row{color:#344054}
+.big-progress .bar{background:rgba(0,21,122,.13)}
+.big-progress .bar span{background:#00157A}
+
+.tabs{
+  border-radius:5px;
+  border:1px solid #dde2e8;
+  padding:4px;
+}
+.tabs button{border-radius:3px}
+.tabs button.active{
+  background:#00157A;
+  color:#fff;
+}
+.goal,.notice{border-radius:4px}
+.goal-title{color:#00157A}
+.subtree .node{border-left:2px solid #C1E6EF}
+
+.pill{border-radius:3px}
+.pill.green{background:#eef8de;color:#416500}
+.pill.yellow{background:#fff6db;color:#8b5e00}
+.pill.red{background:#fff0f0;color:#bd1e24}
+
+.notice{
+  background:#fff9e9;
+  border-color:#f3d993;
+}
+.check{border-radius:2px}
+.check.done{
+  background:#eef8de;
+  border-color:#90D116;
+  color:#456b00;
+}
+.date-chip{
+  background:#eef8fb;
+  color:#00157A;
+  border-radius:3px;
+  font-weight:700;
+}
+
+.brand-strip{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:18px;
+  padding:12px 16px;
+  background:#00157A;
+  color:#fff;
+  border-radius:5px;
+}
+.brand-strip strong{font-size:13px;letter-spacing:.04em}
+.brand-strip span{font-size:12px;color:#d8e8ff}
+.brand-wordmark{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:800;
+  letter-spacing:-.03em;
+}
+.brand-wordmark b{font-size:18px}
+.brand-wordmark em{
+  font-style:normal;
+  font-weight:500;
+  font-size:13px;
+  opacity:.92;
+}
+</style>
+
+
+<style id="versorgungsassistent-logo-match">
+/* Same app-logo treatment as patientcareassistent-lab/Versorgungsassistent:
+   ShieldCheck, #0f766e, rounded square. */
+.logo-mark{
+  width:48px !important;
+  height:48px !important;
+  border-radius:14px !important;
+  display:grid !important;
+  place-items:center !important;
+  background:#0f766e !important;
+  color:#fff !important;
+  box-shadow:none !important;
+  flex:0 0 48px;
+}
+.logo-mark:before{display:none !important;content:none !important}
+.logo-mark svg{display:block}
+.logo h1:after{display:none !important;content:none !important}
+.logo h1{
+  font-size:19px !important;
+  color:#111827 !important;
+  letter-spacing:-.02em !important;
+}
+.logo small{
+  color:#667085 !important;
+  font-size:11px !important;
+  text-transform:none !important;
+  letter-spacing:0 !important;
+}
+.strip-shield{
+  width:34px;height:34px;
+  border-radius:10px;
+  display:grid;
+  place-items:center;
+  background:#0f766e;
+  color:#fff;
+  flex:0 0 34px;
+}
+.brand-wordmark{gap:9px}
+.brand-wordmark b{font-size:16px}
+.brand-wordmark em{margin-left:2px}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+  <path d="m9 12 2 2 4-4"/>
+</svg></div>
+      <div><h1>Projektportal</h1><small>brillinger | ottobock.care · Geschäftsführung</small></div>
+    </div>
+    <input id="treeSearch" class="search" placeholder="Projekt / Verantwortliche suchen …">
+    <div class="tree-title">Projektstruktur</div>
+    <div class="tree" id="projectTree">
+      <div class="tree-item">
+        <div class="tree-row active" data-project="portfolio"><span class="chev">⌂</span><span class="folder">▦</span><span>Projektportfolio</span></div>
+      </div>
+      <div class="tree-item">
+        <div class="tree-row" data-project="zam"><span class="chev">▾</span><span class="folder">📁</span><span>ZAM Neuorganisation</span><span class="badge-dot y"></span></div>
+        <div class="tree-children">
+          <div class="tree-row" data-project="zam-org"><span class="chev">▾</span><span class="folder">📂</span><span>Organisation</span><span class="badge-dot g"></span></div>
+          <div class="tree-children">
+            <div class="tree-row" data-project="zam-team"><span class="chev">•</span><span>Teamstruktur</span><span class="badge-dot g"></span></div>
+            <div class="tree-row" data-project="zam-inco"><span class="chev">•</span><span>Inko / Pflegehilfsmittel</span><span class="badge-dot y"></span></div>
+          </div>
+          <div class="tree-row" data-project="zam-billing"><span class="chev">▸</span><span class="folder">📁</span><span>Selbstabrechnung</span><span class="badge-dot y"></span></div>
+          <div class="tree-row" data-project="zam-process"><span class="chev">▸</span><span class="folder">📁</span><span>Prozessdokumentation</span><span class="badge-dot r"></span></div>
+        </div>
+      </div>
+      <div class="tree-item">
+        <div class="tree-row" data-project="bridge"><span class="chev">▸</span><span class="folder">📁</span><span>Rezeptbrücke</span><span class="badge-dot g"></span></div>
+      </div>
+      <div class="tree-item">
+        <div class="tree-row" data-project="assistant"><span class="chev">▸</span><span class="folder">📁</span><span>Versorgungsassistent</span><span class="badge-dot y"></span></div>
+      </div>
+      <div class="tree-item">
+        <div class="tree-row" data-project="mobility"><span class="chev">▸</span><span class="folder">📁</span><span>REHA Mobility Dashboard</span><span class="badge-dot g"></span></div>
+      </div>
+      <div class="tree-item">
+        <div class="tree-row" data-project="office"><span class="chev">▸</span><span class="folder">📁</span><span>Standort / Büroplanung</span><span class="badge-dot r"></span></div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <strong>Ampellogik</strong><br>
+      Grün = planmäßig · Gelb = Handlungsbedarf · Rot = Ziel/Termin gefährdet
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="btn mobile-nav">☰</button>
+        <div class="view-toggle">
+          <button id="gfBtn" class="active">GF-Modus</button>
+          <button id="workBtn">Arbeitsmodus</button>
+        </div>
+      </div>
+      <div class="user"><div><strong>Geschäftsführung</strong><div style="font-size:11px;color:#667085">Portfolioansicht</div></div><div class="avatar">GF</div></div>
+    </div>
+
+    <div class="content">
+      <div class="brand-strip">
+        <div class="brand-wordmark">
+  <span class="strip-shield"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+  <path d="m9 12 2 2 4-4"/>
+</svg></span>
+  <b>Projektportal</b><em>brillinger | ottobock.care</em>
+</div>
+        <span>PROJEKTPORTAL · MANAGEMENT &amp; STEUERUNG</span>
+      </div>
+      <section id="portfolioView">
+        <div class="page-head">
+          <div>
+            <h2>Projektportfolio</h2>
+            <p>Fokus auf Abweichungen, Entscheidungen und kritische Termine.</p>
+          </div>
+          <div class="actions">
+            <button class="btn">Export</button>
+            <button class="btn primary" onclick="alert('Demo: Neues Projekt anlegen')">+ Projekt</button>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi"><div class="label">Aktive Projekte</div><div class="value">12</div><div class="sub">5 mit Unterprojekten</div></div>
+          <div class="kpi alert"><div class="label">Kritisch</div><div class="value">3</div><div class="sub">sofort prüfen</div></div>
+          <div class="kpi warn"><div class="label">Beobachten</div><div class="value">4</div><div class="sub">gelber Status</div></div>
+          <div class="kpi alert"><div class="label">GF-Entscheidungen</div><div class="value">4</div><div class="sub">2 davon diese Woche</div></div>
+          <div class="kpi warn"><div class="label">Überfällige Maßnahmen</div><div class="value">17</div><div class="sub">6 kritisch</div></div>
+          <div class="kpi"><div class="label">Meilensteine 30 Tage</div><div class="value">8</div><div class="sub">3 in den nächsten 7 Tagen</div></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3>Portfolio</h3><div class="legend"><span><i class="badge-dot g"></i>Planmäßig</span><span><i class="badge-dot y"></i>Beobachten</span><span><i class="badge-dot r"></i>Kritisch</span></div></div>
+            <div style="overflow:auto">
+              <table>
+                <thead><tr><th>Projekt</th><th>Verantwortlich</th><th>Status</th><th>Fortschritt</th><th>Nächster Meilenstein</th><th>Aufmerksamkeit</th></tr></thead>
+                <tbody>
+                  <tr data-open="zam"><td><strong>ZAM Neuorganisation</strong><div style="color:#667085;font-size:11px">4 Teilprojekte</div></td><td>J. Winter</td><td><span class="status"><i class="y"></i>Gelb</span></td><td><div class="progress"><span style="width:68%"></span></div><small>68 %</small></td><td>Teamübergang · 20.10.</td><td><span class="attn">2 Entscheidungen</span></td></tr>
+                  <tr data-open="bridge"><td><strong>Rezeptbrücke</strong><div style="color:#667085;font-size:11px">3 Teilprojekte</div></td><td>M. Schmidt</td><td><span class="status"><i class="g"></i>Grün</span></td><td><div class="progress"><span style="width:42%"></span></div><small>42 %</small></td><td>Pilot · 28.10.</td><td><span class="attn none">–</span></td></tr>
+                  <tr data-open="assistant"><td><strong>Versorgungsassistent</strong><div style="color:#667085;font-size:11px">5 Teilprojekte</div></td><td>T. Meier</td><td><span class="status"><i class="y"></i>Gelb</span></td><td><div class="progress"><span style="width:75%"></span></div><small>75 %</small></td><td>Testbetrieb · 16.10.</td><td><span class="attn">1 Risiko</span></td></tr>
+                  <tr data-open="office"><td><strong>Standort / Büroplanung</strong><div style="color:#667085;font-size:11px">2 Teilprojekte</div></td><td>A. Keller</td><td><span class="status"><i class="r"></i>Rot</span></td><td><div class="progress"><span style="width:31%"></span></div><small>31 %</small></td><td>Raumkonzept · überfällig</td><td><span class="attn">GF-Entscheidung</span></td></tr>
+                  <tr data-open="mobility"><td><strong>REHA Mobility Dashboard</strong><div style="color:#667085;font-size:11px">2 Teilprojekte</div></td><td>S. Braun</td><td><span class="status"><i class="g"></i>Grün</span></td><td><div class="progress"><span style="width:58%"></span></div><small>58 %</small></td><td>Filterlogik · 21.10.</td><td><span class="attn none">–</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-head"><h3>Entscheidungen für GF</h3><span class="pill red">4 offen</span></div>
+              <div class="card-body">
+                <div class="decision"><div class="eyebrow">ZAM Neuorganisation</div><strong>Zuordnung Inko / Pflegehilfsmittel</strong><small>Entscheidung bis 16.10.2026 · Vorschlag: Zusammenführung mit TB / Backoffice</small></div>
+                <div class="decision"><div class="eyebrow">Standortplanung</div><strong>Freigabe Raumkonzept</strong><small>Termin überschritten · Auswirkungen auf Umzugsplanung</small></div>
+                <div class="decision" style="border-left-color:#d79b00;border-color:#f5e8be"><div class="eyebrow" style="color:#a15c00">Versorgungsassistent</div><strong>Go-Live Umfang Testphase</strong><small>Entscheidung bis 19.10.2026</small></div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><h3>Nächste Meilensteine</h3><span style="font-size:12px;color:#667085">30 Tage</span></div>
+              <div class="card-body">
+                <div class="timeline-mini"><span class="date-chip">16.10.</span><div><strong>Testbetrieb</strong><div style="font-size:12px;color:#667085">Versorgungsassistent</div></div></div>
+                <div class="timeline-mini"><span class="date-chip">20.10.</span><div><strong>Teamübergang</strong><div style="font-size:12px;color:#667085">ZAM Neuorganisation</div></div></div>
+                <div class="timeline-mini"><span class="date-chip">21.10.</span><div><strong>Filterlogik</strong><div style="font-size:12px;color:#667085">REHA Mobility Dashboard</div></div></div>
+                <div class="timeline-mini"><span class="date-chip">28.10.</span><div><strong>Pilot Apotheke</strong><div style="font-size:12px;color:#667085">Rezeptbrücke</div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="projectView" class="hidden">
+        <div class="project-head">
+          <div class="project-head-top">
+            <div>
+              <div style="font-size:12px;color:#bad9d0;margin-bottom:6px">Projekt / <span id="breadcrumb">ZAM Neuorganisation</span></div>
+              <h2 id="projectTitle">ZAM – Strukturelle Neuordnung</h2>
+              <div class="meta">
+                <span>Projektleitung: <strong id="projectOwner">Jacqueline Winter</strong></span>
+                <span>Auftraggeber: Geschäftsführung</span>
+                <span>Zeitraum: 01.09.2026 – 31.12.2026</span>
+              </div>
+            </div>
+            <span id="projectStatus" class="pill yellow">● Beobachten</span>
+          </div>
+          <div class="big-progress">
+            <div class="row"><span>Gesamtfortschritt</span><strong id="projectProgressText">68 %</strong></div>
+            <div class="bar"><span id="projectProgressBar" style="width:68%"></span></div>
+          </div>
+        </div>
+
+        <div class="tabs" id="tabs">
+          <button class="active" data-tab="overview">Übersicht</button>
+          <button data-tab="subprojects">Teilprojekte</button>
+          <button data-tab="actions">Maßnahmen</button>
+          <button data-tab="milestones">Meilensteine</button>
+          <button data-tab="decisions">Entscheidungen</button>
+          <button data-tab="risks">Risiken</button>
+          <button data-tab="people">Beteiligte</button>
+          <button data-tab="documents">Dokumente</button>
+          <button data-tab="history">Verlauf</button>
+        </div>
+
+        <div id="tab-overview" class="tab-content">
+          <div class="project-grid">
+            <div>
+              <div class="card" style="margin-bottom:16px">
+                <div class="card-head"><h3>Projektziel</h3><button class="btn">Bearbeiten</button></div>
+                <div class="card-body">
+                  <p style="margin-top:0;line-height:1.55">Neuorganisation des zentralen Abrechnungsmanagements unter Berücksichtigung der Selbstabrechnung sowie der organisatorischen Neuordnung von Inko/Pflegehilfsmittel, TB und Backoffice.</p>
+                  <div class="goal"><div class="goal-top"><div class="goal-title">Neue Teamstruktur beschlossen</div><strong>100 %</strong></div><div class="progress" style="margin-top:9px"><span style="width:100%"></span></div></div>
+                  <div class="goal"><div class="goal-top"><div class="goal-title">Verantwortlichkeiten vollständig definiert</div><strong>75 %</strong></div><div class="progress" style="margin-top:9px"><span style="width:75%"></span></div></div>
+                  <div class="goal"><div class="goal-top"><div class="goal-title">Selbstabrechnungsprozess produktiv</div><strong>45 %</strong></div><div class="progress" style="margin-top:9px"><span style="width:45%"></span></div></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-head"><h3>Projektstruktur</h3><button class="btn">+ Teilprojekt</button></div>
+                <div class="card-body subtree">
+                  <div class="node"><div>▾ Organisation <span class="pill green">80 %</span></div>
+                    <div class="children">
+                      <div class="node"><div>• Teamstruktur <span class="pill green">100 %</span></div></div>
+                      <div class="node"><div>• Stellenzuordnung <span class="pill yellow">70 %</span></div></div>
+                      <div class="node"><div>• Kommunikation <span class="pill green">75 %</span></div></div>
+                    </div>
+                  </div>
+                  <div class="node"><div>▸ Selbstabrechnung <span class="pill yellow">55 %</span></div></div>
+                  <div class="node"><div>▸ Inko / Pflegehilfsmittel <span class="pill yellow">70 %</span></div></div>
+                  <div class="node"><div>▸ Prozessdokumentation <span class="pill red">20 %</span></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="card" style="margin-bottom:16px">
+                <div class="card-head"><h3>GF-Aufmerksamkeit</h3><span class="pill red">3 Punkte</span></div>
+                <div class="card-body">
+                  <div class="notice"><strong>Entscheidung erforderlich:</strong><br>Zuordnung Inko / Pflegehilfsmittel bis 16.10.2026.</div>
+                  <div class="notice" style="margin-top:9px;background:#fff7ed;border-color:#fed7aa;color:#9a3412"><strong>Terminrisiko:</strong><br>Prozessdokumentation liegt 8 Tage hinter Plan.</div>
+                  <div class="notice" style="margin-top:9px;background:#f8fafc;border-color:#e2e8f0;color:#475569"><strong>Information:</strong><br>Teamstruktur wurde am 06.10.2026 abgestimmt.</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-head"><h3>Beteiligte</h3><button class="btn">Alle</button></div>
+                <div class="card-body">
+                  <div class="person" style="margin-bottom:10px"><span class="mini">JW</span><div><strong>Jacqueline Winter</strong><div style="font-size:11px;color:#667085">Projektleitung</div></div></div>
+                  <div class="person" style="margin-bottom:10px"><span class="mini">GF</span><div><strong>Geschäftsführung</strong><div style="font-size:11px;color:#667085">Auftraggeber / Entscheider</div></div></div>
+                  <div class="person" style="margin-bottom:10px"><span class="mini">IT</span><div><strong>IT</strong><div style="font-size:11px;color:#667085">Consulted</div></div></div>
+                  <div class="person"><span class="mini">QM</span><div><strong>QM</strong><div style="font-size:11px;color:#667085">Informed</div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-actions" class="tab-content hidden">
+          <div class="card">
+            <div class="card-head"><h3>Maßnahmen & Aufgaben</h3><button class="btn primary">+ Maßnahme</button></div>
+            <div class="card-body task-list">
+              <div class="task"><div class="check done">✓</div><div><strong>Ist-Prozess aufnehmen</strong><div style="font-size:11px;color:#667085">Selbstabrechnung</div></div><div class="person"><span class="mini">JW</span>J. Winter</div><div class="due"><span class="pill green">Erledigt</span></div></div>
+              <div class="task"><div class="check done">✓</div><div><strong>Verantwortlichkeiten definieren</strong><div style="font-size:11px;color:#667085">Organisation</div></div><div class="person"><span class="mini">MS</span>M. Schmidt</div><div class="due"><span class="pill green">Erledigt</span></div></div>
+              <div class="task"><div class="check"></div><div><strong>Testabrechnung durchführen</strong><div style="font-size:11px;color:#667085">Termin 14.10.2026</div></div><div class="person"><span class="mini">AB</span>A. Braun</div><div class="due"><span class="pill yellow">Läuft</span></div></div>
+              <div class="task"><div class="check"></div><div><strong>Fehlerliste abarbeiten</strong><div style="font-size:11px;color:#667085">Termin 19.10.2026</div></div><div class="person"><span class="mini">IT</span>IT</div><div class="due"><span class="pill yellow">Offen</span></div></div>
+              <div class="task"><div class="check"></div><div><strong>Prozessdokumentation finalisieren</strong><div style="font-size:11px;color:#667085">Termin überschritten</div></div><div class="person"><span class="mini">QM</span>QM</div><div class="due"><span class="pill red">Überfällig</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-decisions" class="tab-content hidden">
+          <div class="card">
+            <div class="card-head"><h3>Entscheidungen</h3><button class="btn primary">+ Entscheidung</button></div>
+            <div class="card-body">
+              <div class="decision">
+                <div class="eyebrow">Entscheidung offen</div><strong>Zuordnung Inko / Pflegehilfsmittel</strong>
+                <p style="font-size:13px;line-height:1.5">Soll das Team organisatorisch mit TB und Backoffice zusammengeführt werden?</p>
+                <div style="font-size:12px;color:#667085;margin-bottom:10px"><strong>Empfehlung Projektleitung:</strong> Ja · Frist: 16.10.2026</div>
+                <div class="actions"><button class="btn primary">Zustimmen</button><button class="btn">Ablehnen</button><button class="btn">Rückfrage</button></div>
+              </div>
+              <div class="decision" style="border-left-color:#16a34a;border-color:#d7f0df">
+                <div class="eyebrow" style="color:#067647">Entschieden · 06.10.2026</div><strong>Projektleitung Neuorganisation</strong>
+                <small>Entscheidung: Jacqueline Winter übernimmt die Projektleitung.</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-risks" class="tab-content hidden">
+          <div class="card">
+            <div class="card-head"><h3>Risiken & Probleme</h3><button class="btn primary">+ Risiko</button></div>
+            <div style="overflow:auto">
+              <table><thead><tr><th>Typ</th><th>Thema</th><th>Wahrscheinlichkeit</th><th>Auswirkung</th><th>Verantwortlich</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr><td><span class="pill yellow">Risiko</span></td><td>Personalkapazität ZAM</td><td>Hoch</td><td>Hoch</td><td>J. Winter</td><td><span class="pill yellow">Gegenmaßnahme aktiv</span></td></tr>
+                <tr><td><span class="pill red">Problem</span></td><td>Dokumentation verspätet</td><td>–</td><td>Mittel</td><td>QM</td><td><span class="pill red">Offen</span></td></tr>
+              </tbody></table>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-history" class="tab-content hidden">
+          <div class="card">
+            <div class="card-head"><h3>Projekt-Logbuch</h3><button class="btn">+ Eintrag</button></div>
+            <div class="card-body">
+              <div class="timeline-mini"><span class="date-chip">07.10.</span><div><strong>Termin geändert</strong><div style="font-size:12px;color:#667085">Prozessdokumentation · 10.10. → 18.10. · durch QM</div></div></div>
+              <div class="timeline-mini"><span class="date-chip">06.10.</span><div><strong>Entscheidung dokumentiert</strong><div style="font-size:12px;color:#667085">Jacqueline Winter übernimmt Projektleitung</div></div></div>
+              <div class="timeline-mini"><span class="date-chip">05.10.</span><div><strong>Status geändert</strong><div style="font-size:12px;color:#667085">Teamstruktur · Offen → Abgestimmt</div></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab-subprojects" class="tab-content hidden">
+          <div class="card"><div class="card-head"><h3>Teilprojekte</h3><button class="btn primary">+ Teilprojekt</button></div><div class="card-body subtree">
+            <div class="node"><div>Organisation <span class="pill green">80 %</span></div></div>
+            <div class="node"><div>Selbstabrechnung <span class="pill yellow">55 %</span></div></div>
+            <div class="node"><div>Inko / Pflegehilfsmittel <span class="pill yellow">70 %</span></div></div>
+            <div class="node"><div>Prozessdokumentation <span class="pill red">20 %</span></div></div>
+          </div></div>
+        </div>
+
+        <div id="tab-milestones" class="tab-content hidden"><div class="card"><div class="card-head"><h3>Meilensteine</h3><button class="btn primary">+ Meilenstein</button></div><div class="card-body">
+          <div class="timeline-mini"><span class="date-chip">20.10.</span><div><strong>Teamübergang</strong><div style="font-size:12px;color:#667085">Verantwortlich: Projektleitung</div></div><span class="pill yellow" style="margin-left:auto">offen</span></div>
+          <div class="timeline-mini"><span class="date-chip">30.10.</span><div><strong>Testabrechnung abgeschlossen</strong><div style="font-size:12px;color:#667085">Selbstabrechnung</div></div><span class="pill yellow" style="margin-left:auto">offen</span></div>
+          <div class="timeline-mini"><span class="date-chip">15.11.</span><div><strong>Prozessfreigabe</strong><div style="font-size:12px;color:#667085">Geschäftsführung / QM</div></div><span class="pill green" style="margin-left:auto">planmäßig</span></div>
+        </div></div></div>
+
+        <div id="tab-people" class="tab-content hidden"><div class="card"><div class="card-head"><h3>Beteiligte / RACI</h3><button class="btn primary">+ Person</button></div><div style="overflow:auto"><table>
+          <thead><tr><th>Person / Bereich</th><th>Rolle</th><th>Organisation</th><th>Selbstabrechnung</th><th>Dokumentation</th></tr></thead>
+          <tbody>
+            <tr><td>Geschäftsführung</td><td>Auftraggeber</td><td>A</td><td>I</td><td>I</td></tr>
+            <tr><td>Jacqueline Winter</td><td>Projektleitung</td><td>R</td><td>A</td><td>R</td></tr>
+            <tr><td>IT</td><td>Beteiligte</td><td>I</td><td>R</td><td>C</td></tr>
+            <tr><td>QM</td><td>Beteiligte</td><td>C</td><td>C</td><td>A</td></tr>
+          </tbody>
+        </table></div></div></div>
+
+        <div id="tab-documents" class="tab-content hidden"><div class="card"><div class="card-head"><h3>Dokumente</h3><button class="btn primary">+ Dokument</button></div><div class="card-body">
+          <div class="timeline-mini"><span>📄</span><div><strong>Projektauftrag_ZAM.docx</strong><div style="font-size:12px;color:#667085">Projektgrundlage · aktualisiert 05.10.2026</div></div></div>
+          <div class="timeline-mini"><span>📊</span><div><strong>Stellenplanung.xlsx</strong><div style="font-size:12px;color:#667085">Organisation · aktualisiert 07.10.2026</div></div></div>
+          <div class="timeline-mini"><span>📄</span><div><strong>Prozess_Selbstabrechnung.pdf</strong><div style="font-size:12px;color:#667085">Entwurf · aktualisiert 06.10.2026</div></div></div>
+        </div></div></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+const portfolioView = document.getElementById('portfolioView');
+const projectView = document.getElementById('projectView');
+const rows = document.querySelectorAll('.tree-row');
+const projectData = {
+  zam:{title:'ZAM – Strukturelle Neuordnung', crumb:'ZAM Neuorganisation', owner:'Jacqueline Winter', progress:68, status:'yellow', label:'● Beobachten'},
+  'zam-org':{title:'ZAM – Organisation', crumb:'ZAM Neuorganisation / Organisation', owner:'Jacqueline Winter', progress:80, status:'green', label:'● Planmäßig'},
+  'zam-team':{title:'ZAM – Teamstruktur', crumb:'ZAM / Organisation / Teamstruktur', owner:'Jacqueline Winter', progress:100, status:'green', label:'● Planmäßig'},
+  'zam-inco':{title:'ZAM – Inko / Pflegehilfsmittel', crumb:'ZAM / Organisation / Inko / Pflegehilfsmittel', owner:'Jacqueline Winter', progress:70, status:'yellow', label:'● Beobachten'},
+  'zam-billing':{title:'ZAM – Selbstabrechnung', crumb:'ZAM / Selbstabrechnung', owner:'A. Braun', progress:55, status:'yellow', label:'● Beobachten'},
+  'zam-process':{title:'ZAM – Prozessdokumentation', crumb:'ZAM / Prozessdokumentation', owner:'QM', progress:20, status:'red', label:'● Kritisch'},
+  bridge:{title:'Rezeptbrücke brillinger | ottobock.care', crumb:'Rezeptbrücke', owner:'M. Schmidt', progress:42, status:'green', label:'● Planmäßig'},
+  assistant:{title:'Versorgungsassistent', crumb:'Versorgungsassistent', owner:'T. Meier', progress:75, status:'yellow', label:'● Beobachten'},
+  mobility:{title:'REHA Mobility Dashboard', crumb:'REHA Mobility Dashboard', owner:'S. Braun', progress:58, status:'green', label:'● Planmäßig'},
+  office:{title:'Standort- und Büroplanung', crumb:'Standort / Büroplanung', owner:'A. Keller', progress:31, status:'red', label:'● Kritisch'}
+};
+
+function openProject(id){
+  rows.forEach(r=>r.classList.toggle('active',r.dataset.project===id));
+  if(id==='portfolio'){
+    portfolioView.classList.remove('hidden');
+    projectView.classList.add('hidden');
+    return;
+  }
+  const d=projectData[id]||projectData.zam;
+  portfolioView.classList.add('hidden');
+  projectView.classList.remove('hidden');
+  document.getElementById('projectTitle').textContent=d.title;
+  document.getElementById('breadcrumb').textContent=d.crumb;
+  document.getElementById('projectOwner').textContent=d.owner;
+  document.getElementById('projectProgressText').textContent=d.progress+' %';
+  document.getElementById('projectProgressBar').style.width=d.progress+'%';
+  const st=document.getElementById('projectStatus');
+  st.className='pill '+d.status;
+  st.textContent=d.label;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+rows.forEach(r=>r.addEventListener('click',()=>openProject(r.dataset.project)));
+document.querySelectorAll('[data-open]').forEach(r=>r.addEventListener('click',()=>openProject(r.dataset.open)));
+
+document.getElementById('treeSearch').addEventListener('input',e=>{
+  const q=e.target.value.toLowerCase();
+  rows.forEach(r=>{
+    const match=r.textContent.toLowerCase().includes(q);
+    r.style.display=match?'flex':'none';
+  });
+});
+
+document.querySelectorAll('#tabs button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.add('hidden'));
+    const target=document.getElementById('tab-'+btn.dataset.tab);
+    if(target) target.classList.remove('hidden');
+  });
+});
+
+const gfBtn=document.getElementById('gfBtn');
+const workBtn=document.getElementById('workBtn');
+gfBtn.addEventListener('click',()=>{
+  gfBtn.classList.add('active');workBtn.classList.remove('active');
+  openProject('portfolio');
+});
+workBtn.addEventListener('click',()=>{
+  workBtn.classList.add('active');gfBtn.classList.remove('active');
+  openProject('zam');
+  document.querySelector('[data-tab="actions"]').click();
+});
+</script>
+</body>
+</html>
