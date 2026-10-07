@@ -86,37 +86,37 @@ jobs:
                   print('download failed',target,e)
           PY
 
-      - name: Build pinned browser dependencies
+      - name: Setup pinned Node toolchain
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Build locked browser dependencies
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf vendor .vendor-build
-          mkdir -p .vendor-build vendor/tesseract/core vendor/tesseract/lang vendor/pdfjs vendor/transformers
+          rm -rf vendor models node_modules
+          mkdir -p vendor/tesseract/core vendor/tesseract/lang vendor/pdfjs vendor/transformers
+          mkdir -p models/onnx-community/whisper-tiny/onnx
 
-          npm install --prefix .vendor-build --no-save --ignore-scripts --no-fund --no-audit \
-            @supabase/supabase-js@2.57.4 \
-            tesseract.js@5.1.1 \
-            tesseract.js-core@5.1.1 \
-            @tesseract.js-data/deu@1.0.0 \
-            pdfjs-dist@4.10.38 \
-            @huggingface/transformers@4.3.0
+          npm ci --ignore-scripts --no-fund --no-audit
+          npm audit --omit=dev --audit-level=critical
 
-          cp .vendor-build/node_modules/@supabase/supabase-js/dist/umd/supabase.js vendor/supabase.js
-          cp .vendor-build/node_modules/tesseract.js/dist/tesseract.esm.min.js vendor/tesseract/tesseract.esm.min.js
-          cp .vendor-build/node_modules/tesseract.js/dist/worker.min.js vendor/tesseract/worker.min.js
-          cp .vendor-build/node_modules/tesseract.js-core/tesseract-core* vendor/tesseract/core/
+          cp node_modules/@supabase/supabase-js/dist/umd/supabase.js vendor/supabase.js
+          cp node_modules/tesseract.js/dist/tesseract.esm.min.js vendor/tesseract/tesseract.esm.min.js
+          cp node_modules/tesseract.js/dist/worker.min.js vendor/tesseract/worker.min.js
+          cp node_modules/tesseract.js-core/tesseract-core* vendor/tesseract/core/
 
-          LANG_FILE="$(find .vendor-build/node_modules/@tesseract.js-data/deu -type f -name 'deu.traineddata.gz' -print -quit)"
+          LANG_FILE="$(find node_modules/@tesseract.js-data/deu -type f -name 'deu.traineddata.gz' -print -quit)"
           test -n "$LANG_FILE"
           cp "$LANG_FILE" vendor/tesseract/lang/deu.traineddata.gz
 
-          cp .vendor-build/node_modules/pdfjs-dist/build/pdf.min.mjs vendor/pdfjs/pdf.min.mjs
-          cp .vendor-build/node_modules/pdfjs-dist/build/pdf.worker.min.mjs vendor/pdfjs/pdf.worker.min.mjs
+          cp node_modules/pdfjs-dist/build/pdf.min.mjs vendor/pdfjs/pdf.min.mjs
+          cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs vendor/pdfjs/pdf.worker.min.mjs
 
-          cp .vendor-build/node_modules/@huggingface/transformers/dist/transformers.min.js vendor/transformers/transformers.min.js
-          find .vendor-build/node_modules/@huggingface/transformers/dist -maxdepth 1 -type f -name 'ort-*' -exec cp {} vendor/transformers/ \;
-
-          find vendor -type f -print0 | sort -z | xargs -0 sha256sum > vendor/SHA256SUMS
+          cp node_modules/@huggingface/transformers/dist/transformers.min.js vendor/transformers/transformers.min.js
+          find node_modules/@huggingface/transformers/dist -maxdepth 1 -type f -name 'ort-*' -exec cp {} vendor/transformers/ \;
 
           test -s vendor/supabase.js
           test -s vendor/tesseract/tesseract.esm.min.js
@@ -126,8 +126,47 @@ jobs:
           test -s vendor/pdfjs/pdf.worker.min.mjs
           test -s vendor/transformers/transformers.min.js
 
-          rm -rf .vendor-build
+          rm -rf node_modules
 
+      - name: Fetch pinned Whisper model for same-origin runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          MODEL_DIR="models/onnx-community/whisper-tiny"
+          REV="ff4177021cc41f7db950912b73ea4fdf7d01d8e7"
+          BASE="https://huggingface.co/onnx-community/whisper-tiny/resolve/$REV"
+
+          files=(
+            "added_tokens.json"
+            "config.json"
+            "generation_config.json"
+            "merges.txt"
+            "normalizer.json"
+            "preprocessor_config.json"
+            "quantize_config.json"
+            "special_tokens_map.json"
+            "tokenizer.json"
+            "tokenizer_config.json"
+            "vocab.json"
+            "onnx/encoder_model_quantized.onnx"
+            "onnx/decoder_model_merged_quantized.onnx"
+          )
+
+          for file in "${files[@]}"; do
+            mkdir -p "$MODEL_DIR/$(dirname "$file")"
+            curl --fail --location --silent --show-error --retry 3 --retry-delay 2 \
+              "$BASE/$file?download=true" \
+              --output "$MODEL_DIR/$file"
+            test -s "$MODEL_DIR/$file"
+          done
+
+          echo "2af4a414ca47aa30f61246017e5fe82b0a8d229281d1255ba666a2a7f6b84d19  $MODEL_DIR/onnx/encoder_model_quantized.onnx" | sha256sum -c -
+          echo "25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3  $MODEL_DIR/onnx/decoder_model_merged_quantized.onnx" | sha256sum -c -
+
+          printf '%s\n' "$REV" > "$MODEL_DIR/UPSTREAM_REVISION"
+          find "$MODEL_DIR" -type f -print0 | sort -z | xargs -0 sha256sum > "$MODEL_DIR/SHA256SUMS"
+          find vendor -type f -print0 | sort -z | xargs -0 sha256sum > vendor/SHA256SUMS
+          sha256sum package-lock.json > DEPENDENCY_LOCK_SHA256
       - name: Runtime dependency gate
         shell: bash
         run: |
@@ -149,10 +188,29 @@ jobs:
                   if pattern.search(text):
                       failures.append(f'{path}: {label}')
           html = Path('index.html').read_text(encoding='utf-8')
+          app = Path('app.js').read_text(encoding='utf-8')
           if re.search(r'<script\\b(?![^>]*\\bsrc\s*=)[^>]*>', html, re.I):
               failures.append('index.html: inline script block')
           if "script-src 'self' 'wasm-unsafe-eval'" not in html:
               failures.append('index.html: hardened script-src CSP missing')
+          if 'huggingface.co' in html.lower() or 'hf.co' in html.lower():
+              failures.append('index.html: runtime Hugging Face network access still allowed')
+          if 'allowRemoteModels=false' not in app:
+              failures.append('app.js: Transformers remote models are not disabled')
+          if "localModelPath=new URL('./models/',import.meta.url).href" not in app:
+              failures.append('app.js: local model path missing')
+          if "dtype:{encoder_model:'q8',decoder_model_merged:'q8'}" not in app:
+              failures.append('app.js: Whisper dtype is not pinned')
+          required = [
+              Path('models/onnx-community/whisper-tiny/onnx/encoder_model_quantized.onnx'),
+              Path('models/onnx-community/whisper-tiny/onnx/decoder_model_merged_quantized.onnx'),
+              Path('models/onnx-community/whisper-tiny/UPSTREAM_REVISION'),
+              Path('vendor/SHA256SUMS'),
+              Path('DEPENDENCY_LOCK_SHA256'),
+          ]
+          for path in required:
+              if not path.exists() or path.stat().st_size == 0:
+                  failures.append(f'missing build artifact: {path}')
           if failures:
               print('Runtime dependency gate failed:')
               for item in failures:
