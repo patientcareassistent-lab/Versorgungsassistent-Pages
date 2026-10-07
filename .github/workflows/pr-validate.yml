@@ -1,0 +1,64 @@
+name: Pull request validation
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install locked dependencies
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-fund --no-audit
+          npm audit --omit=dev --audit-level=critical
+
+      - name: Prepare browser runtime used by regression tests
+        run: |
+          set -euo pipefail
+          mkdir -p vendor
+          cp node_modules/@supabase/supabase-js/dist/umd/supabase.js vendor/supabase.js
+          test -s vendor/supabase.js
+
+      - name: Static security and syntax gate
+        run: |
+          set -euo pipefail
+          node --check app.js
+          node --check frame-guard.js
+          node --check whispercpp/runtime.js
+          node --check whispercpp/worker.js
+
+          runtime_files=(index.html app.js frame-guard.js whispercpp/runtime.js whispercpp/worker.js)
+          if grep -niE 'service[_-]?role|sb_secret_|/mnt/data|file://|localhost|127\.0\.0\.1' "${runtime_files[@]}"; then
+            echo 'Pull-request safety gate failed.'
+            exit 1
+          fi
+          if ! grep -q 'sb_publishable_' index.html app.js; then
+            echo 'Expected Supabase publishable-key marker missing.'
+            exit 1
+          fi
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run critical browser regressions
+        run: |
+          npx playwright test             tests/e2e/auth.spec.cjs             tests/e2e/workflow.spec.cjs             tests/e2e/live-security.spec.cjs
