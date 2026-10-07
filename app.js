@@ -662,6 +662,12 @@
 
     async function openApp(session){
       showLoading(true)
+      $('password').value=''
+      $('otp').value=''
+      $('secret').textContent=''
+      $('secretDetails').classList.add('hidden')
+      $('qr').removeAttribute('src')
+      $('qr').classList.add('hidden')
       const access=await supabase.rpc('current_access')
       if(access.error || !access.data?.[0]?.allowed){
         showLoading(false); $('auth').classList.remove('hidden'); $('app').classList.add('hidden')
@@ -3908,6 +3914,7 @@
       const result=await supabase.auth.signInWithPassword({email:username+'@versorgungsassistent.test',password:$('password').value})
       $('loginButton').disabled=false
       if(result.error){ showError('loginError',result.error.message); return }
+      $('password').value=''
       await handleSession(result.data.session)
     })
 
@@ -3921,6 +3928,7 @@
       const verify=await supabase.auth.mfa.verify({factorId,challengeId:challenge.data.id,code})
       $('verifyButton').disabled=false
       if(verify.error){ showError('mfaError',verify.error.message); return }
+      $('otp').value=''
       const {data:{session}}=await supabase.auth.getSession()
       await openApp(session)
     })
