@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - hardening/phase4-browser-regression
+      - hardening/phase4-whispercpp-wasm
 
 permissions:
   contents: read
@@ -42,8 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf vendor models
-          mkdir -p vendor/tesseract/core vendor/tesseract/lang vendor/pdfjs vendor/transformers
-          mkdir -p models/onnx-community/whisper-tiny/onnx
+          mkdir -p vendor/tesseract/core vendor/tesseract/lang vendor/pdfjs
 
           cp node_modules/@supabase/supabase-js/dist/umd/supabase.js vendor/supabase.js
           cp node_modules/tesseract.js/dist/tesseract.esm.min.js vendor/tesseract/tesseract.esm.min.js
@@ -57,53 +57,56 @@ jobs:
           cp node_modules/pdfjs-dist/build/pdf.min.mjs vendor/pdfjs/pdf.min.mjs
           cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs vendor/pdfjs/pdf.worker.min.mjs
 
-          cp node_modules/@huggingface/transformers/dist/transformers.min.js vendor/transformers/transformers.min.js
-          find node_modules/@huggingface/transformers/dist -maxdepth 1 -type f -name 'ort-*' -exec cp {} vendor/transformers/ \;
-          find node_modules/onnxruntime-web/dist -maxdepth 1 -type f -name 'ort-*' -exec cp {} vendor/transformers/ \;
-
           test -s vendor/supabase.js
           test -s vendor/tesseract/tesseract.esm.min.js
           test -s vendor/tesseract/worker.min.js
           test -s vendor/tesseract/lang/deu.traineddata.gz
           test -s vendor/pdfjs/pdf.min.mjs
           test -s vendor/pdfjs/pdf.worker.min.mjs
-          test -s vendor/transformers/transformers.min.js
-          test -s vendor/transformers/ort-wasm-simd-threaded.asyncify.mjs
 
-      - name: Fetch pinned Whisper model
+      - name: Setup pinned Emscripten toolchain
+        uses: emscripten-core/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021
+
+      - name: Build pinned whisper.cpp WebAssembly runtime
         shell: bash
         run: |
           set -euo pipefail
-          MODEL_DIR="models/onnx-community/whisper-tiny"
-          REV="ff4177021cc41f7db950912b73ea4fdf7d01d8e7"
-          BASE="https://huggingface.co/onnx-community/whisper-tiny/resolve/$REV"
+          WHISPER_CPP_REV="d1be6fde11ac6e0407606b4e42fe72d34add8037"
+          rm -rf .whisper-src .whisper-build
+          git clone --quiet https://github.com/ggml-org/whisper.cpp.git .whisper-src
+          git -C .whisper-src checkout --quiet "$WHISPER_CPP_REV"
 
-          files=(
-            "added_tokens.json"
-            "config.json"
-            "generation_config.json"
-            "merges.txt"
-            "normalizer.json"
-            "preprocessor_config.json"
-            "quantize_config.json"
-            "special_tokens_map.json"
-            "tokenizer.json"
-            "tokenizer_config.json"
-            "vocab.json"
-            "onnx/encoder_model_quantized.onnx"
-            "onnx/decoder_model_merged_quantized.onnx"
-          )
+          cp whispercpp/emscripten.cpp .whisper-src/examples/whisper.wasm/emscripten.cpp
+          cp whispercpp/CMakeLists.txt .whisper-src/examples/whisper.wasm/CMakeLists.txt
 
-          for file in "${files[@]}"; do
-            mkdir -p "$MODEL_DIR/$(dirname "$file")"
-            curl --fail --location --silent --show-error --retry 3 --retry-delay 2 \
-              "$BASE/$file?download=true" \
-              --output "$MODEL_DIR/$file"
-            test -s "$MODEL_DIR/$file"
-          done
+          emcmake cmake -S .whisper-src -B .whisper-build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DWHISPER_BUILD_TESTS=OFF \
+            -DWHISPER_BUILD_EXAMPLES=ON \
+            -DWHISPER_BUILD_SERVER=OFF \
+            -DWHISPER_WASM_SINGLE_FILE=ON
+          cmake --build .whisper-build --target libmain --parallel 2
 
-          echo "2af4a414ca47aa30f61246017e5fe82b0a8d229281d1255ba666a2a7f6b84d19  $MODEL_DIR/onnx/encoder_model_quantized.onnx" | sha256sum -c -
-          echo "25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3  $MODEL_DIR/onnx/decoder_model_merged_quantized.onnx" | sha256sum -c -
+          cp .whisper-build/bin/libmain.js whispercpp/whisper.js
+          test -s whispercpp/whisper.js
+          grep -q "whisper_factory" whispercpp/whisper.js
+          printf '%s\n' "$WHISPER_CPP_REV" > whispercpp/UPSTREAM_REVISION
+
+          rm -rf .whisper-src .whisper-build
+
+      - name: Fetch multilingual quantized whisper.cpp model
+        shell: bash
+        run: |
+          set -euo pipefail
+          MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny-q5_1.bin?download=true"
+          curl --fail --location --silent --show-error --retry 3 --retry-delay 2 \
+            "$MODEL_URL" \
+            --output whispercpp/ggml-tiny-q5_1.bin
+          test -s whispercpp/ggml-tiny-q5_1.bin
+          test "$(stat -c%s whispercpp/ggml-tiny-q5_1.bin)" -gt 25000000
+          test "$(stat -c%s whispercpp/ggml-tiny-q5_1.bin)" -lt 45000000
+          sha256sum whispercpp/ggml-tiny-q5_1.bin | tee whispercpp/MODEL_SHA256
+          sha256sum whispercpp/whisper.js whispercpp/worker.js coi-serviceworker.js > whispercpp/RUNTIME_SHA256
 
       - name: Fetch current AOK PG24 source forms
         shell: bash
