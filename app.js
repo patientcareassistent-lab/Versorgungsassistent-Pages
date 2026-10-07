@@ -278,6 +278,29 @@
       },1200)
     }
 
+    async function persistActiveSupplyNow(){
+      if(!supplyHasEditableContext()) return false
+      clearTimeout(draftSaveTimer)
+      draftSaveTimer=null
+      try{ await autosaveInFlight }catch(_){}
+      return await autosaveSupplyDraft(true)
+    }
+
+    async function removeRepairStoragePaths(paths){
+      const unique=[...new Set((paths||[]).filter(Boolean))]
+      if(!unique.length) return {ok:true,error:null}
+      let lastError=null
+      for(let attempt=0;attempt<2;attempt++){
+        const result=await supabase.storage.from(REPAIR_PHOTO_BUCKET).remove(unique)
+        if(!result.error){
+          unique.forEach(path=>repairPhotoUrlCache.delete(path))
+          return {ok:true,error:null}
+        }
+        lastError=result.error
+      }
+      return {ok:false,error:lastError}
+    }
+
     function formatDraftTime(iso){
       if(!iso) return '—'
       try{return new Intl.DateTimeFormat('de-DE',{dateStyle:'short',timeStyle:'short'}).format(new Date(iso))}catch(_){return iso}
@@ -3305,19 +3328,38 @@
       ).join('')
       host.querySelectorAll('[data-repair-photo-remove]').forEach(btn=>btn.addEventListener('click',async()=>{
         const i=Number(btn.dataset.repairPhotoRemove)
-        const next=repairPhotos().slice()
+        const previous=repairPhotos().slice()
+        const next=previous.slice()
         const [removed]=next.splice(i,1)
-        if(removed?.path){
-          const result=await supabase.storage.from(REPAIR_PHOTO_BUCKET).remove([removed.path])
-          if(result.error){
-            showWizardError('Foto konnte nicht gelöscht werden.',[result.error.message])
+        if(!removed) return
+
+        values.repairPhotos=next
+        const saved=await persistActiveSupplyNow()
+        if(!saved){
+          values.repairPhotos=previous
+          await renderRepairPhotos()
+          showWizardError('Foto konnte nicht sicher aus dem Vorgang entfernt werden. Der bisherige Stand bleibt erhalten.')
+          return
+        }
+
+        if(removed.path){
+          const storageDelete=await removeRepairStoragePaths([removed.path])
+          if(!storageDelete.ok){
+            values.repairPhotos=previous
+            const rollbackSaved=await persistActiveSupplyNow()
+            await renderRepairPhotos()
+            showWizardError(
+              rollbackSaved
+                ? 'Foto konnte im Bildspeicher nicht gelöscht werden. Die Änderung am Vorgang wurde zurückgenommen.'
+                : 'Foto konnte im Bildspeicher nicht gelöscht werden und der Vorgang konnte nicht vollständig zurückgesetzt werden. Bitte Administrator informieren.',
+              [storageDelete.error?.message||'Storage-Löschung fehlgeschlagen']
+            )
             return
           }
-          repairPhotoUrlCache.delete(removed.path)
         }
-        values.repairPhotos=next
+
         await renderRepairPhotos()
-        queueAutosaveSupply()
+        showWizardError('')
         updateWizardStatus()
       }))
     }
@@ -3326,8 +3368,10 @@
       if(!supplyHasEditableContext()) return
       const selected=[...(files||[])].filter(file=>String(file.type||'').startsWith('image/'))
       if(!selected.length) return
-      const existing=repairPhotos().slice()
-      const slots=Math.max(0,4-existing.length)
+      const previous=repairPhotos().slice()
+      const next=previous.slice()
+      const uploaded=[]
+      const slots=Math.max(0,4-next.length)
       if(!slots){
         showWizardError('Es können maximal 4 Reparaturfotos gespeichert werden.')
         return
@@ -3338,17 +3382,27 @@
       try{
         for(const file of todo){
           const prepared=await compressRepairPhoto(file)
-          existing.push(await uploadRepairPhoto(prepared))
+          const photo=await uploadRepairPhoto(prepared)
+          uploaded.push(photo)
+          next.push(photo)
         }
-        values.repairPhotos=existing
+        values.repairPhotos=next
+        const saved=await persistActiveSupplyNow()
+        if(!saved) throw new Error('Vorgang konnte nach dem Foto-Upload nicht gespeichert werden.')
         await renderRepairPhotos()
-        queueAutosaveSupply()
         showWizardError('')
         updateWizardStatus()
       }catch(err){
         console.error(err)
-        showWizardError('Ein Reparaturfoto konnte nicht gespeichert werden.',[err?.message||'Unbekannter Fehler'])
+        values.repairPhotos=previous
+        const cleanup=await removeRepairStoragePaths(uploaded.map(photo=>photo.path))
         await renderRepairPhotos()
+        showWizardError(
+          cleanup.ok
+            ? 'Ein Reparaturfoto konnte nicht sicher gespeichert werden. Bereits hochgeladene Dateien wurden zurückgerollt.'
+            : 'Ein Reparaturfoto konnte nicht sicher gespeichert werden. Mindestens eine hochgeladene Datei konnte nicht automatisch entfernt werden; bitte Administrator informieren.',
+          [err?.message||'Unbekannter Fehler',cleanup.error?.message].filter(Boolean)
+        )
       }finally{
         if($('repairPhotoFiles')) $('repairPhotoFiles').value=''
         if($('repairPhotoCamera')) $('repairPhotoCamera').value=''
@@ -3382,19 +3436,38 @@
       ).join('')
       host.querySelectorAll('[data-repair-label-remove]').forEach(btn=>btn.addEventListener('click',async()=>{
         const i=Number(btn.dataset.repairLabelRemove)
-        const next=repairLabelPhotos().slice()
+        const previous=repairLabelPhotos().slice()
+        const next=previous.slice()
         const [removed]=next.splice(i,1)
-        if(removed?.path){
-          const result=await supabase.storage.from(REPAIR_PHOTO_BUCKET).remove([removed.path])
-          if(result.error){
-            showWizardError('Etikett-Foto konnte nicht gelöscht werden.',[result.error.message])
+        if(!removed) return
+
+        values.repairLabelPhotos=next
+        const saved=await persistActiveSupplyNow()
+        if(!saved){
+          values.repairLabelPhotos=previous
+          await renderRepairLabelPhotos()
+          showWizardError('Etikett-Foto konnte nicht sicher aus dem Vorgang entfernt werden. Der bisherige Stand bleibt erhalten.')
+          return
+        }
+
+        if(removed.path){
+          const storageDelete=await removeRepairStoragePaths([removed.path])
+          if(!storageDelete.ok){
+            values.repairLabelPhotos=previous
+            const rollbackSaved=await persistActiveSupplyNow()
+            await renderRepairLabelPhotos()
+            showWizardError(
+              rollbackSaved
+                ? 'Etikett-Foto konnte im Bildspeicher nicht gelöscht werden. Die Änderung am Vorgang wurde zurückgenommen.'
+                : 'Etikett-Foto konnte im Bildspeicher nicht gelöscht werden und der Vorgang konnte nicht vollständig zurückgesetzt werden. Bitte Administrator informieren.',
+              [storageDelete.error?.message||'Storage-Löschung fehlgeschlagen']
+            )
             return
           }
-          repairPhotoUrlCache.delete(removed.path)
         }
-        values.repairLabelPhotos=next
+
         await renderRepairLabelPhotos()
-        queueAutosaveSupply()
+        showWizardError('')
         updateWizardStatus()
       }))
     }
@@ -3403,8 +3476,10 @@
       if(!supplyHasEditableContext()) return
       const selected=[...(files||[])].filter(file=>String(file.type||'').startsWith('image/'))
       if(!selected.length) return
-      const existing=repairLabelPhotos().slice()
-      const slots=Math.max(0,10-existing.length)
+      const previous=repairLabelPhotos().slice()
+      const next=previous.slice()
+      const uploaded=[]
+      const slots=Math.max(0,10-next.length)
       if(!slots){
         showWizardError('Es können maximal 10 Passteiletiketten gespeichert werden.')
         return
@@ -3415,17 +3490,27 @@
       try{
         for(const file of todo){
           const prepared=await compressRepairPhoto(file)
-          existing.push(await uploadRepairPhoto(prepared,'labels'))
+          const photo=await uploadRepairPhoto(prepared,'labels')
+          uploaded.push(photo)
+          next.push(photo)
         }
-        values.repairLabelPhotos=existing
+        values.repairLabelPhotos=next
+        const saved=await persistActiveSupplyNow()
+        if(!saved) throw new Error('Vorgang konnte nach dem Etikett-Upload nicht gespeichert werden.')
         await renderRepairLabelPhotos()
-        queueAutosaveSupply()
         showWizardError('')
         updateWizardStatus()
       }catch(err){
         console.error(err)
-        showWizardError('Ein Etikett-Foto konnte nicht gespeichert werden.',[err?.message||'Unbekannter Fehler'])
+        values.repairLabelPhotos=previous
+        const cleanup=await removeRepairStoragePaths(uploaded.map(photo=>photo.path))
         await renderRepairLabelPhotos()
+        showWizardError(
+          cleanup.ok
+            ? 'Ein Etikett-Foto konnte nicht sicher gespeichert werden. Bereits hochgeladene Dateien wurden zurückgerollt.'
+            : 'Ein Etikett-Foto konnte nicht sicher gespeichert werden. Mindestens eine hochgeladene Datei konnte nicht automatisch entfernt werden; bitte Administrator informieren.',
+          [err?.message||'Unbekannter Fehler',cleanup.error?.message].filter(Boolean)
+        )
       }finally{
         if($('repairLabelFiles')) $('repairLabelFiles').value=''
         if($('repairLabelCamera')) $('repairLabelCamera').value=''
