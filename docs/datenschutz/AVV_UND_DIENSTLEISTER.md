@@ -29,9 +29,25 @@ Trotzdem entstehen beim Abruf einer Website regelmäßig technische Verbindungsd
 
 Empfehlung für den Produktivbetrieb: Hosting unter einer kontrollierten Unternehmens-/EU-Infrastruktur oder eine ausdrücklich für Gesundheitsdaten freigegebene Hostinglösung prüfen.
 
-## Externe JavaScript-/OCR-Abhängigkeiten
+## Browser-Laufzeitabhängigkeiten
 
-Der aktuelle Frontendcode lädt Laufzeitbibliotheken extern. Da fremder JavaScript-Code im Kontext der Anwendung ausgeführt wird, ist dies ein Supply-Chain-Risiko. Vor Produktivfreigabe sollen kritische Bibliotheken möglichst selbst gehostet, fest versioniert, integritätsgeprüft und über restriktive Content-Security-Policy abgesichert werden.
+Die produktiven Browser-Laufzeitbibliotheken werden im GitHub-Pages-Build fest versioniert bzw. reproduzierbar erzeugt und anschließend same-origin ausgeliefert. OCR, PDF-Verarbeitung und whisper.cpp/WebAssembly benötigen zur Laufzeit keinen externen JavaScript-CDN-Zugriff. Die verbleibenden Supply-Chain-Risiken werden durch Lockfile, Hashprüfungen, gepinnte Build-Actions, CSP und Browser-Regressionen reduziert.
+
+## Optionales externes Langzeitarchiv (Cloudflare R2)
+
+Für abgeschlossene Versorgungen ist technisch ein geschützter Backend-Dienst "archive-care-case" vorbereitet. Er kann den vollständigen Fallstand, Revisions- und Auditdaten sowie zugehörige Reparaturbilder in ein privates Cloudflare-R2-Objektarchiv übertragen. Der Browser erhält keine R2-Zugangsdaten; die Übertragung erfolgt ausschließlich serverseitig nach gültiger Supabase-Sitzung, MFA/AAL2, aktiver Mitgliedschaft und Eigentümerprüfung.
+
+Zum Stand dieses Dokuments existiert noch kein erfolgreicher Archiveintrag in app_private.care_case_archives. Ob die R2-Zugangsdaten bereits produktiv hinterlegt sind, ist aus der Anwendung selbst nicht ableitbar.
+
+Vor einer Aktivierung mit echten Gesundheitsdaten zwingend zu dokumentieren und freizugeben:
+- Vertrags-/AVV- bzw. DPA-Einordnung von Cloudflare einschließlich Unterauftragsverarbeitern,
+- Datenregion, mögliche Drittlandtransfers und Supportzugriffe,
+- private Bucket-Konfiguration und administrative Zugriffskontrollen,
+- Aufbewahrungs- und Löschprozess auch für die externen Archivobjekte,
+- Wiederherstellungs-/Integritätsprüfung der Archive,
+- Exit-/Datenrückgabeprozess bei Anbieterwechsel.
+
+Der lokale Purge-Prozess ist technisch so gehärtet, dass eine fällige Versorgung nicht als vollständig gelöscht gelten kann, solange dazu noch ein externer Archiveintrag besteht.
 
 ## Freigabeprotokoll
 
@@ -41,5 +57,6 @@ IT-Sicherheit: [ ] geprüft
 Supabase DPA wirksam einbezogen: [ ]  
 Unterauftragsverarbeiter geprüft: [ ]  
 GitHub/Produktivhosting entschieden: [ ]  
+Cloudflare-R2-Archiv freigegeben oder deaktiviert: [ ]  
 Drittlandtransferbewertung dokumentiert: [ ]  
-Lösch-/Exit-Prozess getestet: [ ]
+Lösch-/Exit-Prozess einschließlich externer Archive getestet: [ ]
