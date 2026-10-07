@@ -53,6 +53,20 @@ test('care case load failure keeps the application closed', async ({ page }) => 
   await expect(page.locator('#loginError')).toContainText('Versorgungsübersicht')
 })
 
+test('inactive or non-member password sessions cannot reach MFA enrollment', async ({ page }) => {
+  await installSupabaseMock(page, { mode: 'login', denyPreMfa: true })
+  await page.goto('/index.html')
+
+  await page.locator('#username').fill('e2e-user')
+  await page.locator('#password').fill('test')
+  await page.locator('#loginButton').click()
+
+  await expect(page.locator('#loginPane')).toBeVisible()
+  await expect(page.locator('#mfaPane')).toBeHidden()
+  await expect(page.locator('#loginError')).toContainText('Zugriffsberechtigung')
+  await expect(page.locator('#app')).toBeHidden()
+})
+
 test('password login remains gated by MFA before the app opens', async ({ page }) => {
   await installSupabaseMock(page, { mode: 'login' })
   await page.goto('/index.html')

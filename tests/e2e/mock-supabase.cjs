@@ -2,7 +2,8 @@ async function installSupabaseMock(page, options = {}) {
   const mode = options.mode || 'signed-in'
   const failBootstrap = options.failBootstrap === true
   const failCases = options.failCases === true
-  await page.addInitScript(({ mode, failBootstrap, failCases }) => {
+  const denyPreMfa = options.denyPreMfa === true
+  await page.addInitScript(({ mode, failBootstrap, failCases, denyPreMfa }) => {
     const SESSION = {
       user: {
         id: '11111111-1111-4111-8111-111111111111',
@@ -165,6 +166,9 @@ async function installSupabaseMock(page, options = {}) {
         }
       },
       rpc(name) {
+        if (name === 'mfa_enrollment_access') {
+          return Promise.resolve({ data: !denyPreMfa, error: null })
+        }
         if (failBootstrap && name === 'care_reference_bootstrap') {
           return Promise.resolve({ data: null, error: { message: 'simulated bootstrap failure' } })
         }
@@ -211,7 +215,7 @@ async function installSupabaseMock(page, options = {}) {
         })
       }
     })
-  }, { mode, failBootstrap, failCases })
+  }, { mode, failBootstrap, failCases, denyPreMfa })
 }
 
 module.exports = { installSupabaseMock }

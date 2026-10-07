@@ -757,6 +757,12 @@
       if(aal.error){ showLogin(); showError('loginError',aal.error.message); return }
       if(aal.data.currentLevel==='aal2'){ await openApp(session); return }
 
+      const preMfaAccess=await supabase.rpc('mfa_enrollment_access')
+      if(preMfaAccess.error || preMfaAccess.data!==true){
+        await endSessionForSecurity('Zugriffsberechtigung konnte nicht bestätigt werden. Bitte erneut anmelden.')
+        return
+      }
+
       const factors=await supabase.auth.mfa.listFactors()
       if(factors.error){ showLogin(); showError('loginError',factors.error.message); return }
       const verified=(factors.data.totp||[]).find(f=>f.status==='verified') || (factors.data.totp||[])[0]
