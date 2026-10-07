@@ -1,6 +1,6 @@
 # Datenschutz-Folgenabschätzung (DSFA) – Versorgungsassistent
 
-Stand: 01.10.2026  
+Stand: 07.10.2026  
 Status: Entwurf, formale Freigabe durch Verantwortliche/n und Datenschutzbeauftragte/n erforderlich
 
 ## 1. Notwendigkeit
@@ -16,7 +16,7 @@ Datenfluss:
 4. Patient-/Versorgungsdaten werden im Browser erfasst.
 5. Rezeptfoto/PDF wird aktuell nur lokal für OCR verarbeitet und nicht dauerhaft gespeichert.
 6. Fachlicher Text und Vorgangsdaten werden über TLS in `public.care_cases` gespeichert.
-7. RLS begrenzt Zugriff auf den jeweiligen Eigentümer.
+7. RLS erlaubt aktiven MFA/AAL2-Mitgliedern Team-READ; Änderungen bleiben an den jeweiligen Eigentümer gebunden.
 8. Änderungen erzeugen Audit- und Revisionsdaten im privaten Schema.
 9. Bei Abschluss wird eine Aufbewahrungsfrist vorgemerkt; Löschung erfolgt kontrolliert nach Freigabe des Löschkonzepts.
 
@@ -44,7 +44,7 @@ Folgende Punkte sind vor echter Patientennutzung verbindlich zu schließen oder 
 - Externe JavaScript-Laufzeitabhängigkeiten selbst hosten oder mit einem gleichwertigen Supply-Chain-Schutz versehen.
 - Schutz gegen kompromittierte Passwörter in Supabase aktivieren, sofern verfügbar.
 - Backup-/Restore-Ziele und Tests dokumentieren.
-- Rollen-/Vertretungsmodell für Mehrbenutzerbearbeitung festlegen, falls benötigt.
+- Rollen-/Vertretungsmodell für eine mögliche spätere gemeinsame Bearbeitung festlegen; aktuell ist nur teamweite Einsicht bei ownergebundenem Schreiben umgesetzt.
 - Datenschutzinformationen nach Art. 13/14 DSGVO bereitstellen.
 - Prozess für Betroffenenrechte und Datenschutzverletzungen organisatorisch freigeben.
 
