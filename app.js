@@ -1,5 +1,14 @@
     const { createClient } = window.supabase
 
+    try{
+      for(let i=localStorage.length-1;i>=0;i--){
+        const key=localStorage.key(i)||''
+        if(key==='sb-pypljdyqjpdkismbwuag-auth-token' || key.startsWith('sb-pypljdyqjpdkismbwuag-auth-token.')){
+          localStorage.removeItem(key)
+        }
+      }
+    }catch(_){}
+
     const supabase = createClient(
       'https://pypljdyqjpdkismbwuag.supabase.co',
       'sb_publishable_dyiVrJQX8HYWKrWxJzqLmw_RmFAWJRI',
