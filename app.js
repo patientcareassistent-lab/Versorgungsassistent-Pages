@@ -1074,12 +1074,10 @@
     }
 
     async function getProfileAsr(){
-      if(!window.crossOriginIsolated){
-        throw new Error('Die lokale Spracheingabe wird noch vorbereitet. Bitte die Seite einmal neu laden.')
-      }
       if(!window.WhisperCppRuntime){
         throw new Error('Die lokale whisper.cpp-Laufzeit ist nicht verfügbar.')
       }
+      window.WhisperCppRuntime.setStatusHandler(text=>profileAiSetStatus(text))
       if(!profileAsrPromise){
         profileAiSetStatus('Lokale whisper.cpp-Spracherkennung wird vorbereitet … Beim ersten Einsatz wird das Modell geladen.')
         profileAsrPromise=window.WhisperCppRuntime.warmup()

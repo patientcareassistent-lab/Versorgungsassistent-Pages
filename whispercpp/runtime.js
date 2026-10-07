@@ -1,94 +1,91 @@
-/* Self-hosted whisper.cpp browser adapter. No audio leaves the browser. */
+/* Browser adapter for local single-thread whisper.cpp WebAssembly. */
 (() => {
-  let runtimeResolve
-  let runtimeReject
-  const runtimeReady = new Promise((resolve, reject) => {
-    runtimeResolve = resolve
-    runtimeReject = reject
-  })
-  let modelPromise = null
-  let scriptPromise = null
+  let worker = null
+  let sequence = 0
+  let statusHandler = null
+  const pending = new Map()
 
-  const moduleConfig = {
-    print: () => {},
-    printErr: (message) => console.warn('[whisper.cpp]', message),
-    onRuntimeInitialized() {
-      runtimeResolve(window.Module)
-    },
-    onAbort(reason) {
-      runtimeReject(new Error('whisper.cpp WebAssembly wurde abgebrochen: ' + String(reason || 'unbekannt')))
-    },
+  function emitStatus(text) {
+    if (!text) return
+    try { statusHandler?.(String(text)) } catch (_) {}
   }
-  window.Module = moduleConfig
 
-  function ensureEngineScript() {
-    if (scriptPromise) return scriptPromise
-    scriptPromise = new Promise((resolve, reject) => {
-      const script = document.createElement('script')
-      script.src = './whispercpp/whisper.js'
-      script.async = true
-      script.addEventListener('load', resolve, { once: true })
-      script.addEventListener('error', () => {
-        const error = new Error('whisper.cpp WebAssembly-Script konnte nicht geladen werden.')
-        runtimeReject(error)
-        reject(error)
-      }, { once: true })
-      document.head.appendChild(script)
+  function ensureWorker() {
+    if (worker) return worker
+
+    worker = new Worker('./whispercpp/worker.js', {
+      name: 'versorgungsassistent-whisper'
     })
-    return scriptPromise
-  }
 
-  async function ensureModel() {
-    if (modelPromise) return modelPromise
-    modelPromise = (async () => {
-      if (!window.crossOriginIsolated) {
-        throw new Error('Cross-Origin-Isolation ist für whisper.cpp noch nicht aktiv.')
+    worker.addEventListener('message', event => {
+      const msg = event.data || {}
+
+      if (msg.type === 'status') {
+        emitStatus(msg.text)
+        return
       }
-      await ensureEngineScript()
-      const module = await runtimeReady
-      const response = await fetch('./whispercpp/ggml-tiny-q5_1.bin', { cache: 'force-cache' })
-      if (!response.ok) {
-        throw new Error('Lokales Whisper-Modell konnte nicht geladen werden (' + response.status + ').')
+
+      if (msg.type !== 'ready' && msg.type !== 'result' && msg.type !== 'error') {
+        return
       }
-      const modelBytes = new Uint8Array(await response.arrayBuffer())
-      const modelPath = '/whisper-model.bin'
-      try { module.FS_unlink(modelPath) } catch (_) {}
-      module.FS_createDataFile('/', 'whisper-model.bin', modelBytes, true, false, false)
-      if (!module.init(modelPath)) {
-        throw new Error('Lokales Whisper-Modell konnte nicht initialisiert werden.')
+
+      const item = pending.get(msg.id)
+      if (!item) return
+
+      pending.delete(msg.id)
+
+      if (msg.type === 'error') {
+        item.reject(new Error(msg.message || 'Lokale Transkription fehlgeschlagen.'))
+        return
       }
-      return module
-    })().catch(error => {
-      modelPromise = null
-      throw error
+
+      item.resolve(msg.type === 'result' ? String(msg.text || '').trim() : true)
     })
-    return modelPromise
+
+    worker.addEventListener('error', event => {
+      const error = new Error(event?.message || 'Lokale whisper.cpp-Laufzeit ist abgestürzt.')
+      for (const item of pending.values()) item.reject(error)
+      pending.clear()
+      try { worker?.terminate() } catch (_) {}
+      worker = null
+    })
+
+    return worker
   }
 
-  async function waitUntilIdle(module, timeoutMs = 180000) {
-    const started = Date.now()
-    while (module.is_running()) {
-      if (Date.now() - started > timeoutMs) {
-        throw new Error('Lokale whisper.cpp-Transkription hat das Zeitlimit überschritten.')
-      }
-      await new Promise(resolve => setTimeout(resolve, 50))
-    }
+  function request(type, payload = {}, transfer = []) {
+    return new Promise((resolve, reject) => {
+      const id = 'whisper-' + (++sequence)
+      pending.set(id, { resolve, reject })
+      ensureWorker().postMessage({ type, id, ...payload }, transfer)
+    })
   }
 
   window.WhisperCppRuntime = {
-    async warmup() {
-      await ensureModel()
-      return true
+    setStatusHandler(handler) {
+      statusHandler = typeof handler === 'function' ? handler : null
     },
+
+    async warmup() {
+      return request('warmup')
+    },
+
     async transcribe(audio, language = 'de') {
-      const module = await ensureModel()
-      await waitUntilIdle(module)
-      const rc = module.start_transcribe(audio, language, false)
-      if (rc !== 0) {
-        throw new Error('whisper.cpp konnte die Transkription nicht starten (Code ' + rc + ').')
+      const pcm = audio instanceof Float32Array ? audio : new Float32Array(audio)
+      return request(
+        'transcribe',
+        { audio: pcm, language },
+        [pcm.buffer]
+      )
+    },
+
+    reset() {
+      for (const item of pending.values()) {
+        item.reject(new Error('Lokale Spracherkennung wurde zurückgesetzt.'))
       }
-      await waitUntilIdle(module)
-      return String(module.get_result() || '').trim()
+      pending.clear()
+      try { worker?.terminate() } catch (_) {}
+      worker = null
     },
   }
 })()

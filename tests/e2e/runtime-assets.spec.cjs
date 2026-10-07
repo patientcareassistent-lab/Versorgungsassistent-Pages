@@ -28,9 +28,10 @@ test('PDF.js renders a pinned AOK source form entirely same-origin', async ({ pa
   expect(remote).toEqual([])
 })
 
-test('whisper.cpp WASM transcribes entirely same-origin in a cross-origin-isolated page', async ({ page }) => {
+test('single-thread whisper.cpp WASM transcribes entirely same-origin in a dedicated worker', async ({ page }) => {
   test.setTimeout(180000)
   const remoteRuntimeRequests = []
+
   page.on('request', request => {
     if (/huggingface\.co|\.hf\.co|esm\.sh|cdn\.jsdelivr\.net|unpkg\.com/i.test(request.url())) {
       remoteRuntimeRequests.push(request.url())
@@ -38,37 +39,39 @@ test('whisper.cpp WASM transcribes entirely same-origin in a cross-origin-isolat
   })
 
   await page.goto('/index.html')
-  await page.waitForFunction(() => window.crossOriginIsolated === true, null, { timeout: 20000 })
 
   const assetState = await page.evaluate(async () => {
-    const [runtime, model, adapter] = await Promise.all([
+    const [runtime, model, worker] = await Promise.all([
       fetch('./whispercpp/whisper.js'),
       fetch('./whispercpp/ggml-tiny-q5_1.bin'),
-      fetch('./whispercpp/runtime.js'),
+      fetch('./whispercpp/worker.js'),
     ])
+
     return {
-      isolated: window.crossOriginIsolated,
       runtimeOk: runtime.ok,
       modelOk: model.ok,
       modelBytes: Number(model.headers.get('content-length') || 0),
-      adapterOk: adapter.ok,
+      workerOk: worker.ok,
+      isolated: window.crossOriginIsolated,
+      adapter: Boolean(window.WhisperCppRuntime),
     }
   })
 
-  expect(assetState.isolated).toBe(true)
   expect(assetState.runtimeOk).toBe(true)
   expect(assetState.modelOk).toBe(true)
-  expect(assetState.adapterOk).toBe(true)
+  expect(assetState.workerOk).toBe(true)
+  expect(assetState.adapter).toBe(true)
   expect(assetState.modelBytes).toBeGreaterThan(25000000)
 
   const result = await page.evaluate(async () => {
-    if (!window.WhisperCppRuntime) throw new Error('WhisperCppRuntime missing')
     await window.WhisperCppRuntime.warmup()
     const text = await window.WhisperCppRuntime.transcribe(new Float32Array(16000), 'de')
-    return { text, isolated: window.crossOriginIsolated }
+    return {
+      text,
+      isolated: window.crossOriginIsolated,
+    }
   })
 
-  expect(result.isolated).toBe(true)
   expect(typeof result.text).toBe('string')
   expect(remoteRuntimeRequests).toEqual([])
 })
