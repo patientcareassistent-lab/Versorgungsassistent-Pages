@@ -27,6 +27,12 @@ Vor dem Upload wird der vollständige Fallstand persistiert. Der Archivdienst pr
 
 Externe Archivobjekte sind Teil des Lösch- und Aufbewahrungskonzepts. Der lokale Purge ist fail-closed und verweigert die Löschung eines fälligen Falls, solange noch ein externer Archiveintrag oder zugehörige private Reparaturbilder bestehen. Die konkrete R2-Bucket-Konfiguration, Datenregion, Anbieterfreigabe und der kontrollierte Löschprozess des externen Archivs bleiben organisatorische Freigabepunkte.
 
+### Integritätsprüfung des externen Archivs
+
+Für externe Archive existiert ein eigener serverseitiger Verifikationspfad. Die Prüfung vergleicht den gespeicherten SHA-256-Wert des gzip-Archivs mit dem tatsächlichen R2-Objekt, dekomprimiert das Manifest, kontrolliert Archiv-ID, Vorgangs-ID, Eigentümer und Manifestversion und prüft anschließend jedes referenzierte Bildobjekt erneut per SHA-256. Das Verifikationsergebnis wird ausschließlich im privaten Archivindex gespeichert. Der Browser erhält nur Status- und Prüfsummenmetadaten, keine archivierten Patientendaten.
+
+Die vorbereitete externe Archivlöschung ist zusätzlich rollenbegrenzt: erforderlich sind MFA/AAL2, aktive App-Mitgliedschaft mit Rolle admin, abgelaufene Aufbewahrungsfrist, kein Legal Hold und ein zuvor erfolgreich verifiziertes Archiv. Aktuell ist keinem Mitglied die Rolle admin zugewiesen, so dass der destructive Pfad nicht nutzbar ist. Externe Archivobjekte und Archivindex werden zuerst kontrolliert entfernt; erst danach darf der getrennte Datenbank-Purge den operativen Fall löschen. Eine eigene private Lösch-Auditspur protokolliert die Archivlöschung.
+
 ## Verfügbarkeit und Wiederherstellbarkeit
 
 Supabase übernimmt die Datenbankplattform. Backup-/Restore-Funktionen, konkrete Sicherungsintervalle und vertragliche Wiederherstellungsziele müssen entsprechend dem gebuchten Supabase-Tarif dokumentiert und regelmäßig getestet werden.
