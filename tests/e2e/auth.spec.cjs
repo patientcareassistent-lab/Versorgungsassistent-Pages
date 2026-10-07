@@ -62,6 +62,13 @@ test('password login remains gated by MFA before the app opens', async ({ page }
 })
 
 
+test('Supabase auth tokens are not persisted in localStorage or parsed from the URL', async ({ page }) => {
+  const source = await (await page.request.get('/app.js')).text()
+  expect(source).toContain('storage: window.sessionStorage')
+  expect(source).toContain('detectSessionInUrl: false')
+  expect(source).not.toContain('detectSessionInUrl: true')
+})
+
 test('document shell remains structurally complete after hardening', async ({ page }) => {
   await page.goto('/index.html')
   await expect(page.locator('#contractQuestionList')).toHaveCount(1)
