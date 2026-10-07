@@ -19,6 +19,14 @@ Governance-Felder wie Eigentümer, Erstellzeitpunkt, Legal Hold und Aufbewahrung
 
 Direkte DELETE-Rechte für `authenticated` auf Patientenvorgänge sind entzogen. Löschung soll ausschließlich über einen kontrollierten administrativen Prozess nach Fristen- und Rechtsgrundlagenprüfung erfolgen.
 
+## Externe Archivierung
+
+Für vollständig bearbeitete eigene Vorgänge ist technisch eine optionale externe Archivierung über den Supabase-Backend-Dienst "archive-care-case" vorbereitet. Der Aufruf erfordert eine gültige Benutzer-Sitzung mit MFA/AAL2, aktive App-Mitgliedschaft und Eigentümerschaft am Vorgang. R2-Zugangsdaten befinden sich ausschließlich serverseitig.
+
+Vor dem Upload wird der vollständige Fallstand persistiert. Der Archivdienst prüft serverseitig Abschlussmerkmale, begrenzt Request- und Archivgrößen, validiert Bildpfade gegen Eigentümer und Vorgangs-ID und führt eine private Archivindex-Tabelle mit Status PENDING/READY/FAILED. Wiederholte Aufrufe eines bereits READY archivierten Vorgangs erzeugen keine neue fachliche Archivversion. Der finale Statuswechsel auf "Abgeschlossen" erfolgt mit dem Benutzerkontext, damit Audit und last_modified_by dem ausführenden Benutzer zugeordnet bleiben.
+
+Externe Archivobjekte sind Teil des Lösch- und Aufbewahrungskonzepts. Der lokale Purge ist fail-closed und verweigert die Löschung eines fälligen Falls, solange noch ein externer Archiveintrag oder zugehörige private Reparaturbilder bestehen. Die konkrete R2-Bucket-Konfiguration, Datenregion, Anbieterfreigabe und der kontrollierte Löschprozess des externen Archivs bleiben organisatorische Freigabepunkte.
+
 ## Verfügbarkeit und Wiederherstellbarkeit
 
 Supabase übernimmt die Datenbankplattform. Backup-/Restore-Funktionen, konkrete Sicherungsintervalle und vertragliche Wiederherstellungsziele müssen entsprechend dem gebuchten Supabase-Tarif dokumentiert und regelmäßig getestet werden.
