@@ -86,6 +86,58 @@ jobs:
                   print('download failed',target,e)
           PY
 
+      - name: Build pinned browser dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf vendor .vendor-build
+          mkdir -p .vendor-build vendor/tesseract/core vendor/tesseract/lang vendor/pdfjs vendor/transformers
+
+          npm install --prefix .vendor-build --no-save --ignore-scripts --no-fund --no-audit \
+            @supabase/supabase-js@2.57.4 \
+            tesseract.js@5.1.1 \
+            tesseract.js-core@5.1.1 \
+            @tesseract.js-data/deu@1.0.0 \
+            pdfjs-dist@4.10.38 \
+            @huggingface/transformers@4.3.0
+
+          cp .vendor-build/node_modules/@supabase/supabase-js/dist/umd/supabase.js vendor/supabase.js
+          cp .vendor-build/node_modules/tesseract.js/dist/tesseract.esm.min.js vendor/tesseract/tesseract.esm.min.js
+          cp .vendor-build/node_modules/tesseract.js/dist/worker.min.js vendor/tesseract/worker.min.js
+          cp .vendor-build/node_modules/tesseract.js-core/tesseract-core* vendor/tesseract/core/
+
+          LANG_FILE="$(find .vendor-build/node_modules/@tesseract.js-data/deu -type f -name 'deu.traineddata.gz' -print -quit)"
+          test -n "$LANG_FILE"
+          cp "$LANG_FILE" vendor/tesseract/lang/deu.traineddata.gz
+
+          cp .vendor-build/node_modules/pdfjs-dist/build/pdf.min.mjs vendor/pdfjs/pdf.min.mjs
+          cp .vendor-build/node_modules/pdfjs-dist/build/pdf.worker.min.mjs vendor/pdfjs/pdf.worker.min.mjs
+
+          cp .vendor-build/node_modules/@huggingface/transformers/dist/transformers.min.js vendor/transformers/transformers.min.js
+          find .vendor-build/node_modules/@huggingface/transformers/dist -maxdepth 1 -type f -name 'ort-*' -exec cp {} vendor/transformers/ \;
+
+          find vendor -type f -print0 | sort -z | xargs -0 sha256sum > vendor/SHA256SUMS
+
+          test -s vendor/supabase.js
+          test -s vendor/tesseract/tesseract.esm.min.js
+          test -s vendor/tesseract/worker.min.js
+          test -s vendor/tesseract/lang/deu.traineddata.gz
+          test -s vendor/pdfjs/pdf.min.mjs
+          test -s vendor/pdfjs/pdf.worker.min.mjs
+          test -s vendor/transformers/transformers.min.js
+
+          rm -rf .vendor-build
+
+      - name: Runtime dependency gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE --include='index.html' --include='app.js' '(esm\.sh|cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com)' .; then
+            echo 'Runtime dependency gate failed: executable CDN dependency remains in application code.'
+            exit 1
+          fi
+          echo 'Runtime dependency gate passed.'
+
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
