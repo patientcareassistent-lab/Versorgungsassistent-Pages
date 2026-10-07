@@ -123,18 +123,25 @@
     }
 
     async function loadSupplyDrafts(){
-      const response=await supabase
-        .from('care_case_overview')
-        .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,schema_version,patient_first_name,patient_last_name,patient_name,case_number,insured_no,case_kind,owner_user_id,last_modified_by')
-        .neq('status','Abgeschlossen')
-        .order('updated_at',{ascending:false})
-        .limit(250)
-      if(response.error){
-        showError('appError','Versorgungsdaten konnten nicht geladen werden: '+response.error.message)
-        supplyDraftCache=[]
-        return false
+      const pageSize=250
+      const rows=[]
+      for(let from=0;;from+=pageSize){
+        const response=await supabase
+          .from('care_case_overview')
+          .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,schema_version,patient_first_name,patient_last_name,patient_name,case_number,insured_no,case_kind,owner_user_id,last_modified_by')
+          .neq('status','Abgeschlossen')
+          .order('updated_at',{ascending:false})
+          .range(from,from+pageSize-1)
+        if(response.error){
+          showError('appError','Versorgungsdaten konnten nicht geladen werden: '+response.error.message)
+          supplyDraftCache=[]
+          return false
+        }
+        const batch=response.data||[]
+        rows.push(...batch)
+        if(batch.length<pageSize) break
       }
-      supplyDraftCache=(response.data||[]).map(mapCareCaseRow)
+      supplyDraftCache=rows.map(mapCareCaseRow)
       renderSupplyOverview()
       return true
     }
