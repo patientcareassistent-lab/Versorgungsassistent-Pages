@@ -421,7 +421,9 @@
     let currentSession = null
     let factorId = ''
     const IDLE_TIMEOUT_MS=30*60*1000
+    const ACCESS_RECHECK_MS=10*60*1000
     let lastUserActivityAt=Date.now()
+    let lastAccessCheckAt=0
     let idleGuardTimer=null
 
     function markUserActivity(){
@@ -478,27 +480,50 @@
       idleGuardTimer=null
     }
 
-    async function enforceIdleSession(){
-      if(!currentSession) return
-      if(Date.now()-lastUserActivityAt<IDLE_TIMEOUT_MS) return
+    async function endSessionForSecurity(message){
       stopIdleSessionGuard()
       clearSensitiveRuntimeState()
       try{ await supabase.auth.signOut() }catch(_){}
       currentSession=null
       showLogin()
-      showError('loginError','Sitzung wegen Inaktivität beendet. Bitte erneut anmelden.')
+      showError('loginError',message)
+    }
+
+    async function enforceIdleSession(){
+      if(!currentSession) return
+      if(Date.now()-lastUserActivityAt<IDLE_TIMEOUT_MS) return
+      await endSessionForSecurity('Sitzung wegen Inaktivität beendet. Bitte erneut anmelden.')
+    }
+
+    async function revalidateSessionAccess(force=false){
+      if(!currentSession) return true
+      const now=Date.now()
+      if(!force && now-lastAccessCheckAt<ACCESS_RECHECK_MS) return true
+      lastAccessCheckAt=now
+      const access=await supabase.rpc('current_access')
+      if(access.error || !access.data?.[0]?.allowed){
+        await endSessionForSecurity('Zugriffsberechtigung konnte nicht bestätigt werden. Bitte erneut anmelden.')
+        return false
+      }
+      return true
     }
 
     function startIdleSessionGuard(){
       markUserActivity()
-      if(!idleGuardTimer) idleGuardTimer=setInterval(()=>{ void enforceIdleSession() },60000)
+      if(!idleGuardTimer) idleGuardTimer=setInterval(()=>{
+        void enforceIdleSession()
+        void revalidateSessionAccess(false)
+      },60000)
     }
 
     ;['pointerdown','keydown','input','touchstart'].forEach(type=>{
       document.addEventListener(type,()=>{ if(currentSession) markUserActivity() },{passive:true})
     })
     document.addEventListener('visibilitychange',()=>{
-      if(document.visibilityState==='visible') void enforceIdleSession()
+      if(document.visibilityState==='visible'){
+        void enforceIdleSession()
+        void revalidateSessionAccess(true)
+      }
     })
 
     function escapeHtml(value){
@@ -779,6 +804,7 @@
         showError('mfaError',access.error?.message || 'Dieser Benutzer ist nicht für den Versorgungsassistenten freigegeben.')
         return
       }
+      lastAccessCheckAt=Date.now()
 
       const bootstrap=await supabase.rpc('care_reference_bootstrap')
       if(bootstrap.error){
