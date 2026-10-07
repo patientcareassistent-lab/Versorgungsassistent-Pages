@@ -83,3 +83,35 @@ Umgesetzt am 07.10.2026:
 - Der produktive Pages-Workflow kompiliert whisper.cpp, prüft Modell- und Runtime-Hashes, installiert Chromium und führt die Browser-Regressionen vor dem eigentlichen Pages-Deploy aus. Ein fehlschlagender Regressionstest verhindert damit den Produktionsdeploy.
 
 Hinweis zur Historie: Die in Phase 1/2 dokumentierte Transformers.js-/ONNX-Implementierung war ein Zwischenschritt und ist für die Spracheingabe durch diese Phase ersetzt. Die dort eingeführten Prinzipien – same-origin Laufzeit, feste Versionen, Hashprüfung und keine Runtime-CDN-Zugriffe – bleiben bestehen.
+
+
+## Phase 5 – Deep Audit: Teamzugriff, Sitzungen und Deployment-Oberfläche
+
+Umgesetzt am 07.10.2026:
+
+- Die RLS-SELECT-Policy für `care_cases` erlaubt allen aktiven, nicht-anonymen AAL2-Mitgliedern das Lesen aller Team-Vorgänge.
+- `INSERT` und `UPDATE` bleiben ownergebunden. Fremde UPDATE-Versuche ändern keine Zeilen.
+- `care_case_overview` wurde um `owner_user_id` und `last_modified_by` ergänzt, bleibt `security_invoker` und hat für `authenticated` ausschließlich `SELECT`.
+- Der private Bucket `repair-photos-private` verwendet nun Team-SELECT bei weiterhin ownergebundenem INSERT/DELETE.
+- Ein Live-RLS-Test bestätigte Team-READ, Owner-WRITE sowie AAL1-Sperre für Fälle und Bilder.
+- Fremde Versorgungen werden im Browser automatisch als `Nur Lesen` erkannt. Eingabefelder, Uploads, Löschen und Leeren sind gesperrt; Navigation und Drucken bleiben möglich.
+- Der veraltete LocalStorage-Schreibpfad `writeSupplyDrafts` wurde entfernt.
+- Die Versorgungsliste lädt paginiert und ist nicht mehr auf 250 offene Fälle begrenzt.
+- Cross-User- und >250-Fälle-Regressionstests wurden ergänzt.
+- `reference-import-once` sowie die alten Edge-Endpunkte `versorgungsassistent`, `versorgungsassistent-js` und `versorgungsassistent-css` wurden auf `410 Gone` und JWT-Pflicht gestellt.
+- Das Pages-Deployment veröffentlicht nur noch ein explizit aufgebautes `dist/`-Artefakt. `.github`, `docs`, `tests`, `projektportal`, Package-Metadaten und Playwright-Konfiguration werden nicht ausgeliefert.
+- AOK-PG24-Quellen werden fail-closed geladen; fehlende oder ungültige Pflicht-PDFs blockieren das Deployment.
+- GitHub Actions im Produktions- und Validierungsworkflow sind auf konkrete Commit-SHAs gepinnt.
+- Supabase-Sitzungen werden nur noch in `sessionStorage` persistiert; URL-Sessionerkennung ist deaktiviert.
+- Frühere persistente Supabase-Auth-Tokens werden beim Start aus `localStorage` entfernt.
+- Passwort, OTP, QR-/TOTP-Enrolment-Secret werden nach erfolgreicher Authentisierung aus dem DOM entfernt.
+- Patientenname und Versichertennummer sind gegen Browser-Autocomplete gehärtet.
+- Reparaturfotos werden mit Cache-Control 0 hochgeladen; Signed URLs laufen nach 5 Minuten ab.
+- Der Pages-Workflow überspringt reine Änderungen an Dokumentation, README und `projektportal/`, um Free-Plan-Actions-Ressourcen zu schonen.
+
+### Verbleibende technische Punkte
+
+- `Leaked Password Protection` bleibt im Supabase-Security-Advisor als Warnung bestehen.
+- Branch Protection / Ruleset-Schutz für `main` muss mit Repository-Adminrechten bestätigt bzw. eingerichtet werden; über die eingesetzte GitHub-App war die Protection-API nicht lesbar.
+- Wiederherstellungs-/Restore-Test und verbindliche Lösch-/Aufbewahrungsfreigabe stehen noch aus.
+- Das öffentliche GitHub-Repository enthält weiterhin historische Entwicklungs-/Dokumentationsdateien im Quellstand; sie werden nicht mehr als Pages-Artefakt ausgeliefert. Eine Trennung in öffentliches Deployment-Repo und private Entwicklungsdokumentation ist als organisatorische Härtung sinnvoll.
