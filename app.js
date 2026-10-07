@@ -92,6 +92,8 @@
       }
       return {
         id:row.id,
+        ownerUserId:row.owner_user_id||'',
+        lastModifiedBy:row.last_modified_by||'',
         createdAt:row.created_at,
         updatedAt:row.updated_at,
         wizardIndex:row.wizard_index,
@@ -107,7 +109,7 @@
     async function loadSupplyDrafts(){
       const response=await supabase
         .from('care_case_overview')
-        .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,schema_version,patient_first_name,patient_last_name,patient_name,case_number,insured_no,case_kind')
+        .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,schema_version,patient_first_name,patient_last_name,patient_name,case_number,insured_no,case_kind,owner_user_id,last_modified_by')
         .neq('status','Abgeschlossen')
         .order('updated_at',{ascending:false})
         .limit(250)
@@ -186,14 +188,15 @@
       })
     }
 
-    async function autosaveSupplyDraft(){
+    async function autosaveSupplyDraft(force=false){
       const hasContent=Object.keys(values).some(k=>{
         const v=values[k]
         return typeof v==='boolean'?v:String(v??'').trim()!==''
       }) || !!$('careKasse')?.value || !!$('carePg')?.value || !!$('careHimi')?.value
-      if(!hasContent || !currentSession) return
+      if((!hasContent && !force) || !currentSession) return
 
       if(!activeSupplyId) return
+      if(!supplyHasEditableContext()) return true
       const id=activeSupplyId
       const existing=supplyDraftCache.find(x=>x.id===id)
       const semanticItem={
@@ -212,6 +215,8 @@
       const now=new Date().toISOString()
       const item={
         ...semanticItem,
+        ownerUserId:existing?.ownerUserId||currentSession.user.id,
+        lastModifiedBy:currentSession.user.id,
         createdAt:existing?.createdAt||now,
         updatedAt:now
       }
@@ -241,6 +246,7 @@
     }
 
     function queueAutosaveSupply(){
+      if(!supplyHasEditableContext()) return
       clearTimeout(draftSaveTimer)
       draftSaveTimer=setTimeout(()=>{
         autosaveInFlight=autosaveInFlight
@@ -318,7 +324,7 @@
       if(!item) return
       const detail=await supabase
         .from('care_cases')
-        .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,payload,schema_version')
+        .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,payload,schema_version,owner_user_id,last_modified_by')
         .eq('id',id)
         .single()
       if(detail.error){
@@ -3138,9 +3144,10 @@
       const urls=await Promise.all(photos.map(async photo=>{
         try{return await repairPhotoDisplayUrl(photo)}catch(err){console.error(err);return ''}
       }))
+      const canEdit=supplyHasEditableContext()
       host.innerHTML=photos.map((photo,index)=>
         '<article class="repair-photo-item">'+
-          '<button type="button" class="repair-photo-remove" data-repair-photo-remove="'+index+'" aria-label="Foto löschen">×</button>'+
+          (canEdit?'<button type="button" class="repair-photo-remove" data-repair-photo-remove="'+index+'" aria-label="Foto löschen">×</button>':'')+
           (urls[index]?'<img src="'+escapeHtml(urls[index])+'" alt="Reparaturfoto '+(index+1)+'">':'<div class="repair-photo-empty">Foto konnte nicht geladen werden.</div>')+
           '<div class="repair-photo-meta" title="'+escapeHtml(photo.name)+'">'+escapeHtml(photo.name)+' · '+escapeHtml(formatRepairPhotoSize(photo.size||0))+'</div>'+
         '</article>'
@@ -3165,6 +3172,7 @@
     }
 
     async function handleRepairPhotos(files){
+      if(!supplyHasEditableContext()) return
       const selected=[...(files||[])].filter(file=>String(file.type||'').startsWith('image/'))
       if(!selected.length) return
       const existing=repairPhotos().slice()
@@ -3213,9 +3221,10 @@
       const urls=await Promise.all(photos.map(async photo=>{
         try{return await repairPhotoDisplayUrl(photo)}catch(err){console.error(err);return ''}
       }))
+      const canEdit=supplyHasEditableContext()
       host.innerHTML=photos.map((photo,index)=>
         '<article class="repair-photo-item">'+
-          '<button type="button" class="repair-photo-remove" data-repair-label-remove="'+index+'" aria-label="Etikett-Foto löschen">×</button>'+
+          (canEdit?'<button type="button" class="repair-photo-remove" data-repair-label-remove="'+index+'" aria-label="Etikett-Foto löschen">×</button>':'')+
           (urls[index]?'<img src="'+escapeHtml(urls[index])+'" alt="Passteiletikett '+(index+1)+'">':'<div class="repair-photo-empty">Foto konnte nicht geladen werden.</div>')+
           '<div class="repair-photo-meta" title="'+escapeHtml(photo.name)+'">'+escapeHtml(photo.name)+' · '+escapeHtml(formatRepairPhotoSize(photo.size||0))+'</div>'+
         '</article>'
@@ -3240,6 +3249,7 @@
     }
 
     async function handleRepairLabelPhotos(files){
+      if(!supplyHasEditableContext()) return
       const selected=[...(files||[])].filter(file=>String(file.type||'').startsWith('image/'))
       if(!selected.length) return
       const existing=repairLabelPhotos().slice()
@@ -3621,6 +3631,11 @@
 
     function advanceWizard(){
       showWizardError('')
+      if(activeSupplyIsReadOnly()){
+        const next=nextApplicableIndex(wizardIndex)
+        if(next!==wizardIndex) goWizard(next)
+        return
+      }
       const result=validateStep(wizardIndex)
       if(!result.ok){
         showWizardError('Bitte diesen Arbeitsschritt zuerst vollständig bearbeiten:',result.missing)
@@ -3635,7 +3650,7 @@
       if(index<0||index>=wizardSteps.length) return
       if(!stepApplicable(index)) return
       const blocker=firstBlockingIndex()
-      if(index>blocker){
+      if(!activeSupplyIsReadOnly() && index>blocker){
         showWizardError('Dieser Schritt ist noch gesperrt. Bitte zuerst abschließen:',[wizardSteps[blocker].name])
         return
       }
@@ -3652,10 +3667,11 @@
         wizardIndex=n!==wizardIndex?n:previousApplicableIndex(wizardIndex)
       }
       const blocker=firstBlockingIndex()
+      const readOnly=activeSupplyIsReadOnly()
       document.querySelectorAll('.wizard-step').forEach((b,i)=>{
         const applicable=stepApplicable(i)
         const done=applicable && validateStep(i).ok && i<blocker
-        const locked=applicable && i>blocker
+        const locked=applicable && !readOnly && i>blocker
         b.classList.toggle('active',i===wizardIndex)
         b.classList.toggle('done',done)
         b.classList.toggle('skipped',!applicable)
@@ -3686,6 +3702,7 @@
       if(selectedHimi()) context.push('<span class="pill blue">'+escapeHtml(selectedHimi())+'</span>')
       if(values.caseKind) context.push('<span class="pill">'+escapeHtml(values.caseKind)+'</span>')
       if(values.supplyType && values.supplyType!==values.caseKind) context.push('<span class="pill">'+escapeHtml(values.supplyType)+'</span>')
+      if(activeSupplyIsReadOnly()) context.push('<span class="pill warning">Nur Lesen</span>')
       $('wizardContext').innerHTML=context.length?context.join(''):'<span class="pill">Neuer Vorgang</span>'
 
       const missing=wizardSteps.filter((_,i)=>applicable[i]&&!complete[i]).map(x=>x.name)
@@ -3709,10 +3726,11 @@
 
       queueAutosaveSupply()
       if(rerender){
+        const readOnly=activeSupplyIsReadOnly()
         document.querySelectorAll('.wizard-step').forEach((b,i)=>{
           const isApp=applicable[i]
           const done=isApp&&complete[i]&&i<blocker
-          const locked=isApp&&i>blocker
+          const locked=isApp&&!readOnly&&i>blocker
           b.classList.toggle('done',done)
           b.classList.toggle('skipped',!isApp)
           b.classList.toggle('locked',locked)
@@ -3721,21 +3739,35 @@
       }
     }
 
-    function supplyHasEditableContext(){ return !!activeSupplyId }
+    function activeSupplyRecord(){
+      return activeSupplyId?readSupplyDrafts().find(x=>x.id===activeSupplyId)||null:null
+    }
+
+    function activeSupplyIsReadOnly(){
+      const item=activeSupplyRecord()
+      return !!(item?.ownerUserId && currentSession?.user?.id && item.ownerUserId!==currentSession.user.id)
+    }
+
+    function supplyHasEditableContext(){
+      return !!activeSupplyId && !activeSupplyIsReadOnly()
+    }
 
     function updateSupplyEditState(){
-      const enabled=supplyHasEditableContext()
+      const hasContext=!!activeSupplyId
+      const editable=supplyHasEditableContext()
       document.querySelectorAll('#careView input,#careView select,#careView textarea').forEach(el=>{
         if(['newSupplyButton'].includes(el.id)) return
-        el.disabled=!enabled
+        el.disabled=!editable
       })
-      if($('clearButton')) $('clearButton').disabled=!enabled
-      if($('printButton')) $('printButton').disabled=!enabled
-      document.querySelectorAll('.wizard-step').forEach(el=>{ if(!enabled) el.disabled=true })
+      if($('clearButton')) $('clearButton').disabled=!editable
+      if($('printButton')) $('printButton').disabled=!hasContext
+      if($('readOnlyBanner')) $('readOnlyBanner').classList.toggle('hidden',!activeSupplyIsReadOnly())
+      document.querySelectorAll('.wizard-step').forEach(el=>{ if(!hasContext) el.disabled=true })
+      if($('wizardNext')) $('wizardNext').disabled=!hasContext
     }
 
     function clearCurrentSupplyInputs(){
-      if(!activeSupplyId) return
+      if(!supplyHasEditableContext()) return
       Object.keys(values).forEach(k=>delete values[k])
       document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox'||el.type==='radio')el.checked=false;else el.value=''})
       $('careKasse').value=''
@@ -3766,19 +3798,8 @@
       wizardIndex=0
       showWizardError('')
       renderWizard()
-      const drafts=readSupplyDrafts()
-      const current=drafts.find(x=>x.id===activeSupplyId)
-      if(current){
-        current.updatedAt=new Date().toISOString()
-        current.wizardIndex=0
-        current.kasse=''
-        current.pg=''
-        current.himiId=''
-        current.himi=''
-        current.status='Laufend'
-        current.values={}
-        writeSupplyDrafts(drafts)
-      }
+      lastPersistedSupplyFingerprint=''
+      void autosaveSupplyDraft(true)
       renderSupplyOverview()
       updateSupplyEditState()
     }
