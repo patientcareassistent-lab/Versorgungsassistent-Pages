@@ -1,0 +1,52 @@
+name: Refresh whisper.cpp dependency lockfile
+
+on:
+  push:
+    branches:
+      - hardening/phase4-whispercpp-wasm
+    paths:
+      - '.github/workflows/refresh-whispercpp-lock.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Regenerate exact lockfile
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          node - <<'NODE'
+          const fs = require('fs')
+          const pkg = JSON.parse(fs.readFileSync('package.json','utf8'))
+          const lock = JSON.parse(fs.readFileSync('package-lock.json','utf8'))
+          if (lock.lockfileVersion !== 3) throw new Error('Expected lockfileVersion 3')
+          if (pkg.dependencies?.['@huggingface/transformers']) throw new Error('Transformers.js dependency still present')
+          if (lock.packages?.['']?.dependencies?.['@huggingface/transformers']) throw new Error('Transformers.js remains in lockfile root')
+          for (const [name, version] of Object.entries(pkg.dependencies || {})) {
+            if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`Dependency ${name} is not exact: ${version}`)
+          }
+          console.log('Whisper.cpp dependency lockfile verified.')
+          NODE
+
+      - name: Commit lockfile and remove one-time workflow
+        run: |
+          set -euo pipefail
+          git config user.name "patientcareassistent-lab"
+          git config user.email "patientcare.assistent@gmail.com"
+          git add package.json package-lock.json
+          git rm .github/workflows/refresh-whispercpp-lock.yml
+          git commit -m "Remove unused Transformers.js dependency"
+          git push origin HEAD:${GITHUB_REF_NAME}

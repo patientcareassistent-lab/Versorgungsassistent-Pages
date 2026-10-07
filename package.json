@@ -5,7 +5,6 @@
   "description": "Pinned browser runtime dependencies for the Versorgungsassistent GitHub Pages deployment.",
   "license": "UNLICENSED",
   "dependencies": {
-    "@huggingface/transformers": "4.3.0",
     "@supabase/supabase-js": "2.57.4",
     "@tesseract.js-data/deu": "1.0.0",
     "pdfjs-dist": "4.10.38",
