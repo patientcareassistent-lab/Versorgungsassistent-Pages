@@ -161,12 +161,8 @@
       }catch(_){ legacy=[] }
       if(!legacy.length) return true
 
-      const now=new Date().toISOString()
       const rows=legacy.slice(0,250).map(item=>({
         id:normalizedLegacyId(item.id),
-        owner_user_id:currentSession.user.id,
-        created_at:item.createdAt||now,
-        updated_at:item.updatedAt||now,
         wizard_index:Number(item.wizardIndex)||0,
         insurer:item.kasse||'',
         product_group:String(item.pg||''),
@@ -246,9 +242,6 @@
 
       const response=await supabase.from('care_cases').upsert({
         id:item.id,
-        owner_user_id:currentSession.user.id,
-        created_at:item.createdAt,
-        updated_at:item.updatedAt,
         wizard_index:item.wizardIndex,
         insurer:item.kasse,
         product_group:String(item.pg||''),
