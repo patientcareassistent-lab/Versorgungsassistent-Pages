@@ -1,11 +1,11 @@
 # Technische und organisatorische Maßnahmen (TOM)
 
-Stand: 01.10.2026  
+Stand: 07.10.2026  
 Status: technische Ist-Dokumentation mit Freigabepunkten
 
 ## Vertraulichkeit
 
-Authentifizierung erfolgt über Supabase Auth. Produktiver Zugriff auf Patientenvorgänge erfordert MFA/AAL2. Zusätzlich muss der Benutzer in `app_private.app_members` aktiv freigegeben sein. Anonyme Konten werden ausgeschlossen. Die Patiententabelle `public.care_cases` nutzt Row Level Security; ein Benutzer sieht nur eigene Vorgänge. `anon` besitzt keine Tabellenrechte.
+Authentifizierung erfolgt über Supabase Auth. Produktiver Zugriff auf Patientenvorgänge erfordert MFA/AAL2. Zusätzlich muss der Benutzer in `app_private.app_members` aktiv freigegeben sein. Anonyme Konten werden ausgeschlossen. Die Patiententabelle `public.care_cases` nutzt Row Level Security; aktive Mitglieder mit MFA/AAL2 können Team-Vorgänge lesen, während Schreibzugriffe ownergebunden bleiben. `anon` besitzt keine Tabellenrechte.
 
 Die fachliche Wissensdatenbank bleibt vom Patientenvorgang getrennt. Für die Wissensdaten gelten read-only-Berechtigungen; Patientenvorgänge liegen in einer separaten Schreibstruktur.
 
@@ -13,7 +13,7 @@ Rezeptbilder werden aktuell nicht dauerhaft gespeichert. OCR läuft lokal im Bro
 
 ## Integrität
 
-Änderungen an Patientenvorgängen erzeugen serverseitige Audit-Ereignisse. Zusätzlich wird nach jedem Insert/Update ein vollständiger Revisionsstand des fachlichen Payloads in einem nicht für Frontend-Rollen zugänglichen Schema gespeichert.
+Änderungen an Patientenvorgängen erzeugen serverseitige Audit-Ereignisse. Zusätzlich werden vollständige Revisionsstände des fachlichen Payloads in einem nicht für Frontend-Rollen zugänglichen Schema gespeichert. Häufige Autosaves innerhalb derselben Bearbeitungssitzung werden zu einem aktuellen Snapshot zusammengefasst; Status-/Wizard-Wechsel und getrennte Sitzungen erzeugen neue Revisionen.
 
 Governance-Felder wie Eigentümer, Erstellzeitpunkt, Legal Hold und Aufbewahrungssteuerung können nicht vom normalen Frontend-Benutzer überschrieben werden.
 
@@ -39,7 +39,7 @@ Auditdaten sind nicht über die normale Frontend-API für Anwender abrufbar. Zug
 
 ## Mandanten-/Benutzertrennung
 
-Aktuell gilt Privacy-by-default: Vorgänge sind eigentümergebunden. Team-Sharing ist nicht freigeschaltet. Eine spätere gemeinsame Bearbeitung benötigt eine explizite Fallzuordnung/Rollenmatrix und darf nicht durch Aufweichen der bestehenden RLS erfolgen.
+Aktuell gilt Team-Lesen bei weiterhin eigentümergebundener Bearbeitung. Dadurch ist Vertretung zur Einsicht möglich, ohne dass fremde Vorgänge verändert werden können. Eine spätere gemeinsame Bearbeitung benötigt eine gesonderte Rollen-/Übergabelogik und darf nicht durch pauschales Aufweichen der bestehenden Write-Policies erfolgen.
 
 ## Datenschutz durch Technikgestaltung
 
@@ -47,7 +47,8 @@ Datenminimierung: Rezeptdateien werden nicht dauerhaft gespeichert; nur erforder
 Zweckbindung: Patientendaten liegen getrennt von allgemeiner Wissensbasis.  
 Default-Deny: `anon` ausgeschlossen; MFA/AAL2 verpflichtend.  
 Nachvollziehbarkeit: serverseitiges Audit + Revisionshistorie.  
-Löschschutz: keine Benutzer-Direktlöschung.
+Löschschutz: keine Benutzer-Direktlöschung.  
+Sitzungsschutz: Auth-Tokens werden nur in `sessionStorage` gehalten; nach 30 Minuten Inaktivität erfolgt automatische Abmeldung.
 
 ## Organisatorische Maßnahmen vor Produktivfreigabe
 
