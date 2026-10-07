@@ -7,6 +7,48 @@
     )
 
     const $ = (id) => document.getElementById(id)
+
+    const runtimeStyleCache = new Map()
+    const runtimeStyleSlots = new WeakMap()
+    const runtimeStyleAllowedProperties = new Set(['left','top','width','height','font-size'])
+    const runtimeStyleValuePattern = /^-?(?:\\d+(?:\\.\\d+)?|\\.\\d+)(?:px|%)$/
+    let runtimeStyleSeq = 0
+
+    function applyRuntimeStyle(el,slot,declarations){
+      if(!el) return
+      const entries=Object.entries(declarations||{})
+        .filter(([,value])=>value!==null && value!==undefined && value!=='')
+        .map(([property,value])=>[String(property),String(value)])
+        .sort(([a],[b])=>a.localeCompare(b))
+      for(const [property,value] of entries){
+        if(!runtimeStyleAllowedProperties.has(property)) throw new Error('Nicht erlaubte Laufzeit-CSS-Eigenschaft: '+property)
+        if(!runtimeStyleValuePattern.test(value)) throw new Error('Ungültiger Laufzeit-CSS-Wert: '+value)
+      }
+      const key=entries.map(([property,value])=>property+':'+value).join(';')
+      let assignments=runtimeStyleSlots.get(el)
+      if(!assignments){
+        assignments=new Map()
+        runtimeStyleSlots.set(el,assignments)
+      }
+      const previous=assignments.get(slot)
+      if(!key){
+        if(previous) el.classList.remove(previous)
+        assignments.delete(slot)
+        return
+      }
+      let className=runtimeStyleCache.get(key)
+      if(!className){
+        className='runtime-style-'+(++runtimeStyleSeq)
+        const sheet=$('appStyles')?.sheet
+        if(!sheet) throw new Error('Stylesheet für Laufzeitpositionierung ist nicht verfügbar.')
+        const body=entries.map(([property,value])=>property+':'+value).join(';')
+        sheet.insertRule('.'+className+'{'+body+'}',sheet.cssRules.length)
+        runtimeStyleCache.set(key,className)
+      }
+      if(previous && previous!==className) el.classList.remove(previous)
+      if(previous!==className) el.classList.add(className)
+      assignments.set(slot,className)
+    }
     const views = ['overview','care','supplyOverview','forms','contractQuestions','pg26','sources']
     const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Auftragsübersicht',forms:'Formularregeln',contractQuestions:'Vertragsfragen',pg26:'PG 26',sources:'Quellen'}
     const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[],contractQuestions:[],contractKnowledge:[],approvedKnowledge:[]}
@@ -1406,8 +1448,10 @@
           option.name='aok-plusm-row-'+row
           option.className='aok-plusm-option'
           option.setAttribute('aria-label','PLUS-M Frage '+row+' · '+score+' Punkte')
-          option.style.left=(xPct[colIndex]-0.875)+'%'
-          option.style.top=(y-0.64)+'%'
+          applyRuntimeStyle(option,'geometry',{
+            left:(xPct[colIndex]-0.875)+'%',
+            top:(y-0.64)+'%'
+          })
           option.dataset.plusmRow=String(row)
           option.dataset.plusmScore=String(score)
           option.checked=Number(values['aokPlusM:'+row])===score
@@ -1435,10 +1479,12 @@
       option.value=value
       option.checked=values[key]===value
       option.setAttribute('aria-label','primär verwendete Gehhilfe '+value)
-      option.style.left=(left/viewport.width*100)+'%'
-      option.style.top=(top/viewport.height*100)+'%'
-      option.style.width=Math.max(width/viewport.width*100,1.3)+'%'
-      option.style.height=Math.max(height/viewport.height*100,1.3)+'%'
+      applyRuntimeStyle(option,'geometry',{
+        left:(left/viewport.width*100)+'%',
+        top:(top/viewport.height*100)+'%',
+        width:Math.max(width/viewport.width*100,1.3)+'%',
+        height:Math.max(height/viewport.height*100,1.3)+'%'
+      })
       option.addEventListener('change',()=>{
         if(!option.checked) return
         values[key]=value
@@ -1463,10 +1509,12 @@
       const targetTop=Math.max(0,originalBottom-targetHeight)
       const targetWidth=exact ? width : Math.max(width,viewport.width*.45)
 
-      pad.style.left=Math.max(0,left/viewport.width*100)+'%'
-      pad.style.top=(targetTop/viewport.height*100)+'%'
-      pad.style.width=(targetWidth/viewport.width*100)+'%'
-      pad.style.height=(targetHeight/viewport.height*100)+'%'
+      applyRuntimeStyle(pad,'geometry',{
+        left:Math.max(0,left/viewport.width*100)+'%',
+        top:(targetTop/viewport.height*100)+'%',
+        width:(targetWidth/viewport.width*100)+'%',
+        height:(targetHeight/viewport.height*100)+'%'
+      })
       pad.dataset.profileKey=key
       pad.dataset.required='false'
       pad.dataset.signatureRole=role
@@ -1595,11 +1643,13 @@
             const aiLabel=nearbyLabel||fieldName||'Profilerhebungsfeld'
             el.dataset.aiLabel=aiLabel
             el.setAttribute('aria-label',aiLabel)
-            el.style.left=(left/viewport.width*100)+'%'
-            el.style.top=(top/viewport.height*100)+'%'
-            el.style.width=Math.max(width/viewport.width*100,1.2)+'%'
-            el.style.height=Math.max(height/viewport.height*100,1.1)+'%'
-            el.style.fontSize=Math.max(8,Math.min(14,height*.55))+'px'
+            applyRuntimeStyle(el,'geometry',{
+              left:(left/viewport.width*100)+'%',
+              top:(top/viewport.height*100)+'%',
+              width:Math.max(width/viewport.width*100,1.2)+'%',
+              height:Math.max(height/viewport.height*100,1.1)+'%',
+              'font-size':Math.max(8,Math.min(14,height*.55))+'px'
+            })
             pageBox.appendChild(el)
           })
           if(pageNo===2) renderPlusMPage2Overlays(pageBox)
@@ -1893,11 +1943,13 @@
             }
             el.dataset.measureKey=key
             el.setAttribute('aria-label',ann.alternativeText||ann.fieldName||'Maßblattfeld')
-            el.style.left=(left/viewport.width*100)+'%'
-            el.style.top=(top/viewport.height*100)+'%'
-            el.style.width=Math.max(width/viewport.width*100,1.2)+'%'
-            el.style.height=Math.max(height/viewport.height*100,1.1)+'%'
-            el.style.fontSize=Math.max(8,Math.min(14,height*.55))+'px'
+            applyRuntimeStyle(el,'geometry',{
+              left:(left/viewport.width*100)+'%',
+              top:(top/viewport.height*100)+'%',
+              width:Math.max(width/viewport.width*100,1.2)+'%',
+              height:Math.max(height/viewport.height*100,1.1)+'%',
+              'font-size':Math.max(8,Math.min(14,height*.55))+'px'
+            })
             pageBox.appendChild(el)
           })
         }
@@ -2490,19 +2542,19 @@
       if(canvas && canvas.dataset.sketch!==sketch) drawOriginalOrientationSketch(schema,sketch)
 
       if(profile){
-        if(marker) marker.style.display='none'
-        if(guide) guide.style.display='none'
-        if(overlaySvg) overlaySvg.style.display='block'
+        if(marker) marker.classList.add('hidden')
+        if(guide) guide.classList.add('hidden')
+        if(overlaySvg) overlaySvg.classList.remove('hidden')
         if(shape) shape.innerHTML=ukbMeasureOverlayMarkup(profile)
       }else{
-        if(overlaySvg) overlaySvg.style.display='none'
+        if(overlaySvg) overlaySvg.classList.add('hidden')
         if(shape) shape.innerHTML=''
-        if(marker) marker.style.display=''
-        if(guide) guide.style.display=''
+        if(marker) marker.classList.remove('hidden')
+        if(guide) guide.classList.remove('hidden')
         const x=Math.max(2,Math.min(98,Number(el.dataset.measureX)||50))
         const y=Math.max(2,Math.min(98,Number(el.dataset.measureY)||50))
-        if(marker){marker.style.left=x+'%';marker.style.top=y+'%'}
-        if(guide) guide.style.top=y+'%'
+        if(marker) applyRuntimeStyle(marker,'geometry',{left:x+'%',top:y+'%'})
+        if(guide) applyRuntimeStyle(guide,'geometry',{top:y+'%'})
       }
 
       document.querySelectorAll('.measure-active-control').forEach(n=>n.classList.remove('measure-active-control'))
@@ -3628,7 +3680,7 @@
       const complete=wizardSteps.map((_,i)=>applicable[i]&&validateStep(i).ok)
       const total=applicable.filter(Boolean).length
       const count=complete.filter(Boolean).length
-      $('wizardProgressBar').style.width=Math.round((count/Math.max(total,1))*100)+'%'
+      applyRuntimeStyle($('wizardProgressBar'),'progress',{width:Math.round((count/Math.max(total,1))*100)+'%'})
       $('wizardProgressText').textContent=count+' von '+total+' relevanten Arbeitsschritten vollständig'
       const context=[]
       const patient=([values.patientFirstName,values.patientLastName].filter(Boolean).join(' ')||values.patientName||values.caseNumber)
