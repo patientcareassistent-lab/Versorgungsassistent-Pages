@@ -28,55 +28,69 @@ test('PDF.js renders a pinned AOK source form entirely same-origin', async ({ pa
   expect(remote).toEqual([])
 })
 
-test('Whisper runtime and q8 model load and execute without Hugging Face runtime access', async ({ page }) => {
-  test.setTimeout(180000)
-  const remoteModelRequests = []
+test('whisper.cpp WASM transcribes entirely same-origin in a cross-origin-isolated page', async ({ page }) => {
+  test.setTimeout(240000)
+  const remoteRuntimeRequests = []
   page.on('request', request => {
-    if (/huggingface\.co|\.hf\.co/i.test(request.url())) remoteModelRequests.push(request.url())
+    if (/huggingface\.co|\.hf\.co|esm\.sh|cdn\.jsdelivr\.net|unpkg\.com/i.test(request.url())) {
+      remoteRuntimeRequests.push(request.url())
+    }
   })
 
   await page.goto('/index.html')
-  const result = await page.evaluate(async () => {
-    const mod = await import('./vendor/transformers/transformers.min.js')
-    mod.env.useBrowserCache = false
-    mod.env.allowRemoteModels = false
-    mod.env.allowLocalModels = true
-    mod.env.localModelPath = new URL('./models/', location.href).href
-    if (mod.env.backends?.onnx?.wasm) {
-      mod.env.backends.onnx.wasm.wasmPaths = new URL('./vendor/transformers/', location.href).href
-    }
-    const modelId = 'onnx-community/whisper-tiny'
-    const localOnly = { local_files_only: true }
-    const modelBase = new URL('./models/' + modelId + '/', location.href)
-    const [tokenizerJson, tokenizerConfig, processor, model] = await Promise.all([
-      fetch(new URL('tokenizer.json', modelBase)).then(r => { if (!r.ok) throw new Error('Local tokenizer.json missing'); return r.json() }),
-      fetch(new URL('tokenizer_config.json', modelBase)).then(r => { if (!r.ok) throw new Error('Local tokenizer_config.json missing'); return r.json() }),
-      mod.AutoProcessor.from_pretrained(modelId, localOnly),
-      mod.AutoModelForSpeechSeq2Seq.from_pretrained(modelId, {
-        ...localOnly,
-        device: 'wasm',
-        dtype: { encoder_model: 'q8', decoder_model_merged: 'q8' }
-      })
+  await page.waitForFunction(() => window.crossOriginIsolated === true, null, { timeout: 20000 })
+
+  const assetState = await page.evaluate(async () => {
+    const [runtime, model, worker] = await Promise.all([
+      fetch('./whispercpp/whisper.js'),
+      fetch('./whispercpp/ggml-tiny-q5_1.bin'),
+      fetch('./whispercpp/worker.js'),
     ])
-    const tokenizer = new mod.WhisperTokenizer(tokenizerJson, tokenizerConfig)
-    if (!processor?.feature_extractor) throw new Error('Local Whisper processor is missing feature_extractor')
-    const asr = new mod.AutomaticSpeechRecognitionPipeline({
-      task: 'automatic-speech-recognition',
-      model,
-      tokenizer,
-      processor
-    })
-    const output = await asr(new Float32Array(16000))
-    if (typeof asr.dispose === 'function') await asr.dispose()
     return {
-      textType: typeof output?.text,
-      remoteModelsAllowed: mod.env.allowRemoteModels,
-      localModelPath: mod.env.localModelPath
+      isolated: window.crossOriginIsolated,
+      runtimeOk: runtime.ok,
+      runtimeBytes: Number(runtime.headers.get('content-length') || 0),
+      modelOk: model.ok,
+      modelBytes: Number(model.headers.get('content-length') || 0),
+      workerOk: worker.ok,
     }
   })
 
-  expect(result.textType).toBe('string')
-  expect(result.remoteModelsAllowed).toBe(false)
-  expect(result.localModelPath).toContain('/models/')
-  expect(remoteModelRequests).toEqual([])
+  expect(assetState.isolated).toBe(true)
+  expect(assetState.runtimeOk).toBe(true)
+  expect(assetState.modelOk).toBe(true)
+  expect(assetState.workerOk).toBe(true)
+  expect(assetState.modelBytes).toBeGreaterThan(25000000)
+
+  const result = await page.evaluate(() => new Promise((resolve, reject) => {
+    const worker = new Worker('./whispercpp/worker.js', { name: 'whispercpp-regression' })
+    const timeout = setTimeout(() => {
+      worker.terminate()
+      reject(new Error('whisper.cpp regression timed out'))
+    }, 180000)
+
+    worker.addEventListener('message', event => {
+      const msg = event.data || {}
+      if (msg.type === 'error' && msg.id === 'regression') {
+        clearTimeout(timeout)
+        worker.terminate()
+        reject(new Error(msg.message || 'whisper.cpp worker failed'))
+      }
+      if (msg.type === 'result' && msg.id === 'regression') {
+        clearTimeout(timeout)
+        worker.terminate()
+        resolve({ text: String(msg.text || ''), isolated: window.crossOriginIsolated })
+      }
+    })
+
+    const silence = new Float32Array(16000)
+    worker.postMessage(
+      { type: 'transcribe', id: 'regression', audio: silence, language: 'de' },
+      [silence.buffer]
+    )
+  }))
+
+  expect(result.isolated).toBe(true)
+  expect(typeof result.text).toBe('string')
+  expect(remoteRuntimeRequests).toEqual([])
 })
