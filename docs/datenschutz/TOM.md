@@ -55,4 +55,4 @@ Verantwortliche Stelle und DSB benennen; Rollenfreigabeprozess dokumentieren; re
 
 ## Offene technische Härtung
 
-Supabase Security Advisor meldet aktuell unter anderem deaktivierten Schutz gegen kompromittierte Passwörter. Diese Einstellung ist im Supabase-Dashboard zu aktivieren, sofern im gebuchten Tarif verfügbar. Außerdem sind externe Laufzeitabhängigkeiten und GitHub-Pages-Eignung für den finalen Produktivbetrieb gesondert zu entscheiden.
+Der Supabase Security Advisor meldet aktuell nur noch den deaktivierten Schutz gegen kompromittierte Passwörter. Laut Supabase-Dokumentation ist die Leaked-Password-Protection erst ab Pro verfügbar und kann deshalb im Free-Plan nicht aktiviert werden. Als kompensierende technische Kontrollen bleiben MFA/AAL2 und die aktive Benutzerfreigabe verpflichtend. Die früheren Hinweise auf `pg_trgm` und `unaccent` im Schema `public` wurden am 07.10.2026 durch Verschieben in `extensions` beseitigt. Externe Laufzeitabhängigkeiten und GitHub-Pages-Eignung für den finalen Produktivbetrieb sind weiterhin gesondert zu entscheiden.
