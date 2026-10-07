@@ -44,12 +44,11 @@ EMSCRIPTEN_BINDINGS(versorgungsassistent_whisper) {
 
         std::vector<float> pcmf32(n);
 
-        emscripten::val heap = emscripten::val::module_property("HEAPU8");
-        emscripten::val memory = heap["buffer"];
-        emscripten::val memory_view = audio["constructor"].new_(
-            memory,
-            reinterpret_cast<uintptr_t>(pcmf32.data()),
-            n
+        emscripten::val memory_view = emscripten::val(
+            emscripten::typed_memory_view(
+                pcmf32.size(),
+                pcmf32.data()
+            )
         );
         memory_view.call<void>("set", audio);
 
