@@ -169,3 +169,58 @@ test('oversized repair source images are rejected before browser decoding', asyn
   })
   await expect(page.locator('#wizardError')).toContainText('größer als 20 MB')
 })
+
+
+test('failed photo metadata save rolls back the uploaded private object', async ({ page }) => {
+  await openSignedInApp(page)
+  await prepareNewSupply(page)
+
+  await expect.poll(async () => page.evaluate(() => {
+    try {
+      return JSON.parse(localStorage.getItem('va:e2e:mock-care-cases') || '[]').length
+    } catch (_) {
+      return 0
+    }
+  }), { timeout: 10000 }).toBe(1)
+
+  await page.waitForTimeout(1500)
+  await page.evaluate(() => localStorage.setItem('va:e2e:fail-next-care-upsert', '1'))
+
+  const jpgBase64 = await page.evaluate(() => {
+    const canvas = document.createElement('canvas')
+    canvas.width = 40
+    canvas.height = 40
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#fff'
+    ctx.fillRect(0, 0, 40, 40)
+    ctx.fillStyle = '#000'
+    ctx.fillRect(8, 8, 24, 24)
+    return canvas.toDataURL('image/jpeg', .8).split(',')[1]
+  })
+
+  await page.locator('#repairPhotoFiles').setInputFiles({
+    name: 'rollback-test.jpg',
+    mimeType: 'image/jpeg',
+    buffer: Buffer.from(jpgBase64, 'base64')
+  })
+
+  await expect(page.locator('#wizardError')).toContainText('zurückgerollt')
+  await expect.poll(async () => page.evaluate(() => {
+    try {
+      return JSON.parse(localStorage.getItem('va:e2e:mock-storage-paths') || '[]').length
+    } catch (_) {
+      return -1
+    }
+  })).toBe(0)
+
+  const state = await page.evaluate(() => {
+    const rows = JSON.parse(localStorage.getItem('va:e2e:mock-care-cases') || '[]')
+    const removed = JSON.parse(localStorage.getItem('va:e2e:last-storage-remove') || '[]')
+    return {
+      repairPhotos: rows[0]?.payload?.repairPhotos || [],
+      removed
+    }
+  })
+  expect(state.repairPhotos).toEqual([])
+  expect(state.removed.length).toBe(1)
+})
