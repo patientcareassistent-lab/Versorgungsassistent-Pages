@@ -3993,6 +3993,7 @@
       $('wizardContext').innerHTML=context.length?context.join(''):'<span class="pill">Neuer Vorgang</span>'
 
       const missing=wizardSteps.filter((_,i)=>applicable[i]&&!complete[i]).map(x=>x.name)
+      updateArchiveButtonState(missing)
       const box=$('finalStatusBox')
       if(box){
         if(!missing.length){
@@ -4039,6 +4040,26 @@
       return !!activeSupplyId && !activeSupplyIsReadOnly()
     }
 
+    function archiveMissingSteps(){
+      if(!supplyHasEditableContext()) return ['eigener bearbeitbarer Vorgang']
+      return wizardSteps
+        .filter((_,i)=>stepApplicable(i) && !validateStep(i).ok)
+        .map(step=>step.name)
+    }
+
+    function updateArchiveButtonState(missingSteps=null){
+      const button=$('archiveSupplyButton')
+      if(!button) return
+      const editable=supplyHasEditableContext()
+      const missing=editable?(missingSteps||archiveMissingSteps()):['Vorgang nicht bearbeitbar']
+      button.disabled=!editable || missing.length>0
+      button.title=!editable
+        ? 'Archivierung ist nur für eigene Vorgänge möglich.'
+        : missing.length
+          ? 'Archivierung erst nach vollständigem Abschluss: '+missing.slice(0,3).join(' · ')
+          : 'Vollständig bearbeiteten Vorgang geschützt archivieren.'
+    }
+
     function updateSupplyEditState(){
       const hasContext=!!activeSupplyId
       const editable=supplyHasEditableContext()
@@ -4047,7 +4068,7 @@
         el.disabled=!editable
       })
       if($('clearButton')) $('clearButton').disabled=!editable
-      if($('archiveSupplyButton')) $('archiveSupplyButton').disabled=!editable
+      updateArchiveButtonState()
       if($('printButton')) $('printButton').disabled=!hasContext
       if($('readOnlyBanner')) $('readOnlyBanner').classList.toggle('hidden',!activeSupplyIsReadOnly())
       document.querySelectorAll('.wizard-step').forEach(el=>{ if(!hasContext) el.disabled=true })
@@ -4056,6 +4077,12 @@
 
     async function archiveActiveSupply(){
       if(!supplyHasEditableContext()) return
+      const missing=archiveMissingSteps()
+      if(missing.length){
+        showWizardError('Archivierung ist erst nach vollständigem Abschluss aller relevanten Arbeitsschritte möglich:',missing)
+        updateArchiveButtonState(missing)
+        return
+      }
       const patient=([values.patientFirstName,values.patientLastName].filter(Boolean).join(' ')||values.patientName||values.caseNumber||'diese Versorgung')
       if(!window.confirm('Versorgung „'+patient+'“ extern archivieren? Der aktuelle Stand, die Revisionshistorie und zugehörige Bilder werden zuerst in das geschützte Archiv kopiert.')) return
 
