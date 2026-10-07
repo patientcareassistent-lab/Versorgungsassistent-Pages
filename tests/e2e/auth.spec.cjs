@@ -60,3 +60,14 @@ test('password login remains gated by MFA before the app opens', async ({ page }
   await expect(page.locator('#supplyOverviewView')).toBeVisible()
   await expect(page.locator('#currentUser')).toContainText('Mitarbeiter3')
 })
+
+
+test('document shell remains structurally complete after hardening', async ({ page }) => {
+  await page.goto('/index.html')
+  await expect(page.locator('#contractQuestionList')).toHaveCount(1)
+  await expect(page.locator('#sourcesView')).toHaveCount(1)
+  await expect(page.locator('script[src="./vendor/supabase.js"]')).toHaveCount(1)
+  await expect(page.locator('script[type="module"][src="./app.js"]')).toHaveCount(1)
+  await expect(page.locator('script:not([src])')).toHaveCount(0)
+  expect(await page.locator('[style]').count()).toBe(0)
+})
