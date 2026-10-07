@@ -37,3 +37,30 @@ Supabase API- und WebSocket-Verbindungen bleiben ausschließlich zum produktiven
 4. Hosting-Option mit kontrollierbaren HTTP-Security-Headers prüfen. GitHub Pages erlaubt keine frei konfigurierbaren Response-Header; die aktuelle CSP wird deshalb als HTML-Meta-Policy ausgeliefert.
 5. Browserbasierte Regressionstests für Login, MFA, OCR, PDF-Maßblatt, Spracheingabe und Supabase-Autosave automatisieren.
 
+
+
+## Phase 2 – Reproduzierbare Abhängigkeiten und lokales Whisper-Modell
+
+Umgesetzt am 07.10.2026:
+
+- Ein versioniertes `package.json` enthält ausschließlich exakte Produktionsversionen.
+- Ein committed `package-lock.json` (Lockfile v3) fixiert den vollständigen npm-Abhängigkeitsgraphen.
+- Das Lockfile enthält für alle aufgelösten Pakete Integritätswerte; beim Audit wurden 107 aufgelöste Pakete mit Integritätswerten verifiziert.
+- Der Pages-Build verwendet `npm ci` statt freier Neuauflösung über `npm install`.
+- Ein `npm audit --omit=dev --audit-level=critical` ist Teil des Produktionsbuilds und blockiert Deployments bei kritischen npm-Sicherheitsbefunden.
+- Das Whisper-Modell `onnx-community/whisper-tiny` ist auf den Upstream-Commit `ff4177021cc41f7db950912b73ea4fdf7d01d8e7` fixiert.
+- Für den WASM-Pfad werden explizit die q8-Modelle `encoder_model_quantized.onnx` und `decoder_model_merged_quantized.onnx` verwendet.
+- Die beiden ONNX-Dateien werden beim Build anhand fest hinterlegter SHA-256-Werte verifiziert.
+- Modellkonfiguration, Tokenizer und ONNX-Dateien werden beim Build in das GitHub-Pages-Artefakt übernommen und zur Laufzeit ausschließlich same-origin geladen.
+- Transformers.js hat `allowRemoteModels=false`; `localModelPath` zeigt auf den lokalen `models/`-Pfad.
+- Hugging-Face-Domains wurden aus `connect-src` der CSP entfernt. Die Anwendung kann zur Laufzeit keine Whisper-Modellbestandteile mehr von Hugging Face nachladen.
+- Der Build erzeugt Hashlisten für Vendor-Dateien und Modellbestand sowie einen SHA-256-Wert des Dependency-Lockfiles.
+
+Damit besteht für OCR, PDF-Verarbeitung, Supabase-JavaScript-Laufzeit, Transformers-/ONNX-Runtime und Whisper-Sprachmodell kein ausführbarer bzw. modellbezogener CDN-/Hub-Laufzeitzugriff mehr. Externe Netzwerkverbindungen der Anwendung sind in der CSP im Wesentlichen auf das produktive Supabase-Projekt begrenzt.
+
+## Verbleibende Härtung
+
+- Inline-Styles schrittweise in eine statische CSS-Datei überführen und danach `style-src 'unsafe-inline'` entfernen.
+- Automatisierte Browser-Regressionstests für MFA, Versorgungsspeicherung, OCR, PDF-Maßblätter und Spracheingabe ergänzen.
+- Abhängigkeitsupdates kontrolliert über einen Review-/Updateprozess statt automatisch durchführen.
+- Hosting mit frei konfigurierbaren HTTP-Sicherheitsheadern als spätere Option bewerten.
