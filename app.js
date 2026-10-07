@@ -3077,6 +3077,8 @@
     }
 
     const REPAIR_PHOTO_BUCKET='repair-photos-private'
+    const REPAIR_SOURCE_MAX_BYTES=20*1024*1024
+    const REPAIR_SOURCE_MAX_PIXELS=50000000
     const repairPhotoUrlCache=new Map()
 
     function repairPhotos(){
@@ -3097,8 +3099,14 @@
     }
 
     async function compressRepairPhoto(file){
+      if((Number(file?.size)||0)>REPAIR_SOURCE_MAX_BYTES){
+        throw new Error('Foto ist größer als 20 MB und wurde nicht verarbeitet.')
+      }
       const bmp=await createImageBitmap(file)
       try{
+        if((Number(bmp.width)||0)*(Number(bmp.height)||0)>REPAIR_SOURCE_MAX_PIXELS){
+          throw new Error('Fotoauflösung ist zu groß und wurde nicht verarbeitet.')
+        }
         const maxSide=1000
         const scale=Math.min(1,maxSide/Math.max(bmp.width,bmp.height))
         let width=Math.max(1,Math.round(bmp.width*scale))
