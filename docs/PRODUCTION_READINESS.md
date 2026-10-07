@@ -67,7 +67,9 @@ Die Rezeptbrücke ist fachlich nicht Bestandteil dieses Projekts und wurde bei d
 
 ## Wiederherstellungsprüfung
 
-Am 07.10.2026 wurde ein transaktionaler Restore-Drill aus `app_private.care_case_revisions` durchgeführt. Alle 30 aktuellen Versorgungen konnten in einer temporären Tabelle aus der jeweils letzten Revision rekonstruiert werden; es gab 0 fehlende Revisionen und 0 Abweichungen bei Status, Wizard-Index oder Payload. Der Drill wurde vollständig zurückgerollt und hat keine Produktivdaten verändert.
+Am 07.10.2026 wurde die Revisionsarchitektur erweitert: jede neue INSERT-/UPDATE-Revision enthält zusätzlich einen vollständigen `row_snapshot` des Versorgungsdatensatzes. Für alle 30 bestehenden Versorgungen wurde die jeweils letzte Revision mit einem vollständigen aktuellen Snapshot hinterlegt.
+
+Ein transaktionaler Restore-Drill bestätigte 0 fehlende Snapshots und 0 Abweichungen im vollständigen fachlichen Datensatz. `updated_at` und `last_modified_by` werden bei einer tatsächlichen Wiederherstellung bewusst neu erzeugt und sind deshalb nicht Teil des fachlichen Vergleichs. Ein zusätzlicher Rollback-Test erzeugte bei einer temporären Änderung genau eine neue, vollständige Revision. Sämtliche Drill-Änderungen wurden zurückgerollt.
 
 ## Security Advisor
 
