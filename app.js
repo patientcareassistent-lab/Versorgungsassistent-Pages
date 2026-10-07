@@ -660,6 +660,14 @@
       }
     }
 
+    async function failClosedStartup(message){
+      showLoading(false)
+      try{ await supabase.auth.signOut() }catch(_){}
+      currentSession=null
+      showLogin()
+      showError('loginError',message||'Die Anwendung konnte nicht sicher geladen werden. Bitte erneut anmelden.')
+    }
+
     async function openApp(session){
       showLoading(true)
       $('password').value=''
@@ -677,21 +685,32 @@
       }
 
       const bootstrap=await supabase.rpc('care_reference_bootstrap')
-      let firstError=''
       if(bootstrap.error){
-        firstError=bootstrap.error.message
-      }else{
-        const payload=bootstrap.data||{}
-        ;['kassen','produktgruppen'].forEach(key=>{
-          data[key]=Array.isArray(payload[key])?payload[key]:[]
-        })
-        dataCounts.sources=Number(payload.sourceCount)||0
-        dataCounts.forms=Number(payload.formCount)||0
+        await failClosedStartup('Die fachliche Datenbasis konnte nicht sicher geladen werden. Bitte erneut anmelden.')
+        return
       }
-      showError('appError',firstError)
+      const payload=bootstrap.data||{}
+      ;['kassen','produktgruppen'].forEach(key=>{
+        data[key]=Array.isArray(payload[key])?payload[key]:[]
+      })
+      dataCounts.sources=Number(payload.sourceCount)||0
+      dataCounts.forms=Number(payload.formCount)||0
+      if(!data.kassen.length || !data.produktgruppen.length){
+        await failClosedStartup('Die fachliche Datenbasis ist unvollständig. Die Anwendung wurde vorsorglich nicht geöffnet.')
+        return
+      }
+      showError('appError','')
 
-      await migrateLegacySupplyDrafts()
-      await loadSupplyDrafts()
+      const legacyOk=await migrateLegacySupplyDrafts()
+      if(!legacyOk){
+        await failClosedStartup('Lokale Alt-Entwürfe konnten nicht sicher übernommen werden. Die Anwendung wurde nicht geöffnet.')
+        return
+      }
+      const casesOk=await loadSupplyDrafts()
+      if(!casesOk){
+        await failClosedStartup('Die Versorgungsübersicht konnte nicht sicher geladen werden. Die Anwendung wurde nicht geöffnet.')
+        return
+      }
 
       $('currentUser').textContent=friendlyUser(session.user.email)
       $('auth').classList.add('hidden'); $('app').classList.remove('hidden')
