@@ -82,6 +82,13 @@ test('password login remains gated by MFA before the app opens', async ({ page }
 })
 
 
+test('sign-out paths clear patient data from runtime memory and DOM', async ({ page }) => {
+  const source = await (await page.request.get('/app.js')).text()
+  expect(source).toContain('function clearSensitiveRuntimeState()')
+  expect(source).toContain("document.querySelectorAll('#careView input,#careView textarea')")
+  expect(source).toContain("if($('supplyOverviewBody')) $('supplyOverviewBody').replaceChildren()")
+})
+
 test('authenticated browser sessions have a 30 minute inactivity timeout', async ({ page }) => {
   const source = await (await page.request.get('/app.js')).text()
   expect(source).toContain('const IDLE_TIMEOUT_MS=30*60*1000')
