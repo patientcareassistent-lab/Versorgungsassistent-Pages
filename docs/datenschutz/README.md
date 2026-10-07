@@ -8,12 +8,12 @@ Dieses Verzeichnis dokumentiert den Datenschutz- und Sicherheitsrahmen des Verso
 
 - Patientenvorgänge werden in Supabase in der Tabelle `public.care_cases` gespeichert.
 - Zugriff ist nur für authentifizierte, in `app_private.app_members` freigegebene Benutzer mit MFA/AAL2 möglich.
-- Row Level Security beschränkt jeden Benutzer auf die eigenen Vorgänge.
+- Row Level Security erlaubt freigegebenen Mitarbeitern mit MFA/AAL2 das teamweite Lesen der Vorgänge. Änderungen an Versorgungen sowie Upload/Löschung zugehöriger Reparaturbilder bleiben dem jeweiligen Ersteller vorbehalten; fremde Vorgänge werden im Frontend als Nur-Lesen geöffnet.
 - `anon` hat keinen Zugriff auf Patientenvorgänge.
 - Rezeptbilder werden derzeit nicht dauerhaft gespeichert. OCR erfolgt im Browser; gespeichert wird nur der erkannte bzw. korrigierte Text und Metadaten zur Erfassung.
 - Alte lokale Browser-Entwürfe werden nach erfolgreicher MFA-Anmeldung einmalig in Supabase übernommen und erst nach erfolgreicher Migration aus `localStorage` gelöscht.
 - Änderungen an Patientenvorgängen werden serverseitig in `app_private.care_case_audit` protokolliert.
-- Vollständige Versionen des fachlichen Nutzdaten-Payloads werden serverseitig in `app_private.care_case_revisions` revisionsartig fortgeschrieben.
+- Vollständige Versionen des fachlichen Nutzdaten-Payloads werden serverseitig in `app_private.care_case_revisions` revisionsartig fortgeschrieben. Häufige Autosaves innerhalb derselben Bearbeitungssitzung werden dabei zu einem aktuellen Snapshot zusammengefasst; Status-/Wizard-Wechsel und getrennte Bearbeitungssitzungen erzeugen neue Revisionen. Die separate Auditspur bleibt bestehen.
 - Direkte Löschung von Patientenvorgängen durch Frontend-Benutzer ist gesperrt.
 - Beim Status `Abgeschlossen` wird technisch eine Aufbewahrung von zehn Jahren als ENTWURF gesetzt. Die Rechtsgrundlage und ggf. abweichende kassen-/vertragsbezogene Fristen müssen vor Produktivfreigabe durch die verantwortliche Stelle bestätigt werden.
 - Ein kontrollierter Löschlauf `app_private.purge_due_care_cases(...)` ist technisch vorbereitet, aber bewusst nicht für Frontend-Rollen freigegeben und nicht automatisch terminiert. Vor Aktivierung müssen die finalen Aufbewahrungsfristen bestätigt werden.
