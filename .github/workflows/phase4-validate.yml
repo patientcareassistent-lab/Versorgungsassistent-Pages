@@ -157,11 +157,7 @@ jobs:
         run: |
           set -euo pipefail
           node --check app.js
-          if [[ "${GITHUB_REF_NAME}" == "hardening/phase4-whispercpp-wasm" ]]; then
-            npx playwright test tests/e2e/runtime-assets.spec.cjs
-          else
-            npm run test:e2e
-          fi
+          npm run test:e2e
 
       - name: Upload Playwright report on failure
         if: failure()
