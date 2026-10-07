@@ -420,6 +420,21 @@
       lastPersistedSupplyFingerprint=''
       Object.keys(values).forEach(key=>delete values[key])
       try{ repairPhotoUrlCache.clear() }catch(_){}
+      clearTimeout(profileAiRecordingTimer)
+      profileAiRecordingTimer=null
+      try{
+        if(profileAiRecorder){
+          profileAiRecorder.ondataavailable=null
+          profileAiRecorder.onstop=null
+          if(profileAiRecorder.state==='recording') profileAiRecorder.stop()
+        }
+      }catch(_){}
+      try{ profileAiStream?.getTracks().forEach(track=>track.stop()) }catch(_){}
+      profileAiRecorder=null
+      profileAiStream=null
+      profileAiChunks=[]
+      profileAsrPromise=null
+      try{ window.WhisperCppRuntime?.reset?.() }catch(_){}
 
       document.querySelectorAll('#careView input,#careView textarea').forEach(el=>{
         if(el.type==='checkbox'||el.type==='radio') el.checked=false
@@ -1178,9 +1193,11 @@
       box.append(cap,pad,hint);parent.appendChild(box);return pad
     }
 
+    const PROFILE_AI_MAX_RECORDING_MS=5*60*1000
     let profileAiRecorder=null
     let profileAiStream=null
     let profileAiChunks=[]
+    let profileAiRecordingTimer=null
     let profileAsrPromise=null
     let profileGuidedTarget=null
     let profileGuidedIndex=-1
@@ -1480,17 +1497,29 @@
           }catch(err){
             console.error(err);profileAiSetStatus('Transkription fehlgeschlagen: '+(err?.message||'unbekannter Fehler'))
           }finally{
+            clearTimeout(profileAiRecordingTimer);profileAiRecordingTimer=null
             profileAiStream?.getTracks().forEach(t=>t.stop());profileAiStream=null
+            profileAiRecorder=null
+            profileAiChunks=[]
             $('profileAiStart').disabled=false;$('profileAiStop').disabled=true
           }
         }
         profileAiRecorder.start()
+        clearTimeout(profileAiRecordingTimer)
+        profileAiRecordingTimer=setTimeout(()=>{
+          if(profileAiRecorder?.state==='recording'){
+            profileAiSetStatus('Maximale Aufnahmezeit erreicht. Aufnahme wird beendet und lokal verarbeitet.')
+            profileAiRecorder.stop()
+          }
+        },PROFILE_AI_MAX_RECORDING_MS)
         $('profileAiStart').disabled=true;$('profileAiStop').disabled=false
         profileAiSetStatus('Aufnahme läuft … Sprechen Sie normal und deutlich.','recording')
       }catch(err){profileAiSetStatus('Mikrofon konnte nicht gestartet werden: '+(err?.message||'Zugriff verweigert'))}
     }
 
     function stopProfileAiRecording(){
+      clearTimeout(profileAiRecordingTimer)
+      profileAiRecordingTimer=null
       if(profileAiRecorder?.state==='recording') profileAiRecorder.stop()
     }
 
