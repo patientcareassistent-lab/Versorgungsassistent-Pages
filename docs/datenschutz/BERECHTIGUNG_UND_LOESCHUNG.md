@@ -1,10 +1,10 @@
 # Berechtigungs-, Aufbewahrungs- und Löschkonzept
 
-Stand: 01.10.2026
+Stand: 07.10.2026
 
 ## Rollenmodell
 
-Tester: Nutzung der freigegebenen Anwendung und Bearbeitung eigener Test-/Versorgungsvorgänge.  
+Tester: Nutzung der freigegebenen Anwendung, teamweites Lesen freigegebener Versorgungsvorgänge und Bearbeitung der selbst angelegten Vorgänge.  
 Editor: fachliche Pflegefunktionen nur, wenn hierfür später gesonderte Schreibpfade mit RLS eingerichtet werden. Aktuell bleibt die Wissensdatenbank für das Frontend read-only.  
 Admin: organisatorische Benutzerfreigabe, Datenschutz-/Aufbewahrungsadministration und technisch notwendige Sonderfälle. Administrative Zugriffe dürfen nicht über normale Frontend-Rechte erfolgen.
 
@@ -18,12 +18,12 @@ Berechtigungen sind mindestens halbjährlich und zusätzlich anlassbezogen zu re
 
 ## Zugriff auf Patientenvorgänge
 
-RLS-Prinzip: `owner_user_id = auth.uid()`.  
-Zusatzbedingungen: aktives Mitglied, MFA/AAL2, nicht anonym.  
-Kein `anon`-Zugriff.  
-Kein direkter DELETE-Zugriff für normale Frontend-Benutzer.
+RLS-Prinzip: Team-SELECT für aktive, nicht-anonyme Mitglieder mit MFA/AAL2; INSERT und UPDATE bleiben an `owner_user_id = auth.uid()` gebunden.  
+Reparatur- und Etikettfotos sind teamweit lesbar, Upload und Löschung bleiben ownergebunden.  
+Fremde Vorgänge werden im Frontend ausdrücklich im Nur-Lesen-Modus geöffnet.  
+Kein `anon`-Zugriff und kein direkter DELETE-Zugriff für normale Frontend-Benutzer.
 
-Team-/Vertretungszugriff ist aktuell bewusst nicht umgesetzt. Er darf später nur über explizite Fallzuordnung und dokumentierte Rollen eingeführt werden.
+Der Eigentümer eines Vorgangs bleibt technisch unverändert. Das Löschen eines Auth-Benutzers darf Patientenvorgänge nicht kaskadierend löschen; der Eigentümer-Fremdschlüssel verwendet deshalb `ON DELETE RESTRICT`. Für organisatorische Vertretung gilt aktuell Lesen, nicht gemeinsame Bearbeitung.
 
 ## Aufbewahrung
 
@@ -39,7 +39,7 @@ Eine Löschung darf nur erfolgen, wenn:
 - keine laufende Prüfung, Reklamation, Abrechnung, Haftungs-/Gewährleistungsfrage oder Rechtsverteidigung die weitere Speicherung rechtfertigt,
 - keine speziellere gesetzliche oder vertragliche Aufbewahrungspflicht entgegensteht.
 
-Der Löschlauf muss protokolliert werden. Vor automatischer Produktivlöschung ist ein dokumentierter Test mit nicht-produktiven Daten erforderlich.
+Der Löschlauf muss protokolliert werden. Der vorbereitete technische Purge verlangt eine Begründung und bricht ab, solange zu einem fälligen Vorgang noch Reparaturbilder im privaten Storage vorhanden sind; diese müssen zuerst kontrolliert über die Storage-API entfernt werden. Vor automatischer Produktivlöschung ist ein dokumentierter Test mit nicht-produktiven Daten erforderlich.
 
 ## Betroffenenrechte
 
