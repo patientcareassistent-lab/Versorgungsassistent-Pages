@@ -25,6 +25,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -312,7 +313,7 @@ jobs:
           for file in "${required[@]}"; do test -s "$file" || { echo "Missing production artifact: $file"; exit 1; }; done
           test -e dist/.nojekyll || { echo "Missing production artifact: dist/.nojekyll"; exit 1; }
 
-          forbidden=(dist/.github dist/docs dist/tests dist/projektportal dist/package.json dist/package-lock.json dist/playwright.config.cjs)
+          forbidden=(dist/.github dist/docs dist/tests dist/projektportal dist/supabase dist/package.json dist/package-lock.json dist/playwright.config.cjs)
           for path in "${forbidden[@]}"; do
             if [ -e "$path" ]; then
               echo "Forbidden development artifact in production bundle: $path"
@@ -325,6 +326,20 @@ jobs:
             exit 1
           fi
 
+          {
+            printf 'commit=%s\n' "$GITHUB_SHA"
+            printf 'repository=%s\n' "$GITHUB_REPOSITORY"
+            printf 'workflow_run=%s\n' "$GITHUB_RUN_ID"
+          } > dist/BUILD_INFO.txt
+
+          (
+            cd dist
+            find . -type f ! -name RELEASE_SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > RELEASE_SHA256SUMS
+            sha256sum -c RELEASE_SHA256SUMS
+          )
+
+          test -s dist/BUILD_INFO.txt
+          test -s dist/RELEASE_SHA256SUMS
           find dist -maxdepth 3 -type f -printf '%P\n' | sort
           du -sh dist
 
