@@ -229,7 +229,10 @@
         values:{...values}
       }
       const fingerprint=supplyPersistenceFingerprint(semanticItem)
-      if(fingerprint===lastPersistedSupplyFingerprint) return true
+      if(fingerprint===lastPersistedSupplyFingerprint){
+        setPaperSaveStatus('Aktueller Stand gespeichert.')
+        return true
+      }
 
       const now=new Date().toISOString()
       const item={
@@ -253,21 +256,27 @@
       },{onConflict:'id'})
       if(response.error){
         showError('appError','Autosave fehlgeschlagen: '+response.error.message)
+        setPaperSaveStatus('Speichern fehlgeschlagen. Bitte erneut speichern; der aktuelle Stand ist nicht bestätigt.')
         return false
       }
       lastPersistedSupplyFingerprint=fingerprint
       supplyDraftCache=[item,...supplyDraftCache.filter(x=>x.id!==id)].slice(0,250)
       renderSupplyOverview()
+      setPaperSaveStatus('Gespeichert: '+formatDraftTime(now))
       return true
     }
 
     function queueAutosaveSupply(){
       if(!supplyHasEditableContext()) return
+      setPaperSaveStatus('Änderungen werden automatisch gespeichert …')
       clearTimeout(draftSaveTimer)
       draftSaveTimer=setTimeout(()=>{
         autosaveInFlight=autosaveInFlight
           .then(()=>autosaveSupplyDraft())
-          .catch(err=>showError('appError','Autosave fehlgeschlagen: '+(err?.message||String(err))))
+          .catch(err=>{
+            setPaperSaveStatus('Speichern fehlgeschlagen. Bitte erneut speichern.')
+            showError('appError','Autosave fehlgeschlagen: '+(err?.message||String(err)))
+          })
       },1200)
     }
 
@@ -3993,6 +4002,7 @@
       $('wizardContext').innerHTML=context.length?context.join(''):'<span class="pill">Neuer Vorgang</span>'
 
       const missing=wizardSteps.filter((_,i)=>applicable[i]&&!complete[i]).map(x=>x.name)
+      renderPaperChecklist()
       updateArchiveButtonState(missing)
       const box=$('finalStatusBox')
       if(box){
@@ -4024,6 +4034,61 @@
           b.classList.toggle('locked',locked)
           b.disabled=!isApp||locked
         })
+      }
+    }
+
+    function setPaperSaveStatus(message){
+      const status=$('paperSaveStatus')
+      if(status) status.textContent=message
+    }
+
+    function renderPaperChecklist(){
+      const host=$('paperChecklistItems')
+      if(!host) return
+      host.replaceChildren()
+      let missingCount=0
+      wizardSteps.forEach((step,index)=>{
+        if(!stepApplicable(index)) return
+        const result=validateStep(index)
+        if(result.ok) return
+        missingCount++
+        const item=document.createElement('li')
+        item.textContent=step.name+': '+result.missing.join(', ')
+        host.appendChild(item)
+      })
+      $('paperChecklistSummary').textContent=missingCount
+        ? 'Dokumentation prüfen – '+missingCount+' Arbeitsschritte offen'
+        : 'Dokumentation nach hinterlegten Regeln vollständig'
+    }
+
+    let paperActionInFlight=false
+    async function savePaperCase(printAfterSave=false){
+      if(!activeSupplyId || paperActionInFlight) return
+      if(activeSupplyIsReadOnly()){
+        if(printAfterSave) window.print()
+        return
+      }
+      paperActionInFlight=true
+      const requestedSupplyId=activeSupplyId
+      $('saveSupplyButton').disabled=true
+      $('printButton').disabled=true
+      setPaperSaveStatus('Wird gespeichert …')
+      try{
+        const saved=await persistActiveSupplyNow()
+        if(activeSupplyId!==requestedSupplyId) return
+        if(!saved){
+          setPaperSaveStatus('Speichern fehlgeschlagen. Bitte erneut speichern; die PDF-Ausgabe wurde nicht gestartet.')
+          return
+        }
+        setPaperSaveStatus('Aktueller Stand gespeichert.')
+        if(printAfterSave) window.print()
+      }catch(error){
+        setPaperSaveStatus('Speichern fehlgeschlagen. Bitte erneut versuchen.')
+        showError('appError','Speichern fehlgeschlagen: '+(error?.message||String(error)))
+      }finally{
+        paperActionInFlight=false
+        $('saveSupplyButton').disabled=!supplyHasEditableContext()
+        $('printButton').disabled=!activeSupplyId
       }
     }
 
@@ -4068,6 +4133,8 @@
         el.disabled=!editable
       })
       if($('clearButton')) $('clearButton').disabled=!editable
+      if($('saveSupplyButton')) $('saveSupplyButton').disabled=!editable
+      setPaperSaveStatus('')
       updateArchiveButtonState()
       if($('printButton')) $('printButton').disabled=!hasContext
       if($('readOnlyBanner')) $('readOnlyBanner').classList.toggle('hidden',!activeSupplyIsReadOnly())
@@ -4282,7 +4349,8 @@
     $('carePg').addEventListener('change',()=>{values.himiId='';populateHimiOptions();updateCare();showWizardError('');renderWizard()})
     $('careHimi').addEventListener('change',()=>{values.himiId=$('careHimi').value;syncPg24Level();syncSituationFields();updateCare();showWizardError('');renderWizard()})
     $('careForm').addEventListener('change',()=>{updateCareFields();showWizardError('');renderWizard()})
-    $('printButton').addEventListener('click',()=>window.print())
+    $('saveSupplyButton').addEventListener('click',()=>savePaperCase(false))
+    $('printButton').addEventListener('click',()=>savePaperCase(true))
     $('archiveSupplyButton').addEventListener('click',archiveActiveSupply)
     $('clearButton').addEventListener('click',clearCurrentSupplyInputs)
     $('profileAiMode').addEventListener('change',()=>{
@@ -4317,3 +4385,4 @@
     })
 
     start()
+
