@@ -156,3 +156,16 @@ test('team overview paginates beyond 250 open supplies', async ({ page }) => {
   await expect(page.locator('#supplyOverviewView')).toBeVisible()
   await expect(page.locator('#supplyOverviewBody [data-supply-id]')).toHaveCount(275)
 })
+
+
+test('oversized repair source images are rejected before browser decoding', async ({ page }) => {
+  await openSignedInApp(page)
+  await page.locator('#newSupplyOverviewButton').click()
+  const oversized = Buffer.alloc(20 * 1024 * 1024 + 1, 0)
+  await page.locator('#repairPhotoFiles').setInputFiles({
+    name: 'zu-gross.jpg',
+    mimeType: 'image/jpeg',
+    buffer: oversized
+  })
+  await expect(page.locator('#wizardError')).toContainText('größer als 20 MB')
+})
