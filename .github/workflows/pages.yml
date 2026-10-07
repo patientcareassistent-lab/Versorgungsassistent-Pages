@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          runtime_files=(index.html app.js whispercpp/runtime.js whispercpp/worker.js)
+          runtime_files=(index.html app.js frame-guard.js whispercpp/runtime.js whispercpp/worker.js)
           if grep -niE 'service[_-]?role|sb_secret_|/mnt/data|file://|localhost|127\.0\.0\.1' "${runtime_files[@]}"; then
             echo 'Production safety gate failed: secret-like credential or local-only runtime dependency found.'
             exit 1
@@ -192,6 +192,7 @@ jobs:
           runtime_files = [
               Path('index.html'),
               Path('app.js'),
+              Path('frame-guard.js'),
               Path('whispercpp/runtime.js'),
               Path('whispercpp/worker.js'),
           ]
@@ -287,7 +288,7 @@ jobs:
           rm -rf dist
           mkdir -p dist/vendor dist/whispercpp dist/assets/aok-pg24
 
-          cp index.html app.js styles.css brand-logo.jpg .nojekyll dist/
+          cp index.html app.js frame-guard.js styles.css brand-logo.jpg .nojekyll dist/
           cp -a vendor/. dist/vendor/
           cp whispercpp/runtime.js whispercpp/worker.js whispercpp/whisper.js whispercpp/ggml-tiny-q5_1.bin dist/whispercpp/
           cp -a assets/aok-pg24/. dist/assets/aok-pg24/
@@ -295,6 +296,7 @@ jobs:
           required=(
             dist/index.html
             dist/app.js
+            dist/frame-guard.js
             dist/styles.css
             dist/brand-logo.jpg
             dist/vendor/supabase.js
@@ -317,7 +319,7 @@ jobs:
             fi
           done
 
-          if grep -RniE 'service[_-]?role|sb_secret_|/mnt/data|file://|localhost|127\.0\.0\.1' dist/index.html dist/app.js dist/whispercpp; then
+          if grep -RniE 'service[_-]?role|sb_secret_|/mnt/data|file://|localhost|127\.0\.0\.1' dist/index.html dist/app.js dist/frame-guard.js dist/whispercpp; then
             echo 'Production artifact safety gate failed.'
             exit 1
           fi
