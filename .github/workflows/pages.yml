@@ -189,10 +189,23 @@ jobs:
                       failures.append(f'{path}: {label}')
           html = Path('index.html').read_text(encoding='utf-8')
           app = Path('app.js').read_text(encoding='utf-8')
+          css = Path('styles.css').read_text(encoding='utf-8')
           if re.search(r'<script\\b(?![^>]*\\bsrc\s*=)[^>]*>', html, re.I):
               failures.append('index.html: inline script block')
+          if re.search(r'<style\\b', html, re.I):
+              failures.append('index.html: inline style block')
+          if re.search(r'\\sstyle\\s*=', html, re.I):
+              failures.append('index.html: inline style attribute')
+          if re.search(r'\\.style\\b|setAttribute\\(\\s*["\\\']style["\\\']|cssText', app):
+              failures.append('app.js: runtime inline style mutation')
+          if re.search(r'@import\\s+|url\\(\\s*["\\\']?https?://', css, re.I):
+              failures.append('styles.css: remote stylesheet dependency')
+          if '<link id="appStyles" rel="stylesheet" href="./styles.css" />' not in html:
+              failures.append('index.html: external application stylesheet missing')
           if "script-src 'self' 'wasm-unsafe-eval'" not in html:
               failures.append('index.html: hardened script-src CSP missing')
+          if "style-src 'self'; style-src-elem 'self'; style-src-attr 'none';" not in html:
+              failures.append('index.html: strict style CSP missing')
           if 'huggingface.co' in html.lower() or 'hf.co' in html.lower():
               failures.append('index.html: runtime Hugging Face network access still allowed')
           if 'allowRemoteModels=false' not in app:
