@@ -59,6 +59,10 @@ test('password login remains gated by MFA before the app opens', async ({ page }
   await expect(page.locator('#app')).toBeVisible()
   await expect(page.locator('#supplyOverviewView')).toBeVisible()
   await expect(page.locator('#currentUser')).toContainText('Mitarbeiter3')
+  await expect(page.locator('#password')).toHaveValue('')
+  await expect(page.locator('#otp')).toHaveValue('')
+  await expect(page.locator('#secretDetails')).toBeHidden()
+  await expect(page.locator('#qr')).not.toHaveAttribute('src', /.+/)
 })
 
 
