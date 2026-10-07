@@ -570,20 +570,17 @@
             </section>
 
             <section class="card">
-              <div <script src="./vendor/supabase.js"></script>
+              <div class="section-title"><div><h3>Prüfqueue Vertragsfragen</h3><p>Offene und bereits bearbeitete Fragen.</p></div><span id="contractQuestionCount" class="pill">0</span></div>
+              <div id="contractQuestionList" class="question-list"></div>
+            </section>
+          </div>
+        </section>
+
+        <section id="sourcesView" class="hidden card"><div class="section-title"><div><h3>Quellenregister</h3><p>Nachvollziehbare fachliche Herkunft der Regeln und Formulare</p></div></div><div id="sourceGrid" class="source-grid"></div></section>
+      </main>
+    </div>
+  </div>
+  <script src="./vendor/supabase.js"></script>
   <script type="module" src="./app.js"></script>
-Enter'||e.key===' ')&&e.target.matches('[data-supply-id]')){e.preventDefault();restoreSupplyDraft(e.target.dataset.supplyId)}})
-
-    document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)))
-    $('knowledgeSearch').addEventListener('input',e=>renderContractKnowledge(e.target.value))
-    $('contractQuestionForm').addEventListener('submit',submitContractQuestion)
-
-    supabase.auth.onAuthStateChange((event,session)=>{
-      if(event==='SIGNED_OUT') showLogin()
-      currentSession=session
-    })
-
-    start()
-  </script>
 </body>
 </html>
