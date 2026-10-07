@@ -47,7 +47,11 @@ test('local Tesseract OCR recognizes a generated prescription image', async ({ p
     buffer: Buffer.from(pngBase64, 'base64')
   })
 
-  await expect(page.locator('#ocrStatus')).toContainText('OCR abgeschlossen', { timeout: 150000 })
+  await page.waitForFunction(() => {
+    const text = document.querySelector('#ocrStatus')?.textContent || ''
+    return text.includes('OCR abgeschlossen') || text.includes('Bitte Rezepttext manuell erfassen')
+  }, null, { timeout: 90000 })
+  await expect(page.locator('#ocrStatus')).toContainText('OCR abgeschlossen')
   const raw = await page.locator('#rxOcrRaw').inputValue()
   expect(raw.trim().length).toBeGreaterThan(10)
   expect(raw.toUpperCase()).toContain('PROTHESE')
