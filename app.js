@@ -3479,13 +3479,27 @@
       }
     }
 
+    const RX_OCR_MAX_PIXELS=12000000
+    const RX_OCR_MAX_SIDE=3500
+    const RX_IMAGE_MAX_DECODE_PIXELS=50000000
+
     async function pdfFirstPageToCanvas(file){
       const pdfjs=await import('./vendor/pdfjs/pdf.min.mjs')
       pdfjs.GlobalWorkerOptions.workerSrc=new URL('./vendor/pdfjs/pdf.worker.min.mjs',import.meta.url).href
       const bytes=new Uint8Array(await file.arrayBuffer())
       const pdf=await pdfjs.getDocument({data:bytes}).promise
       const page=await pdf.getPage(1)
-      const viewport=page.getViewport({scale:2})
+      const base=page.getViewport({scale:1})
+      const basePixels=Math.max(1,base.width*base.height)
+      const safeScale=Math.min(
+        2,
+        RX_OCR_MAX_SIDE/Math.max(base.width,base.height,1),
+        Math.sqrt(RX_OCR_MAX_PIXELS/basePixels)
+      )
+      if(!Number.isFinite(safeScale) || safeScale<=0.1){
+        throw new Error('PDF-Seitenformat ist für die lokale OCR zu groß.')
+      }
+      const viewport=page.getViewport({scale:safeScale})
       const canvas=document.createElement('canvas')
       canvas.width=Math.ceil(viewport.width)
       canvas.height=Math.ceil(viewport.height)
@@ -3496,13 +3510,27 @@
 
     async function imageFileToCanvas(file){
       const bmp=await createImageBitmap(file)
-      const canvas=document.createElement('canvas')
-      canvas.width=bmp.width
-      canvas.height=bmp.height
-      const ctx=canvas.getContext('2d',{willReadFrequently:true})
-      ctx.drawImage(bmp,0,0)
-      bmp.close?.()
-      return canvas
+      try{
+        const sourcePixels=Math.max(1,(Number(bmp.width)||0)*(Number(bmp.height)||0))
+        if(sourcePixels>RX_IMAGE_MAX_DECODE_PIXELS){
+          throw new Error('Bildauflösung ist für die lokale OCR zu groß.')
+        }
+        const scale=Math.min(
+          1,
+          RX_OCR_MAX_SIDE/Math.max(bmp.width,bmp.height,1),
+          Math.sqrt(RX_OCR_MAX_PIXELS/sourcePixels)
+        )
+        const width=Math.max(1,Math.round(bmp.width*scale))
+        const height=Math.max(1,Math.round(bmp.height*scale))
+        const canvas=document.createElement('canvas')
+        canvas.width=width
+        canvas.height=height
+        const ctx=canvas.getContext('2d',{willReadFrequently:true})
+        ctx.drawImage(bmp,0,0,width,height)
+        return canvas
+      }finally{
+        bmp.close?.()
+      }
     }
 
     function normalizeRxDate(value){
