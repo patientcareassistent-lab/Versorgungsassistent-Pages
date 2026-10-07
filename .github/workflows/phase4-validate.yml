@@ -1,0 +1,161 @@
+name: Phase 4 browser regression validation
+
+on:
+  push:
+    branches:
+      - hardening/phase4-browser-regression
+
+permissions:
+  contents: read
+
+jobs:
+  browser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      E2E_TOTP_SECRET: ${{ secrets.E2E_TOTP_SECRET }}
+
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install locked dependencies
+        run: |
+          set -euo pipefail
+          npm ci --ignore-scripts --no-fund --no-audit
+          npm audit --omit=dev --audit-level=critical
+
+      - name: Build same-origin runtime assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf vendor models
+          mkdir -p vendor/tesseract/core vendor/tesseract/lang vendor/pdfjs vendor/transformers
+          mkdir -p models/onnx-community/whisper-tiny/onnx
+
+          cp node_modules/@supabase/supabase-js/dist/umd/supabase.js vendor/supabase.js
+          cp node_modules/tesseract.js/dist/tesseract.esm.min.js vendor/tesseract/tesseract.esm.min.js
+          cp node_modules/tesseract.js/dist/worker.min.js vendor/tesseract/worker.min.js
+          cp node_modules/tesseract.js-core/tesseract-core* vendor/tesseract/core/
+
+          LANG_FILE="$(find node_modules/@tesseract.js-data/deu -type f -name 'deu.traineddata.gz' -print -quit)"
+          test -n "$LANG_FILE"
+          cp "$LANG_FILE" vendor/tesseract/lang/deu.traineddata.gz
+
+          cp node_modules/pdfjs-dist/build/pdf.min.mjs vendor/pdfjs/pdf.min.mjs
+          cp node_modules/pdfjs-dist/build/pdf.worker.min.mjs vendor/pdfjs/pdf.worker.min.mjs
+
+          cp node_modules/@huggingface/transformers/dist/transformers.min.js vendor/transformers/transformers.min.js
+          find node_modules/@huggingface/transformers/dist -maxdepth 1 -type f -name 'ort-*' -exec cp {} vendor/transformers/ \;
+
+          test -s vendor/supabase.js
+          test -s vendor/tesseract/tesseract.esm.min.js
+          test -s vendor/tesseract/worker.min.js
+          test -s vendor/tesseract/lang/deu.traineddata.gz
+          test -s vendor/pdfjs/pdf.min.mjs
+          test -s vendor/pdfjs/pdf.worker.min.mjs
+          test -s vendor/transformers/transformers.min.js
+
+      - name: Fetch pinned Whisper model
+        shell: bash
+        run: |
+          set -euo pipefail
+          MODEL_DIR="models/onnx-community/whisper-tiny"
+          REV="ff4177021cc41f7db950912b73ea4fdf7d01d8e7"
+          BASE="https://huggingface.co/onnx-community/whisper-tiny/resolve/$REV"
+
+          files=(
+            "added_tokens.json"
+            "config.json"
+            "generation_config.json"
+            "merges.txt"
+            "normalizer.json"
+            "preprocessor_config.json"
+            "quantize_config.json"
+            "special_tokens_map.json"
+            "tokenizer.json"
+            "tokenizer_config.json"
+            "vocab.json"
+            "onnx/encoder_model_quantized.onnx"
+            "onnx/decoder_model_merged_quantized.onnx"
+          )
+
+          for file in "${files[@]}"; do
+            mkdir -p "$MODEL_DIR/$(dirname "$file")"
+            curl --fail --location --silent --show-error --retry 3 --retry-delay 2 \
+              "$BASE/$file?download=true" \
+              --output "$MODEL_DIR/$file"
+            test -s "$MODEL_DIR/$file"
+          done
+
+          echo "2af4a414ca47aa30f61246017e5fe82b0a8d229281d1255ba666a2a7f6b84d19  $MODEL_DIR/onnx/encoder_model_quantized.onnx" | sha256sum -c -
+          echo "25e807a962b6349356d0ea5d0dfe530b7e5bf0e2a484aeca0359d03143faddd3  $MODEL_DIR/onnx/decoder_model_merged_quantized.onnx" | sha256sum -c -
+
+      - name: Fetch current AOK PG24 source forms
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p assets/aok-pg24
+          python3 - <<'PY'
+          import html, os, re, urllib.parse, urllib.request
+          page='https://www.aok.de/gp/orthopaedie-rehatechnik/vertraege/pg24-beinprothesen'
+          req=urllib.request.Request(page+'?stand=20260901',headers={'User-Agent':'Mozilla/5.0'})
+          raw=urllib.request.urlopen(req,timeout=30).read().decode('utf-8','ignore')
+          anchors=re.findall(r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',raw,re.I|re.S)
+          wanted={
+            'Anlage 4':'anlage-4-profilerhebungsbogen.pdf',
+            'Anlage 5a':'anlage-5a-fuss.pdf',
+            'Anlage 5b':'anlage-5b-ukb.pdf',
+            'Anlage 5c':'anlage-5c-knieex.pdf',
+            'Anlage 5d':'anlage-5d-okb.pdf',
+            'Anlage 5e':'anlage-5e-hueftex.pdf',
+          }
+          found={}
+          for href,labelhtml in anchors:
+              label=html.unescape(re.sub('<[^>]+>',' ',labelhtml))
+              label=' '.join(label.split())
+              for needle,target in wanted.items():
+                  if needle.lower() in label.lower() and target not in found:
+                      url=urllib.parse.urljoin(page,html.unescape(href))
+                      if '.pdf' in url.lower():
+                          found[target]=url
+          missing=[target for target in wanted.values() if target not in found]
+          if missing:
+              raise SystemExit('Missing AOK PG24 assets: '+', '.join(missing))
+          for target,url in found.items():
+              out=os.path.join('assets/aok-pg24',target)
+              r=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0','Referer':page})
+              data=urllib.request.urlopen(r,timeout=60).read()
+              if data[:4]!=b'%PDF':
+                  raise SystemExit('Downloaded source is not PDF: '+target)
+              open(out,'wb').write(data)
+              print('downloaded',target,len(data))
+          PY
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser regressions
+        run: |
+          set -euo pipefail
+          node --check app.js
+          npm run test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase4-playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
