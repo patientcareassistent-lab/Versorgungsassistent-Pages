@@ -82,3 +82,42 @@ test('oversized prescription files are rejected without leaving the browser flow
   await expect(page.locator('#ocrStatus')).toContainText('größer als 15 MB')
   await expect(page.locator('#rxFileName')).toContainText('zu-gross.png')
 })
+
+
+test('team-visible foreign supplies open read-only instead of failing on save', async ({ page }) => {
+  await openSignedInApp(page)
+
+  await page.evaluate(() => {
+    localStorage.setItem('va:e2e:mock-care-cases', JSON.stringify([{
+      id: '22222222-2222-4222-8222-222222222222',
+      owner_user_id: '22222222-2222-4222-8222-222222222222',
+      created_at: '2026-10-07T10:00:00.000Z',
+      updated_at: '2026-10-07T11:00:00.000Z',
+      wizard_index: 0,
+      insurer: 'Privat',
+      product_group: '10',
+      himi_id: 'Gehstock / Unterarmgehstütze',
+      himi: 'Gehstock / Unterarmgehstütze',
+      status: 'Laufend',
+      schema_version: 1,
+      payload: {
+        patientFirstName: 'Team',
+        patientLastName: 'Fall',
+        caseKind: 'Neuversorgung',
+        supplyType: 'Post-OP'
+      }
+    }]))
+  })
+
+  await page.reload()
+  await expect(page.locator('#supplyOverviewBody')).toContainText('Team')
+  await expect(page.locator('#supplyOverviewBody')).toContainText('Fall')
+
+  await page.locator('#supplyOverviewBody [data-supply-id]').first().click()
+  await expect(page.locator('#readOnlyBanner')).toBeVisible()
+  await expect(page.locator('[data-case-field="patientFirstName"]')).toBeDisabled()
+  await expect(page.locator('#careKasse')).toBeDisabled()
+  await expect(page.locator('#clearButton')).toBeDisabled()
+  await expect(page.locator('#printButton')).toBeEnabled()
+  await expect(page.locator('.wizard-step[data-step="1"]')).toBeEnabled()
+})
