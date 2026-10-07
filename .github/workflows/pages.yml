@@ -132,11 +132,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RniE --include='index.html' --include='app.js' '(esm\.sh|cdn\.jsdelivr\.net|unpkg\.com|cdnjs\.cloudflare\.com)' .; then
-            echo 'Runtime dependency gate failed: executable CDN dependency remains in application code.'
-            exit 1
-          fi
-          echo 'Runtime dependency gate passed.'
+          python3 - <<'PY'
+          from pathlib import Path
+          import re, sys
+
+          files = [Path('index.html'), Path('app.js')]
+          checks = [
+              ('remote dynamic import', re.compile(r'import\s*\(\s*["\\\']https://', re.I)),
+              ('remote static import', re.compile(r'from\s*["\\\']https://', re.I)),
+              ('remote script source', re.compile(r'<script\\b[^>]*\\bsrc\s*=\s*["\\\']https://', re.I)),
+          ]
+          failures = []
+          for path in files:
+              text = path.read_text(encoding='utf-8')
+              for label, pattern in checks:
+                  if pattern.search(text):
+                      failures.append(f'{path}: {label}')
+          html = Path('index.html').read_text(encoding='utf-8')
+          if re.search(r'<script\\b(?![^>]*\\bsrc\s*=)[^>]*>', html, re.I):
+              failures.append('index.html: inline script block')
+          if "script-src 'self' 'wasm-unsafe-eval'" not in html:
+              failures.append('index.html: hardened script-src CSP missing')
+          if failures:
+              print('Runtime dependency gate failed:')
+              for item in failures:
+                  print(' -', item)
+              sys.exit(1)
+          print('Runtime dependency gate passed.')
+          PY
 
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
