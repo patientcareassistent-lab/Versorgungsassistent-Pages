@@ -62,6 +62,14 @@ test('password login remains gated by MFA before the app opens', async ({ page }
 })
 
 
+test('legacy persistent Supabase auth token is removed during startup', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('sb-pypljdyqjpdkismbwuag-auth-token', 'legacy-token')
+  })
+  await page.goto('/index.html')
+  expect(await page.evaluate(() => localStorage.getItem('sb-pypljdyqjpdkismbwuag-auth-token'))).toBeNull()
+})
+
 test('Supabase auth tokens are not persisted in localStorage or parsed from the URL', async ({ page }) => {
   const source = await (await page.request.get('/app.js')).text()
   expect(source).toContain('storage: window.sessionStorage')
