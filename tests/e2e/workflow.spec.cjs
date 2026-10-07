@@ -120,4 +120,6 @@ test('team-visible foreign supplies open read-only instead of failing on save', 
   await expect(page.locator('#clearButton')).toBeDisabled()
   await expect(page.locator('#printButton')).toBeEnabled()
   await expect(page.locator('.wizard-step[data-step="1"]')).toBeEnabled()
+  await page.locator('.wizard-step[data-step="1"]').click()
+  await expect(page.locator('.wizard-panel[data-panel="1"]')).toBeVisible()
 })
