@@ -32,7 +32,7 @@ jobs:
             echo 'Production safety gate failed: secret-like credential or local-only dependency found.'
             exit 1
           fi
-          if ! grep -q 'sb_publishable_' index.html; then
+          if ! grep -q 'sb_publishable_' index.html app.js; then
             echo 'Production safety gate failed: expected Supabase publishable key marker not found.'
             exit 1
           fi
