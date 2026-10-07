@@ -1062,9 +1062,6 @@
     let profileAiStream=null
     let profileAiChunks=[]
     let profileAsrPromise=null
-    let profileAsrWorker=null
-    let profileAsrSequence=0
-    const profileAsrPending=new Map()
     let profileGuidedTarget=null
     let profileGuidedIndex=-1
     let profileAiSuggestionState=[]
@@ -1080,57 +1077,14 @@
       if(!window.crossOriginIsolated){
         throw new Error('Die lokale Spracheingabe wird noch vorbereitet. Bitte die Seite einmal neu laden.')
       }
+      if(!window.WhisperCppRuntime){
+        throw new Error('Die lokale whisper.cpp-Laufzeit ist nicht verfügbar.')
+      }
       if(!profileAsrPromise){
         profileAiSetStatus('Lokale whisper.cpp-Spracherkennung wird vorbereitet … Beim ersten Einsatz wird das Modell geladen.')
-        profileAsrPromise=Promise.resolve().then(()=>{
-          profileAsrWorker=new Worker(
-            new URL('./whispercpp/worker.js',import.meta.url),
-            {name:'versorgungsassistent-whisper'}
-          )
-          profileAsrWorker.addEventListener('message',event=>{
-            const msg=event.data||{}
-            if(msg.type==='status' && msg.text){
-              profileAiSetStatus(msg.text)
-              return
-            }
-            if(msg.type==='ready'){
-              profileAiSetStatus('Lokales Sprachmodell ist bereit.','ready')
-              return
-            }
-            if(msg.type==='result' || msg.type==='error'){
-              const pending=profileAsrPending.get(msg.id)
-              if(!pending) return
-              profileAsrPending.delete(msg.id)
-              if(msg.type==='result') pending.resolve(String(msg.text||'').trim())
-              else pending.reject(new Error(msg.message||'Lokale Transkription fehlgeschlagen.'))
-            }
-          })
-          profileAsrWorker.addEventListener('error',event=>{
-            const error=new Error(event?.message||'Lokale whisper.cpp-Laufzeit ist abgestürzt.')
-            for(const pending of profileAsrPending.values()) pending.reject(error)
-            profileAsrPending.clear()
-            try{profileAsrWorker?.terminate()}catch(_){}
-            profileAsrWorker=null
-            profileAsrPromise=null
-          })
-          return {
-            transcribe(audio){
-              return new Promise((resolve,reject)=>{
-                const id='asr-'+(++profileAsrSequence)
-                profileAsrPending.set(id,{resolve,reject})
-                profileAsrWorker.postMessage(
-                  {type:'transcribe',id,audio,language:'de'},
-                  [audio.buffer]
-                )
-              })
-            }
-          }
-        }).catch(err=>{
-          profileAsrPromise=null
-          try{profileAsrWorker?.terminate()}catch(_){}
-          profileAsrWorker=null
-          throw err
-        })
+        profileAsrPromise=window.WhisperCppRuntime.warmup()
+          .then(()=>window.WhisperCppRuntime)
+          .catch(err=>{profileAsrPromise=null;throw err})
       }
       return profileAsrPromise
     }
@@ -1164,7 +1118,7 @@
       const audio=await audioBlobToMono16k(blob)
       const asr=await getProfileAsr()
       profileAiSetStatus('KI-Transkription läuft vollständig lokal mit whisper.cpp/WebAssembly …')
-      return asr.transcribe(audio)
+      return asr.transcribe(audio,'de')
     }
 
     function profileControlLabel(el){
