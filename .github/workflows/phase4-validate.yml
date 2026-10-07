@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: phase4-browser-regression-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   browser-regression:
     runs-on: ubuntu-latest

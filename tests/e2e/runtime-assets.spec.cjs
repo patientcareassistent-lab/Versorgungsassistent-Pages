@@ -40,6 +40,7 @@ test('Whisper runtime and q8 model load and execute without Hugging Face runtime
     const mod = await import('./vendor/transformers/transformers.min.js')
     mod.env.useBrowserCache = false
     mod.env.allowRemoteModels = false
+    mod.env.allowLocalModels = true
     mod.env.localModelPath = new URL('./models/', location.href).href
     if (mod.env.backends?.onnx?.wasm) {
       mod.env.backends.onnx.wasm.wasmPaths = new URL('./vendor/transformers/', location.href).href
