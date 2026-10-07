@@ -75,3 +75,10 @@ test('single-thread whisper.cpp WASM transcribes entirely same-origin in a dedic
   expect(typeof result.text).toBe('string')
   expect(remoteRuntimeRequests).toEqual([])
 })
+
+test('local speech recording is bounded and cleared on session teardown', async ({ page }) => {
+  const source = await (await page.request.get('/app.js')).text()
+  expect(source).toContain('const PROFILE_AI_MAX_RECORDING_MS=5*60*1000')
+  expect(source).toContain('profileAiStream?.getTracks().forEach')
+  expect(source).toContain('window.WhisperCppRuntime?.reset?.()')
+})
