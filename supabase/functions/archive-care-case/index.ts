@@ -195,7 +195,11 @@ Deno.serve(async(req:Request)=>{
     storage_backend:"r2",
     status:"PENDING",
     error_message:null,
-    manifest_version:1
+    manifest_version:1,
+    verification_status:"UNVERIFIED",
+    verified_at:null,
+    verified_by:null,
+    verification_error:null
   };
 
   let archiveRow;
@@ -291,7 +295,11 @@ Deno.serve(async(req:Request)=>{
       revision_count:(rev.data||[]).length,
       status:"READY",
       error_message:null,
-      manifest_version:1
+      manifest_version:1,
+      verification_status:"UNVERIFIED",
+      verified_at:null,
+      verified_by:null,
+      verification_error:null
     }).eq("archive_id",archiveId).select("archive_id").single();
     if(ready.error||!ready.data) return await fail("archive_index_write_failed",ready.error?.message||"archive index write failed");
 
