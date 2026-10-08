@@ -366,3 +366,59 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
   await expect(page.locator('#fieldList label').filter({ hasText: 'Name / Vorname' }).locator('input')).toHaveValue('Muster, Anna')
   await expect(page.locator('#fieldList label').filter({ hasText: 'Freie Auswahl ohne Vorgaben' }).locator('input')).toHaveCount(1)
 })
+
+
+test('source-backed conditional anamnesis fields become required only when their trigger applies', async ({ page }) => {
+  await installSupabaseMock(page, {
+    mode: 'signed-in',
+    rpcOverrides: {
+      care_reference_bootstrap: {
+        kassen: [{ Kasse_Kanonisch: 'Testkasse' }],
+        produktgruppen: [{ PG: '23', Generisches_Blatt: 'Orthesen', Reifegrad: 'TEST' }],
+        sourceCount: 1,
+        formCount: 1
+      },
+      himi_logic_for_pg: [{
+        Himi_ID: 'PG23_UE',
+        PG: '23',
+        Bezeichnung: 'individuelle Orthese – untere Extremität',
+        Generisches_Formular_ID: 'PG23_Orthesen',
+        Versorgungsarten: ['Erstversorgung'],
+        Profil_erforderlich: true,
+        Mass_erforderlich: false,
+        Erprobung_erforderlich: false,
+        Verlauf_erforderlich: false,
+        Aktiv: true
+      }],
+      forms_for_pg: [],
+      himi_form_rules_for_himi: [],
+      form_fields_for_pg: [
+        { Feldzeile_ID: 'GEN_23_region_24', Formular_ID: 'PG23_Orthesen', PG: '23', Feldbezeichnung: 'Anwendungsregion', Datentyp: 'Auswahl', Pflichtstatus: 'ja', Bedingung_UI: 'untere Extremität | obere Extremität | Rumpf/Wirbelsäule' },
+        { Feldzeile_ID: 'GEN_23_rom_lower_25', Formular_ID: 'PG23_Orthesen', PG: '23', Feldbezeichnung: 'Gelenkbeweglichkeit Neutral-Null unten', Datentyp: 'Messreihe', Pflichtstatus: 'bedingt', Bedingung_UI: 'nur untere Extremität' },
+        { Feldzeile_ID: 'GEN_23_rom_upper_34', Formular_ID: 'PG23_Orthesen', PG: '23', Feldbezeichnung: 'Gelenkbeweglichkeit Neutral-Null oben', Datentyp: 'Messreihe', Pflichtstatus: 'bedingt', Bedingung_UI: 'nur obere Extremität' },
+        { Feldzeile_ID: 'GEN_23_cobb_angle_33', Formular_ID: 'PG23_Orthesen', PG: '23', Feldbezeichnung: 'Cobb-Winkel', Datentyp: 'Text', Pflichtstatus: 'bedingt', Bedingung_UI: 'nur Rumpf/Wirbelsäule' }
+      ]
+    }
+  })
+
+  await page.goto('/index.html')
+  await page.locator('#newSupplyButton').click()
+  await page.locator('#careKasse').selectOption({ label: 'Testkasse' })
+  await page.locator('#carePg').selectOption('23')
+  await page.locator('#careHimi').selectOption('PG23_UE')
+
+  const region = page.locator('#fieldList label').filter({ hasText: 'Anwendungsregion' }).locator('select')
+  await expect(region).toBeVisible()
+  await expect(page.getByText('Gelenkbeweglichkeit Neutral-Null unten')).toHaveCount(0)
+  await expect(page.getByText('Gelenkbeweglichkeit Neutral-Null oben')).toHaveCount(0)
+  await expect(page.getByText('Cobb-Winkel')).toHaveCount(0)
+
+  await region.selectOption({ label: 'untere Extremität' })
+  await expect(page.getByText('Gelenkbeweglichkeit Neutral-Null unten')).toBeVisible()
+  await expect(page.locator('#fieldList').getByText('Gelenkbeweglichkeit Neutral-Null unten').locator('xpath=..').locator('textarea[data-required="true"]')).toHaveCount(1)
+  await expect(page.getByText('Gelenkbeweglichkeit Neutral-Null oben')).toHaveCount(0)
+
+  await page.locator('#fieldList label').filter({ hasText: 'Anwendungsregion' }).locator('select').selectOption({ label: 'Rumpf/Wirbelsäule' })
+  await expect(page.getByText('Cobb-Winkel')).toBeVisible()
+  await expect(page.getByText('Gelenkbeweglichkeit Neutral-Null unten')).toHaveCount(0)
+})

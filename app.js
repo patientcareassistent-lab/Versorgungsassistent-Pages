@@ -3030,10 +3030,82 @@
       return optionPart.split('|').map(x=>x.trim()).filter(Boolean)
     }
 
+    const profileConditionControllers=new Set([
+      'GEN_04_bath_or_shower_25',
+      'GEN_23_region_24',
+      'GEN_23_custom_need_22'
+    ])
+
+    function profileConditionalState(f){
+      const id=String(f.Feldzeile_ID||'')
+      const status=String(f.Pflichtstatus||'').toLowerCase()
+      if(status!=='bedingt') return {visible:true,required:status==='ja'}
+
+      const kasse=String($('careKasse')?.value||'')
+      const himiId=selectedHimiId()
+      const himi=norm(selectedHimi())
+      const value=key=>String(values[key]||'').trim()
+
+      if(['GEN_04_tub_height_27','GEN_04_tub_inner_width_28'].includes(id)){
+        const place=norm(value('GEN_04_bath_or_shower_25'))
+        const active=place.includes('badewanne')||place.includes('beides')
+        return {visible:active,required:active}
+      }
+
+      if(id==='GEN_11_kkh_status_36'){
+        return {visible:kasse==='KKH',required:false}
+      }
+
+      if(id==='GEN_18_storage_32'){
+        const active=himiId==='PG18_E'||himi.includes('e rollstuhl')
+        return {visible:active,required:active}
+      }
+
+      if(id==='GEN_22_arm_hold_24'){
+        const active=himi.includes('aktivlifter')||himi.includes('aufstehlifter')
+        return {visible:active,required:active}
+      }
+
+      if([
+        'GEN_23_contralateral_29','GEN_23_genu_recurvatum_27','GEN_23_muscle_janda_28',
+        'GEN_23_rom_lower_25','GEN_23_varus_valgus_26'
+      ].includes(id)){
+        const active=norm(value('GEN_23_region_24'))==='untere extremitat'
+        return {visible:active,required:active}
+      }
+
+      if(id==='GEN_23_rom_upper_34'){
+        const active=norm(value('GEN_23_region_24'))==='obere extremitat'
+        return {visible:active,required:active}
+      }
+
+      if(['GEN_23_cobb_angle_33','GEN_23_trunk_findings_32'].includes(id)){
+        const active=norm(value('GEN_23_region_24'))==='rumpf wirbelsaule'
+        return {visible:active,required:active}
+      }
+
+      if(id==='GEN_23_custom_reason_23'){
+        const active=norm(value('GEN_23_custom_need_22'))==='nein'
+        return {visible:active,required:active}
+      }
+
+      if(['GEN_26_therapy_environment_42','GEN_26_usage_scope_41'].includes(id)){
+        const active=kasse==='AOK PLUS'
+        return {visible:active,required:active}
+      }
+
+      // Für weitere "bedingt"-Felder nennt die Quelle keinen eindeutig
+      // maschinenlesbaren Auslöser. Sie bleiben sichtbar, blockieren aber
+      // die Vollständigkeit nicht, bis eine belastbare Regel hinterlegt ist.
+      return {visible:true,required:false}
+    }
+
     function renderField(f){
       const id=f.Feldzeile_ID
       const type=String(f.Datentyp||'Text')
-      const required=String(f.Pflichtstatus).toLowerCase()==='ja'
+      const conditional=profileConditionalState(f)
+      if(!conditional.visible) return
+      const required=conditional.required
       const options=fieldOptionValues(f)
       const autoValue=profileAutofillValue(f)
       if((values[id]===undefined || values[id]===null || values[id]==='') && autoValue!=='') values[id]=autoValue
@@ -3051,6 +3123,7 @@
         const save=()=>{
           values[id]=control.type==='checkbox'?!!control.checked:control.value
           showWizardError('')
+          if(profileConditionControllers.has(String(id))) updateCareFields()
           updateWizardStatus()
         }
         control.addEventListener('input',save)
@@ -3907,7 +3980,7 @@
           const next=readCaseField(el)
           if(next!==undefined) values[key]=next
           if(key==='caseKind') syncCaseKind()
-          if(key==='supplyType'){syncSituationFields();renderMeasureFields()}
+          if(key==='supplyType'){syncSituationFields();renderMeasureFields();updateCareFields()}
           if(key==='rxPresent') syncRxPresence()
           showWizardError('');updateWizardStatus()
         }
