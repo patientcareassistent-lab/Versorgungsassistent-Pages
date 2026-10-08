@@ -575,3 +575,29 @@ test('single mandatory payer form is auto-selected even without structured Himi 
   await expect(page.locator('#ruleBox')).toContainText('Voraufnahme')
   await expect(page.locator('#fieldList')).toContainText('Versorgungsziel')
 })
+
+
+test('an empty prescriber directory exposes a secure one-time Excel importer on the overview', async ({ page }) => {
+  await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{prescriber_directory_count:0}})
+  await page.goto('/index.html')
+  await expect(page.locator('#supplyOverviewView')).toBeVisible()
+  const panel=page.locator('#prescriberInitialImportOverview')
+  await expect(panel).toBeVisible()
+  await expect(panel).toContainText('Verordnerverzeichnis einmalig einlesen')
+  const input=panel.locator('input[type="file"]')
+  const button=panel.getByRole('button',{name:'Verordnerdatei importieren'})
+  await expect(button).toBeDisabled()
+  await input.setInputFiles({
+    name:'Verordner.xlsx',
+    mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    buffer:Buffer.from('mock-excel-content')
+  })
+  await expect(button).toBeEnabled()
+})
+
+test('an imported prescriber directory has no initial upload form', async ({ page }) => {
+  await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{prescriber_directory_count:9834}})
+  await page.goto('/index.html')
+  await expect(page.locator('#supplyOverviewView')).toBeVisible()
+  await expect(page.locator('#prescriberInitialImportOverview')).toHaveCount(0)
+})
