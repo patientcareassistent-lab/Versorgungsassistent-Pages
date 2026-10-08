@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { validateArchiveManifest } from "../_shared/archive-layout.mjs";
 import { S3Client, GetObjectCommand } from "npm:@aws-sdk/client-s3@3.1147.0";
 
 const H={
@@ -138,16 +139,10 @@ Deno.serve(async(req:Request)=>{
     try{manifest=JSON.parse(new TextDecoder().decode(raw))}
     catch{return await fail("archive_manifest_invalid","manifest JSON is invalid")}
 
-    if(manifest?.manifest_version!==idx.data.manifest_version) return await fail("manifest_version_mismatch","manifest version mismatch");
-    if(manifest?.archive_id!==idx.data.archive_id) return await fail("archive_id_mismatch","archive id mismatch");
-    if(manifest?.care_case?.id!==id) return await fail("care_case_id_mismatch","care case id mismatch");
-    if(manifest?.care_case?.owner_user_id!==idx.data.owner_user_id) return await fail("owner_mismatch","owner mismatch");
+    try{validateArchiveManifest(manifest,idx.data);}
+    catch(error){return await fail("archive_manifest_integrity_invalid",error);}
 
-    const files=Array.isArray(manifest?.files)?manifest.files:[];
-    if(files.length!==Number(idx.data.photo_count||0)) return await fail("photo_count_mismatch","photo count mismatch");
-    if(files.length>14) return await fail("too_many_archive_files","archive references too many files");
-
-    const base=`care-cases/${id}/${idx.data.archive_id}/files/`;
+    const files=manifest.files;
     for(const file of files){
       const key=typeof file?.target_key==="string"?file.target_key:"";
       const expected=typeof file?.sha256==="string"?file.sha256:"";
