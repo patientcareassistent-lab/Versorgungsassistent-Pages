@@ -3507,7 +3507,7 @@
     function requiresSide(){
       const pg=$('carePg').value
       const id=selectedHimiId()
-      return pg==='24' || pg==='05' || pg==='08' || ['PG23_UE','PG23_OE'].includes(id)
+      return pg==='24' || pg==='05' || pg==='08' || pg==='38' || ['PG23_UE','PG23_OE'].includes(id)
     }
 
     function syncSituationFields(){
