@@ -7,3 +7,6 @@
 .prescriber-result:hover,.prescriber-result:focus-visible{border-color:#1d4ed8;box-shadow:0 0 0 2px rgba(29,78,216,.08)}
 .prescriber-result small{color:#5d6b7a;font-weight:400}
 @media(max-width:720px){.prescriber-search-row{align-items:stretch;flex-direction:column}.prescriber-results{max-height:340px}}
+.prescriber-import{display:grid;gap:8px;margin-top:12px;padding:12px;border:1px dashed #b7c6d8;border-radius:10px;background:#f8fafc}
+.prescriber-import input[type="file"]{max-width:100%}
+.prescriber-import button{justify-self:start}
