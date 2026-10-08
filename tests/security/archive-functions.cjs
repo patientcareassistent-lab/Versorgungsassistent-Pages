@@ -9,6 +9,8 @@ function read(rel) {
 const archive = read('supabase/functions/archive-care-case/index.ts')
 const verify = read('supabase/functions/verify-care-case-archive/index.ts')
 const remove = read('supabase/functions/delete-care-case-archive/index.ts')
+const archiveList = read('supabase/functions/list-care-case-archives/index.ts')
+const archiveListMigration = read('supabase/migrations/20261008151700_archive_overview_service_rpc.sql')
 
 for (const [name, source] of [['archive', archive], ['verify', verify], ['delete', remove]]) {
   assert.match(source, /npm:@supabase\/supabase-js@2\.57\.4/, name + ': Supabase client must be pinned')
@@ -68,4 +70,13 @@ assert.match(deleteAuditMigration, /grant all on table app_private\.care_case_ar
 assert.match(sequenceGrantMigration, /revoke all on sequence app_private\.care_case_archive_delete_log_id_seq[\s\S]*public, anon, authenticated/i, 'migration: identity sequence frontend revocation missing')
 assert.match(sequenceGrantMigration, /grant usage, select[\s\S]*to service_role/i, 'migration: service-role identity sequence grant missing')
 
+// Regression: PostgREST must never require exposing app_private to list archives.
+assert.ok(archiveList.includes('archive_overview_for_service'), 'archive list must use service-only RPC')
+assert.ok(!archiveList.includes('admin.schema("app_private")'), 'archive list may not query private schema through PostgREST')
+assert.ok(archiveList.includes('aal2'), 'archive list must keep MFA gate')
+assert.ok(archiveList.includes('admin.auth.getUser(token)'), 'archive list must verify authenticated actor')
+const archiveGrantSQL = archiveListMigration.replace(/\s+/g, ' ').toLowerCase()
+assert.ok(archiveGrantSQL.includes('security definer'), 'archive RPC requires controlled definer rights')
+assert.ok(archiveGrantSQL.includes('revoke all on function public.archive_overview_for_service(uuid) from public, anon, authenticated'), 'archive RPC must deny frontend roles')
+assert.ok(archiveGrantSQL.includes('grant execute on function public.archive_overview_for_service(uuid) to service_role'), 'archive RPC must only allow service role')
 console.log('Archive function security invariants passed.')
