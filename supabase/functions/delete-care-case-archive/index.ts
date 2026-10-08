@@ -118,7 +118,7 @@ Deno.serve(async(req:Request)=>{
   let deletionIntentStarted=false;
   const s3=new S3Client({
     region:"auto",
-    endpoint:`https://${account}.r2.cloudflarestorage.com`,
+    endpoint:`https://${account}.eu.r2.cloudflarestorage.com`,
     credentials:{accessKeyId:access,secretAccessKey:secret},
     forcePathStyle:true
   });
