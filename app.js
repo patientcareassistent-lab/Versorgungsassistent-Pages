@@ -3143,8 +3143,9 @@
       const required=type==='Hinweis'?false:conditional.required
       const options=fieldOptionValues(f)
       const autoValue=profileAutofillValue(f)
-      if((values[id]===undefined || values[id]===null || values[id]==='') && autoValue!=='') values[id]=autoValue
+      if(autoValue!=='') values[id]=autoValue
       const metaParts=[f.Abschnitt,f.Einheit_Optionen,f.Bedingung_UI].filter(Boolean)
+      if(autoValue!=='') metaParts.push('aus Stammdaten übernommen')
       if(sourceStatus==='bedingt' && !f.Bedingung_UI) metaParts.push('bedingt laut Quelle · Auslöser nicht eindeutig hinterlegt')
       if(type==='Hinweis') metaParts.push('Hinweis · keine Eingabe erforderlich')
       const meta=metaParts.join(' · ')
@@ -3158,6 +3159,11 @@
           else control.value=values[id]
         }
         control.dataset.required=required?'true':'false'
+        if(autoValue!==''){
+          control.dataset.profileLinked='true'
+          if('readOnly' in control && control.tagName!=='SELECT') control.readOnly=true
+          if(control.tagName==='SELECT') control.disabled=true
+        }
         const save=()=>{
           values[id]=control.type==='checkbox'?!!control.checked:control.value
           showWizardError('')
@@ -4013,13 +4019,14 @@
       document.querySelectorAll('[data-case-field]').forEach(el=>{
         const key=el.dataset.caseField
         writeCaseField(el,values[key])
-        const save=()=>{
+        const save=(event)=>{
           if(el.type==='radio' && !el.checked) return
           const next=readCaseField(el)
           if(next!==undefined) values[key]=next
           if(key==='caseKind') syncCaseKind()
           if(key==='supplyType'){syncSituationFields();renderMeasureFields();updateCareFields()}
           if(key==='rxPresent') syncRxPresence()
+          if(['patientFirstName','patientLastName','patientBirthDate','insuredNo','side'].includes(key) && event?.type==='change') updateCareFields()
           showWizardError('');updateWizardStatus()
         }
         el.addEventListener('input',save)
@@ -4182,6 +4189,7 @@
       values[key]=value
       const el=document.querySelector('[data-case-field="'+key+'"]')
       if(el) el.value=value
+      if(['patientFirstName','patientLastName','patientBirthDate','insuredNo'].includes(key)) updateCareFields()
     }
 
     function extractAfterLabel(text,labelPattern,digitsPattern){
@@ -4535,7 +4543,9 @@
       const editable=supplyHasEditableContext()
       document.querySelectorAll('#careView input,#careView select,#careView textarea').forEach(el=>{
         if(['newSupplyButton'].includes(el.id)) return
-        el.disabled=!editable
+        const linkedSelect=el.dataset.profileLinked==='true' && el.tagName==='SELECT'
+        el.disabled=!editable || linkedSelect
+        if(el.dataset.profileLinked==='true' && 'readOnly' in el && el.tagName!=='SELECT') el.readOnly=true
       })
       if($('clearButton')) $('clearButton').disabled=!editable
       document.querySelectorAll('#careView .signature-pad-clear').forEach(el=>{el.disabled=!editable})
