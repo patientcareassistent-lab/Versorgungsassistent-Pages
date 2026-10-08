@@ -17,12 +17,12 @@ async function prepareNewSupply(page) {
   await page.locator('[data-case-field="patientBirthDate"]').fill('1980-01-02')
   await page.locator('.wizard-panel[data-panel="0"] [data-case-field="insuredNo"]').fill('TEST')
   await page.locator('#careKasse').selectOption({ label: 'Privat' })
-  await page.locator('#carePg').selectOption('10')
+  await page.locator('#carePg').selectOption('23')
 
   await expect.poll(async () => page.locator('#careHimi option').allTextContents())
-    .toContain('Gehstock / Unterarmgehstütze')
+    .toContain('Orthese untere Extremität')
 
-  await page.locator('#careHimi').selectOption({ label: 'Gehstock / Unterarmgehstütze' })
+  await page.locator('#careHimi').selectOption({ label: 'Orthese untere Extremität' })
   await page.locator('input[name="caseKindChoice"][value="Neuversorgung"]').check()
   await page.locator('#careSupplyType').selectOption({ label: 'Post-OP' })
 }
@@ -60,8 +60,8 @@ test('autosave survives reload and restores a running supply', async ({ page }) 
   await expect(page.locator('[data-case-field="patientFirstName"]')).toHaveValue('Ada')
   await expect(page.locator('[data-case-field="patientLastName"]')).toHaveValue('Lovelace')
   await expect(page.locator('#careKasse')).toHaveValue('Privat')
-  await expect(page.locator('#carePg')).toHaveValue('10')
-  await expect(page.locator('#careHimi')).toHaveValue('Gehstock / Unterarmgehstütze')
+  await expect(page.locator('#carePg')).toHaveValue('23')
+  await expect(page.locator('#careHimi')).toHaveValue('Orthese untere Extremität')
   expect(await page.locator('[style]').count()).toBe(0)
 })
 
@@ -97,9 +97,9 @@ test('team-visible foreign supplies open read-only instead of failing on save', 
       updated_at: '2026-10-07T11:00:00.000Z',
       wizard_index: 0,
       insurer: 'Privat',
-      product_group: '10',
-      himi_id: 'Gehstock / Unterarmgehstütze',
-      himi: 'Gehstock / Unterarmgehstütze',
+      product_group: '23',
+      himi_id: 'Orthese untere Extremität',
+      himi: 'Orthese untere Extremität',
       status: 'Laufend',
       schema_version: 1,
       payload: {
@@ -140,9 +140,9 @@ test('team overview paginates beyond 250 open supplies', async ({ page }) => {
       updated_at: new Date(Date.UTC(2026, 9, 7, 10, 0, i % 60)).toISOString(),
       wizard_index: 0,
       insurer: 'Privat',
-      product_group: '10',
-      himi_id: 'Gehstock / Unterarmgehstütze',
-      himi: 'Gehstock / Unterarmgehstütze',
+      product_group: '23',
+      himi_id: 'Orthese untere Extremität',
+      himi: 'Orthese untere Extremität',
       status: 'Laufend',
       schema_version: 1,
       payload: {
@@ -242,9 +242,9 @@ test('failed photo-reference removal keeps the private object and case reference
       updated_at: '2026-10-07T11:00:00.000Z',
       wizard_index: 2,
       insurer: 'Privat',
-      product_group: '10',
-      himi_id: 'Gehstock / Unterarmgehstütze',
-      himi: 'Gehstock / Unterarmgehstütze',
+      product_group: '23',
+      himi_id: 'Orthese untere Extremität',
+      himi: 'Orthese untere Extremität',
       status: 'Laufend',
       schema_version: 1,
       payload: {
@@ -293,8 +293,8 @@ test('version 0.9 keeps archiving but hides billing and calculation from the use
   await expect(page.locator('.wizard-panel[data-panel="10"]')).toBeHidden()
   await expect(page.locator('[data-case-field="quoteCalc"]')).toHaveCount(0)
 
-  await page.locator('[data-view="pg26"]').click()
-  await expect(page.locator('#pg26View')).toBeVisible()
+  await expect(page.locator('[data-view="pg26"]')).toBeHidden()
+  await expect(page.locator('#pg26View')).toBeHidden()
   await expect(page.getByText('Kalkulationsbausteine')).toBeHidden()
   await expect(page.getByRole('columnheader', { name: 'Preis netto' })).toHaveCount(0)
 })
@@ -306,15 +306,15 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
     rpcOverrides: {
       care_reference_bootstrap: {
         kassen: [{ Kasse_Kanonisch: 'BARMER' }],
-        produktgruppen: [{ PG: '22', Generisches_Blatt: 'BARMER Test', Reifegrad: 'TEST' }],
+        produktgruppen: [{ PG: '23', Generisches_Blatt: 'BARMER Test', Reifegrad: 'TEST' }],
         sourceCount: 1,
         formCount: 1
       },
       himi_logic_for_pg: [{
-        Himi_ID: 'PG22_TEST',
-        PG: '22',
-        Bezeichnung: 'Patientenlifter',
-        Generisches_Formular_ID: 'BARMER_PG22_ANHB',
+        Himi_ID: 'PG23_TEST',
+        PG: '23',
+        Bezeichnung: 'Individuelle Orthese',
+        Generisches_Formular_ID: 'BARMER_PG23_ANHB',
         Versorgungsarten: ['Erstversorgung'],
         Profil_erforderlich: true,
         Mass_erforderlich: false,
@@ -323,32 +323,32 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
         Aktiv: true
       }],
       forms_for_pg: [{
-        Formular_ID: 'BARMER_PG22_ANHB',
+        Formular_ID: 'BARMER_PG23_ANHB',
         Kasse: 'BARMER',
-        PG: '22',
-        Versorgungsart: 'Patientenlifter',
+        PG: '23',
+        Versorgungsart: 'Individuelle Orthese',
         Status: 'Test',
         Aktion_Versorgungsassistent: 'Digital erfassen'
       }],
       himi_form_rules_for_himi: [{
-        Himi_ID: 'PG22_TEST',
+        Himi_ID: 'PG23_TEST',
         Kasse: 'BARMER',
-        Formular_ID: 'BARMER_PG22_ANHB',
+        Formular_ID: 'BARMER_PG23_ANHB',
         Formularbezeichnung: 'BARMER Test',
         Status: 'Test',
         Sortierung: 1
       }],
       form_fields_for_pg: [
-        { Feldzeile_ID: 'sig', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Unterschrift Leistungserbringer', Datentyp: 'Unterschrift', Pflichtstatus: 'nicht einzeln ausgewiesen' },
-        { Feldzeile_ID: 'multi', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Hilfsmitteloptionen', Datentyp: 'Mehrfachauswahl', Pflichtstatus: 'ja', Bedingung_UI: 'Option A | Option B' },
-        { Feldzeile_ID: 'confirm', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Bestätigung', Datentyp: 'Bestätigung', Pflichtstatus: 'ja' },
-        { Feldzeile_ID: 'yntext', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Ja/Nein mit Bemerkung', Datentyp: 'Ja/Nein + Bemerkung', Pflichtstatus: 'ja' },
-        { Feldzeile_ID: 'hint', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Nur Hinweis', Datentyp: 'Hinweis', Pflichtstatus: 'bedingt', Bedingung_UI: 'Nur bei besonderer Konstellation' },
-        { Feldzeile_ID: 'patient_name', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Name / Vorname', Datentyp: 'Text', Pflichtstatus: 'ja' },
-        { Feldzeile_ID: 'patient_dob', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Geburtsdatum', Datentyp: 'Datum', Pflichtstatus: 'ja' },
-        { Feldzeile_ID: 'patient_insured', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Versichertennummer', Datentyp: 'Text', Pflichtstatus: 'ja' },
-        { Feldzeile_ID: 'patient_kv', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'KV-Nummer', Datentyp: 'Text', Pflichtstatus: 'nein' },
-        { Feldzeile_ID: 'free_selection', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Freie Auswahl ohne Vorgaben', Datentyp: 'Auswahl', Pflichtstatus: 'nein' }
+        { Feldzeile_ID: 'sig', Formular_ID: 'BARMER_PG23_ANHB', PG: '23', Feldbezeichnung: 'Unterschrift Leistungserbringer', Datentyp: 'Unterschrift', Pflichtstatus: 'nicht einzeln ausgewiesen' },
+        { Feldzeile_ID: 'multi', Formular_ID: 'BARMER_PG23_ANHB', PG: '23', Feldbezeichnung: 'Hilfsmitteloptionen', Datentyp: 'Mehrfachauswahl', Pflichtstatus: 'ja', Bedingung_UI: 'Option A | Option B' },
+        { Feldzeile_ID: 'confirm', Formular_ID: 'BARMER_PG23_ANHB', PG: '23', Feldbezeichnung: 'Bestätigung', Datentyp: 'Bestätigung', Pflichtstatus: 'ja' },
+        { Feldzeile_ID: 'yntext', Formular_ID: 'BARMER_PG23_ANHB', PG: '23', Feldbezeichnung: 'Ja/Nein mit Bemerkung', Datentyp: 'Ja/Nein + Bemerkung', Pflichtstatus: 'ja' },
+        { Feldzeile_ID: 'hint', Formular_ID: 'BARMER_PG23_ANHB', PG: '23', Feldbezeichnung: 'Nur Hinweis', Datentyp: 'Hinweis', Pflichtstatus: 'bedingt', Bedingung_UI: 'Nur bei besonderer Konstellation' },
+        { Feldzeile_ID: 'patient_name', Formular_ID: 'BARMER_PG23_ANHB', PG: '23', Feldbezeichnung: 'Name / Vorname', Datentyp: 'Text', Pflichtstatus: 'ja' },
+        { Feldzeile_ID: 'patient_dob', Formular_ID: 'BARMER_PG23_ANHB', PG: '23', Feldbezeichnung: 'Geburtsdatum', Datentyp: 'Datum', Pflichtstatus: 'ja' },
+        { Feldzeile_ID: 'patient_insured', Formular_ID: 'BARMER_PG23_ANHB', PG: '23', Feldbezeichnung: 'Versichertennummer', Datentyp: 'Text', Pflichtstatus: 'ja' },
+        { Feldzeile_ID: 'patient_kv', Formular_ID: 'BARMER_PG23_ANHB', PG: '23', Feldbezeichnung: 'KV-Nummer', Datentyp: 'Text', Pflichtstatus: 'nein' },
+        { Feldzeile_ID: 'free_selection', Formular_ID: 'BARMER_PG23_ANHB', PG: '23', Feldbezeichnung: 'Freie Auswahl ohne Vorgaben', Datentyp: 'Auswahl', Pflichtstatus: 'nein' }
       ]
     }
   })
@@ -361,9 +361,9 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
   await page.locator('.wizard-panel[data-panel="0"] [data-case-field="insuredNo"]').fill('TEST')
   await expect(page.locator('#rxInsuredNo')).toHaveValue('TEST')
   await page.locator('#careKasse').selectOption({ label: 'BARMER' })
-  await page.locator('#carePg').selectOption('22')
-  await expect(page.locator('#careHimi')).toContainText('Patientenlifter')
-  await page.locator('#careHimi').selectOption('PG22_TEST')
+  await page.locator('#carePg').selectOption('23')
+  await expect(page.locator('#careHimi')).toContainText('Individuelle Orthese')
+  await page.locator('#careHimi').selectOption('PG23_TEST')
   await expect(page.locator('#careForm')).toContainText('BARMER Test')
 
   await expect(page.locator('#fieldList canvas[aria-label="Unterschrift Leistungserbringer"]')).toHaveCount(1)
@@ -447,15 +447,15 @@ test('multi-PG contract forms remain discoverable for a selected product group',
     rpcOverrides: {
       care_reference_bootstrap: {
         kassen: [{ Kasse_Kanonisch: 'DAK-Gesundheit' }],
-        produktgruppen: [{ PG: '18', Generisches_Blatt: 'PG18_Rollstuhl', Reifegrad: 'TEST' }],
+        produktgruppen: [{ PG: '23', Generisches_Blatt: 'PG23_Orthesen', Reifegrad: 'TEST' }],
         sourceCount: 1,
         formCount: 1
       },
       himi_logic_for_pg: [{
-        Himi_ID: 'PG18_E',
-        PG: '18',
-        Bezeichnung: 'E-Rollstuhl',
-        Generisches_Formular_ID: 'PG18_Rollstuhl',
+        Himi_ID: 'PG23_E',
+        PG: '23',
+        Bezeichnung: 'Individuelle Orthese',
+        Generisches_Formular_ID: 'PG23_Orthesen',
         Versorgungsarten: ['Erstversorgung'],
         Profil_erforderlich: true,
         Mass_erforderlich: false,
@@ -473,9 +473,9 @@ test('multi-PG contract forms remain discoverable for a selected product group',
       }],
       himi_form_rules_for_himi: [],
       form_fields_for_pg: [{
-        Feldzeile_ID: 'GEN_18_goal',
-        Formular_ID: 'PG18_Rollstuhl',
-        PG: '18',
+        Feldzeile_ID: 'GEN_23_goal',
+        Formular_ID: 'PG23_Orthesen',
+        PG: '23',
         Formular_Typ: 'GENERISCH',
         Feldbezeichnung: 'Versorgungsziel',
         Datentyp: 'Langtext',
@@ -487,8 +487,8 @@ test('multi-PG contract forms remain discoverable for a selected product group',
   await page.goto('/index.html')
   await page.locator('#newSupplyOverviewButton').click()
   await page.locator('#careKasse').selectOption({ label: 'DAK-Gesundheit' })
-  await page.locator('#carePg').selectOption('18')
-  await page.locator('#careHimi').selectOption('PG18_E')
+  await page.locator('#carePg').selectOption('23')
+  await page.locator('#careHimi').selectOption('PG23_E')
 
   await expect(page.locator('#careForm')).toContainText('mehrere Reha-/OT-Bereiche')
   await page.locator('#careForm').selectOption('FORM_MULTI')
@@ -507,7 +507,7 @@ test('single mandatory payer form is auto-selected even without structured Himi 
     rpcOverrides: {
       care_reference_bootstrap: {
         kassen: [{ Kasse_Kanonisch: 'AOK Hessen' }],
-        produktgruppen: [{ PG: '04', Generisches_Blatt: 'PG04_Bad_Dusche', Reifegrad: 'TEST' }],
+        produktgruppen: [{ PG: '24', Generisches_Blatt: 'PG24_Beinprothese', Reifegrad: 'TEST' }],
         sourceCount: 1,
         formCount: 1
       },
@@ -515,17 +515,17 @@ test('single mandatory payer form is auto-selected even without structured Himi 
       forms_for_pg: [{
         Formular_ID: 'FORM_005',
         Kasse: 'AOK Hessen',
-        PG: '04',
-        Versorgungsart: 'Bade- und Duschhilfen',
+        PG: '24',
+        Versorgungsart: 'Beinprothesen',
         Status: 'EXPLIZIT_PFLICHT',
         Aktion_Versorgungsassistent: 'AOK-Hessen-Bogen erzwingen.'
       }],
       himi_form_rules_for_himi: [],
       form_fields_for_pg: [{
-        Feldzeile_ID: 'GEN_04_goal',
-        Formular_ID: 'PG04_Bad_Dusche',
+        Feldzeile_ID: 'GEN_24_goal',
+        Formular_ID: 'PG24_Beinprothese',
         Formular_Typ: 'GENERISCH',
-        PG: '04',
+        PG: '24',
         Feldbezeichnung: 'Versorgungsziel',
         Datentyp: 'Langtext',
         Pflichtstatus: 'ja'
@@ -536,9 +536,9 @@ test('single mandatory payer form is auto-selected even without structured Himi 
   await page.goto('/index.html')
   await page.locator('#newSupplyOverviewButton').click()
   await page.locator('#careKasse').selectOption({ label: 'AOK Hessen' })
-  await page.locator('#carePg').selectOption('04')
-  await expect(page.locator('#careHimi')).toContainText('Badehilfe')
-  await page.locator('#careHimi').selectOption({ label: 'Badehilfe' })
+  await page.locator('#carePg').selectOption('24')
+  await expect(page.locator('#careHimi')).toContainText('Vor-/Mittelfußprothese')
+  await page.locator('#careHimi').selectOption({ label: 'Vor-/Mittelfußprothese' })
 
   await expect(page.locator('#careForm')).toHaveValue('FORM_005')
   await expect(page.locator('#ruleBox')).toContainText('EXPLIZIT_PFLICHT')
