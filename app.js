@@ -3655,6 +3655,21 @@ import { versorgungsziele } from './versorgungsziele.js'
       const groups=[...host.querySelectorAll('[data-profile-group-key]')]
       if(!controls.length && !signatures.length && !groups.length) return {ok:false,missing:['passender Profilerhebungsbogen / Felddefinitionen']}
 
+      // Region is a source-defined PG23 field, while the selected aid determines
+      // the anatomical measurement profile. Do not accept contradictory pairings.
+      if($('carePg').value==='23'){
+        const expectedRegion={
+          PG23_UE:'untere extremitat',
+          PG23_OE:'obere extremitat',
+          PG23_KORSETT:'rumpf wirbelsaule',
+          PG23_MIEDER:'rumpf wirbelsaule'
+        }[selectedHimiId()]
+        const chosenRegion=norm(values.GEN_23_region_24)
+        if(expectedRegion && chosenRegion && chosenRegion!==expectedRegion){
+          return {ok:false,missing:['Anwendungsregion widerspricht dem ausgewählten Hilfsmittel / Maßprofil']}
+        }
+      }
+
       const required=controls.filter(x=>x.dataset.required==='true')
       const emptyControls=required.filter(x=>{
         if(x.type==='checkbox') return !x.checked
