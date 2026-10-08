@@ -83,10 +83,6 @@ Deno.serve(async(req:Request)=>{
   const c=claims(token) as Record<string,unknown>;
   if(c.aal!=="aal2"||c.is_anonymous===true) return out(403,{error:"mfa_required"});
 
-  const member=await admin.schema("app_private").from("app_members")
-    .select("user_id").eq("user_id",user.id).eq("active",true).maybeSingle();
-  if(member.error||!member.data) return out(403,{error:"user_not_allowed"});
-
   let bodyText="";
   try{bodyText=await req.text()}catch{return out(400,{error:"invalid_body"})}
   if(bodyText.length>8192) return out(413,{error:"request_too_large"});
@@ -97,11 +93,15 @@ Deno.serve(async(req:Request)=>{
     return out(400,{error:"invalid_care_case_id"});
   }
 
-  const idx=await admin.schema("app_private").from("care_case_archives")
-    .select("*").eq("care_case_id",id).maybeSingle();
-  if(idx.error) return out(500,{error:"archive_index_read_failed"});
+  const ctx=await admin.rpc("archive_context_for_service",{
+    p_actor_id:user.id,p_care_case_id:id,p_require_admin:false,p_include_history:false
+  });
+  if(ctx.error){
+    if(ctx.error.code==="42501") return out(403,{error:"user_not_allowed"});
+    return out(500,{error:"archive_index_read_failed"});
+  }
+  const idx={data:ctx.data?.archive||null};
   if(!idx.data) return out(404,{error:"archive_not_found"});
-  if(idx.data.owner_user_id!==user.id) return out(403,{error:"only_owner_can_verify"});
   if(idx.data.status!=="READY") return out(409,{error:"archive_not_ready"});
   if(!idx.data.object_key||!idx.data.archive_sha256) return out(409,{error:"archive_index_incomplete"});
 
@@ -114,12 +114,11 @@ Deno.serve(async(req:Request)=>{
 
   const fail=async(code:string,detail:unknown,status=409)=>{
     const message=String(detail instanceof Error?detail.message:detail||code).slice(0,1000);
-    await admin.schema("app_private").from("care_case_archives").update({
-      verification_status:"FAILED",
-      verified_at:null,
-      verified_by:null,
-      verification_error:message
-    }).eq("archive_id",idx.data.archive_id);
+    const updated=await admin.rpc("archive_mutation_for_service",{
+      p_actor_id:user.id,p_care_case_id:id,p_action:"verify",
+      p_data:{result:"FAILED",verification_error:message}
+    });
+    if(updated.error) return out(500,{error:"archive_verification_state_failed"});
     return out(status,{ok:false,error:code});
   };
 
@@ -161,12 +160,11 @@ Deno.serve(async(req:Request)=>{
       if(await sha(bytes)!==expected) return await fail("archive_file_checksum_mismatch","archived file checksum mismatch");
     }
 
-    await admin.schema("app_private").from("care_case_archives").update({
-      verification_status:"VERIFIED",
-      verified_at:new Date().toISOString(),
-      verified_by:user.id,
-      verification_error:null
-    }).eq("archive_id",idx.data.archive_id);
+    const updated=await admin.rpc("archive_mutation_for_service",{
+      p_actor_id:user.id,p_care_case_id:id,p_action:"verify",
+      p_data:{result:"VERIFIED"}
+    });
+    if(updated.error) return out(500,{error:"archive_verification_state_failed"});
 
     return out(200,{
       ok:true,
