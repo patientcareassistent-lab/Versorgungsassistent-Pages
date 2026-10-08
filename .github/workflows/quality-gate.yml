@@ -1,0 +1,99 @@
+name: Cross-project quality and security gates
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - 'app.js'
+      - 'prescribers.js'
+      - 'index.html'
+      - 'frame-guard.js'
+      - 'supabase/**'
+      - '.github/workflows/quality-gate.yml'
+      - 'docs/QUALITY_GATE_V09.md'
+  schedule:
+    - cron: '17 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout without retained credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Reject likely embedded privileged secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git grep -I -n -E 'sb_secret_[A-Za-z0-9_-]{20,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}' -- ':!*.md' ':!.github/workflows/quality-gate.yml'; then
+            echo "::error::Possible credential found in tracked files"
+            exit 1
+          fi
+
+      - name: Block privileged Supabase keys in browser code
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -nEi 'service[_-]?role|sb_secret_|SUPABASE_SERVICE_ROLE_KEY' index.html app.js prescribers.js frame-guard.js; then
+            echo "::error::Privileged credential reference in public browser files"
+            exit 1
+          fi
+          if grep -nE "\\.schema\\(['\\\"](app_private|audit|quarantine)['\\\"]\\)" app.js prescribers.js; then
+            echo "::error::Direct private schema reference in frontend"
+            exit 1
+          fi
+
+      - name: Check SQL migration RLS and broad policies
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, sys
+          errors = []
+          for path in Path("supabase/migrations").glob("*.sql"):
+              sql = path.read_text(encoding="utf-8")
+              lowered = sql.lower()
+              for schema, table in re.findall(
+                  r'create\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?["\']?([a-z0-9_]+)["\']?\\.["\']?([a-z0-9_]+)["\']?',
+                  sql, re.I
+              ):
+                  if schema.lower() not in {"public","app_private","audit","quarantine"}:
+                      continue
+                  pattern = rf'alter\\s+table\\s+(?:if\\s+exists\\s+)?["\']?{re.escape(schema)}["\']?\\.["\']?{re.escape(table)}["\']?\\s+enable\\s+row\\s+level\\s+security'
+                  if not re.search(pattern, lowered, re.I):
+                      errors.append(f"{path}: {schema}.{table} needs explicit RLS enable")
+              if re.search(r'\\b(using|with\\s+check)\\s*\\(\\s*true\\s*\\)', sql, re.I):
+                  errors.append(f"{path}: broad unconditional policy requires review")
+          if errors:
+              print("\n".join(errors))
+              sys.exit(1)
+          print("Migration static RLS gate passed")
+
+      - name: Node syntax checks
+        run: |
+          node --check app.js
+          node --check prescribers.js
+          node --check frame-guard.js
+          node --check whispercpp/runtime.js
+          node --check whispercpp/worker.js
+
+      - name: Validate release docs and pull request checklist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s docs/QUALITY_GATE_V09.md
+          test -s .github/PULL_REQUEST_TEMPLATE.md
+          test -s .github/workflows/pr-validate.yml
+          test -s .github/workflows/supabase-security.yml
