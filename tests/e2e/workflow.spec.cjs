@@ -347,6 +347,7 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
         { Feldzeile_ID: 'patient_name', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Name / Vorname', Datentyp: 'Text', Pflichtstatus: 'ja' },
         { Feldzeile_ID: 'patient_dob', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Geburtsdatum', Datentyp: 'Datum', Pflichtstatus: 'ja' },
         { Feldzeile_ID: 'patient_insured', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Versichertennummer', Datentyp: 'Text', Pflichtstatus: 'ja' },
+        { Feldzeile_ID: 'patient_kv', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'KV-Nummer', Datentyp: 'Text', Pflichtstatus: 'nein' },
         { Feldzeile_ID: 'free_selection', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Freie Auswahl ohne Vorgaben', Datentyp: 'Auswahl', Pflichtstatus: 'nein' }
       ]
     }
@@ -372,6 +373,7 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
   await expect(page.locator('#fieldList label').filter({ hasText: 'Name / Vorname' }).locator('input')).toHaveValue('Muster, Anna')
   await expect(page.locator('#fieldList label').filter({ hasText: 'Geburtsdatum' }).locator('input')).toHaveValue('1980-01-02')
   await expect(page.locator('#fieldList label').filter({ hasText: 'Versichertennummer' }).locator('input')).toHaveValue('TEST')
+  await expect(page.locator('#fieldList label').filter({ hasText: 'KV-Nummer' }).locator('input')).toHaveValue('TEST')
   await expect(page.locator('#fieldList label').filter({ hasText: 'Freie Auswahl ohne Vorgaben' }).locator('input')).toHaveCount(1)
 })
 
@@ -485,4 +487,8 @@ test('multi-PG contract forms remain discoverable for a selected product group',
   await page.locator('#careForm').selectOption('FORM_MULTI')
   await expect(page.locator('#ruleBox')).toContainText('Voraufnahme')
   await expect(page.locator('#fieldInfo')).toContainText('allgemeine Voraufnahme')
+  await expect.poll(async () => page.evaluate(() => {
+    const rows=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
+    return rows[0]?.payload?.formId||''
+  }), { timeout: 10000 }).toBe('FORM_MULTI')
 })
