@@ -125,6 +125,50 @@ async function lookupPrescriptionPrescriber(source='OCR'){
   }
 }
 
+async function fileToBase64(file){
+  const bytes=new Uint8Array(await file.arrayBuffer());
+  let binary='';
+  const step=0x8000;
+  for(let i=0;i<bytes.length;i+=step){
+    binary+=String.fromCharCode(...bytes.subarray(i,Math.min(bytes.length,i+step)));
+  }
+  return btoa(binary);
+}
+
+async function importInitialPrescriberWorkbook(file,button){
+  const state=byId('prescriberDirectoryState');
+  if(!file) return;
+  if(file.size>6*1024*1024){
+    state.className='status-card open prescriber-directory-state';
+    state.textContent='Die Verordnerdatei ist größer als 6 MB.';
+    return;
+  }
+  const old=button.textContent;
+  button.disabled=true;
+  button.textContent='Verordner werden importiert …';
+  state.className='status-card open prescriber-directory-state';
+  state.textContent='Verordnerliste wird einmalig eingelesen und geschützt in der Fachdatenbank abgelegt …';
+  try{
+    const base64=await fileToBase64(file);
+    const response=await prescriberClient.functions.invoke('import-prescribers',{body:{file_base64:base64}});
+    if(response.error) throw response.error;
+    if(!response.data?.ok) throw new Error(response.data?.error||'Import wurde nicht bestätigt.');
+    const count=Number(response.data.imported_rows)||0;
+    const countEl=byId('prescriberDirectoryCount');
+    if(countEl) countEl.textContent=count.toLocaleString('de-DE')+' Verordner';
+    const importBox=byId('prescriberInitialImport');
+    if(importBox) importBox.remove();
+    state.className='status-card ready prescriber-directory-state';
+    state.textContent=count.toLocaleString('de-DE')+' Verordner wurden fest hinterlegt. OCR-Matching über LANR/BSNR ist aktiv.';
+  }catch(err){
+    state.className='status-card open prescriber-directory-state';
+    state.textContent='Import fehlgeschlagen: '+(err?.message||String(err));
+  }finally{
+    button.disabled=false;
+    button.textContent=old;
+  }
+}
+
 function installDirectoryUi(){
   const rxYesPanel=byId('rxYesPanel');
   if(!rxYesPanel || byId('prescriberDirectorySearch')) return;
@@ -192,7 +236,30 @@ function installDirectoryUi(){
   }
 
   prescriberClient.rpc('prescriber_directory_count').then(({data,error})=>{
-    if(!error && Number.isFinite(Number(data))) count.textContent=Number(data).toLocaleString('de-DE')+' Verordner';
+    if(error || !Number.isFinite(Number(data))) return;
+    const n=Number(data);
+    count.textContent=n.toLocaleString('de-DE')+' Verordner';
+    if(n===0){
+      const importBox=document.createElement('div');
+      importBox.id='prescriberInitialImport';
+      importBox.className='prescriber-import';
+      const info=document.createElement('small');
+      info.className='muted';
+      info.textContent='Verzeichnis ist noch leer. Einmalig die hinterlegte Verordner.xlsx einlesen.';
+      const input=document.createElement('input');
+      input.type='file';
+      input.accept='.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='secondary';
+      button.textContent='Verordnerliste importieren';
+      button.disabled=true;
+      let selected=null;
+      input.addEventListener('change',()=>{selected=input.files?.[0]||null;button.disabled=!selected;});
+      button.addEventListener('click',()=>importInitialPrescriberWorkbook(selected,button));
+      importBox.append(info,input,button);
+      section.append(importBox);
+    }
   });
 }
 
