@@ -37,6 +37,14 @@ export function validateArchiveManifest(manifest,index){
     }
     if(!/^care-cases\/[0-9a-f-]{36}\/[0-9a-f-]{36}\/files\/(repair|labels)\/[a-zA-Z0-9][a-zA-Z0-9._-]*$/i.test(file.target_key)
       ||file.target_key.includes('..')) throw new Error('archive_file_path_invalid');
+    const kind=file.target_key.includes('/files/repair/')?'repair':'labels';
+    const sourcePrefix=index.owner_user_id+'/'+index.care_case_id+'/'+kind+'/';
+    if(typeof file.source_path!=='string'||!file.source_path.startsWith(sourcePrefix)
+      ||file.source_path.includes('..')
+      ||file.source_path.split('/').length!==4) throw new Error('archive_source_path_invalid');
+    if(file.source_bucket!=='repair-photos-private') throw new Error('archive_source_bucket_invalid');
+    if(!Number.isSafeInteger(file.bytes)||file.bytes<1||file.bytes>3*1024*1024)
+      throw new Error('archive_file_size_invalid');
     if(!HASH.test(file.sha256||'')) throw new Error('archive_file_hash_invalid');
     if(keys.has(file.target_key)) throw new Error('archive_file_duplicate');
     keys.add(file.target_key);
