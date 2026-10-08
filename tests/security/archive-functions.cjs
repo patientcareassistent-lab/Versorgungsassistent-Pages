@@ -9,21 +9,28 @@ function read(rel) {
 const archive = read('supabase/functions/archive-care-case/index.ts')
 const verify = read('supabase/functions/verify-care-case-archive/index.ts')
 const remove = read('supabase/functions/delete-care-case-archive/index.ts')
+const restore = read('supabase/functions/restore-care-case/index.ts')
+const archiveMutationMigration = read('supabase/migrations/20261008190000_archive_mutation_service_rpc.sql')
+const archiveRestoreMigration = read('supabase/migrations/20261008191000_archive_restore_service_rpc.sql')
+
 const archiveList = read('supabase/functions/list-care-case-archives/index.ts')
 const archiveListMigration = read('supabase/migrations/20261008151700_archive_overview_service_rpc.sql')
 
-for (const [name, source] of [['archive', archive], ['verify', verify], ['delete', remove]]) {
-  assert.match(source, /npm:@supabase\/supabase-js@2\.57\.4/, name + ': Supabase client must be pinned')
-  assert.match(source, /aal[^\n]{0,80}aal2|aal2[^\n]{0,80}aal/, name + ': MFA/AAL2 gate missing')
-  assert.match(source, /app_members/, name + ': active-member gate missing')
+for (const [name, source] of [['archive', archive], ['verify', verify], ['delete', remove],['restore',restore]]) {
+  assert.match(source, /npm:@supabase\\/supabase-js@2\\.57\\.4/, name + ': Supabase client must be pinned')
+  assert.match(source, /aal[^\\n]{0,80}aal2|aal2[^\\n]{0,80}aal/, name + ': MFA/AAL2 gate missing')
+  assert.match(source, /archive_context_for_service/, name + ': server-only context RPC missing')
   assert.match(source, /origin_not_allowed/, name + ': origin gate missing')
-  assert.match(source, /patientcareassistent-lab\.github\.io/, name + ': production origin missing')
-  assert.doesNotMatch(source, /console\.(log|debug)\(/, name + ': debug logging is not allowed')
+  assert.match(source, /patientcareassistent-lab\\.github\\.io/, name + ': production origin missing')
+  assert.doesNotMatch(source, /admin\\.schema\\(["']app_private["']\\)/, name + ': private schema is not available via PostgREST')
+  assert.doesNotMatch(source, /only_owner_can_(archive|verify|restore)/,name + ': obsolete owner-only gate')
+  assert.doesNotMatch(source, /console\\.(log|debug)\\(/, name + ': debug logging is not allowed')
 }
-
 assert.match(archive, /versorgungsassistent-archive-gateway\.patientcare-assistent-archive\.workers\.dev/, 'archive: fixed archive gateway missing')
 assert.doesNotMatch(archive, /access-control-allow-origin": "\*"/, 'archive: wildcard CORS is not allowed')
-assert.match(archive, /only_owner_can_archive/, 'archive: owner-only gate missing')
+assert.match(archive, /archive_mutation_for_service/, 'archive: atomic mutation gateway missing')
+assert.match(archive, /archive_id:archiveId/, 'archive: manifest identifier missing')
+assert.match(archive, /caseId.*archiveId|careCaseId.*archiveId/, 'archive: canonical key missing')
 assert.match(archive, /care_case_not_complete/, 'archive: completion gate missing')
 assert.match(archive, /invalid_photo_path/, 'archive: photo path validation missing')
 assert.match(archive, /verification_status:"VERIFIED"/, 'archive: verified gateway upload state missing')
@@ -37,7 +44,8 @@ assert.match(archive, /Number\(row\.wizard_index\) < 9/, 'archive: v0.9 completi
 assert.doesNotMatch(archive, /patient_first_name|patient_last_name|case_number:/, 'archive: personal metadata must not be duplicated into the archive index')
 
 assert.match(verify, /npm:@aws-sdk\/client-s3@3\.1147\.0/, 'verify: AWS SDK must be pinned')
-assert.match(verify, /only_owner_can_verify/, 'verify: owner-only gate missing')
+assert.match(verify, /archive_mutation_for_service/, 'verify: status gateway missing')
+assert.match(verify, /validateArchiveManifest/, 'verify: manifest validator missing')
 assert.match(verify, /archive_checksum_mismatch/, 'verify: main checksum gate missing')
 assert.match(verify, /archive_file_checksum_mismatch/, 'verify: file checksum gate missing')
 assert.match(verify, /verification_status:"VERIFIED"/, 'verify: verified state missing')
@@ -47,7 +55,22 @@ assert.match(remove, /admin_required/, 'delete: admin role gate missing')
 assert.match(remove, /legal_hold_active/, 'delete: legal-hold gate missing')
 assert.match(remove, /retention_not_due/, 'delete: retention gate missing')
 assert.match(remove, /archive_not_verified/, 'delete: verified-archive gate missing')
-assert.match(remove, /care_case_archive_delete_log/, 'delete: deletion audit log missing')
+assert.match(remove, /p_action:"delete_begin"/, 'delete: pre-delete intent gate missing')
+assert.match(remove, /p_action:"delete_finalize"/, 'delete: audited finalization gate missing')
+assert.match(remove, /validateArchiveManifest/, 'delete: manifest validation missing')
+assert.match(restore, /archive_restore_for_service/, 'restore: atomic restored history gateway missing')
+assert.match(restore, /validateArchiveManifest/, 'restore: manifest validator missing')
+assert.match(restore, /restore_invalid_source_path/, 'restore: photo source path ownership missing')
+
+for(const [name, migration] of [['mutation',archiveMutationMigration],['restore',archiveRestoreMigration]]){
+  assert.match(migration, /security definer/i,name+': server RPC must be security definer')
+  assert.match(migration, /revoke all on function public\\.archive_[\\s\\S]*from public,\\s*anon,\\s*authenticated/i,name+': block frontend EXECUTE')
+  assert.match(migration, /grant execute on function public\\.archive_[\\s\\S]*to service_role/i,name+': service-only EXECUTE')
+}
+assert.match(archiveMutationMigration, /care_case_archive_delete_attempts[\\s\\S]*enable row level security/i,'delete attempts: RLS required')
+assert.match(archiveMutationMigration, /delete_begin[\\s\\S]*delete_finalize/i,'delete gateway: enforce intent before finalization')
+assert.match(archiveRestoreMigration, /archive_restore_preserve_metadata/,'restore: provenance trigger required')
+
 
 
 const preMfaMigration = read('supabase/migrations/20261007204438_move_pre_mfa_membership_privilege_to_private_helper.sql')
