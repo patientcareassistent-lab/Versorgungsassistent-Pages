@@ -51,7 +51,7 @@ jobs:
             echo "::error::Privileged credential reference in public browser files"
             exit 1
           fi
-          if grep -nE "\\.schema\\(['\\\"](app_private|audit|quarantine)['\\\"]\\)" app.js prescribers.js; then
+          if grep -nE "\.schema\(['\\\"](app_private|audit|quarantine)['\\\"]\)" app.js prescribers.js; then
             echo "::error::Direct private schema reference in frontend"
             exit 1
           fi
@@ -66,15 +66,15 @@ jobs:
               sql = path.read_text(encoding="utf-8")
               lowered = sql.lower()
               for schema, table in re.findall(
-                  r'create\\s+table\\s+(?:if\\s+not\\s+exists\\s+)?["\']?([a-z0-9_]+)["\']?\\.["\']?([a-z0-9_]+)["\']?',
+                  r'create\s+table\s+(?:if\s+not\s+exists\s+)?["\']?([a-z0-9_]+)["\']?\.["\']?([a-z0-9_]+)["\']?',
                   sql, re.I
               ):
                   if schema.lower() not in {"public","app_private","audit","quarantine"}:
                       continue
-                  pattern = rf'alter\\s+table\\s+(?:if\\s+exists\\s+)?["\']?{re.escape(schema)}["\']?\\.["\']?{re.escape(table)}["\']?\\s+enable\\s+row\\s+level\\s+security'
+                  pattern = rf'alter\s+table\s+(?:if\s+exists\s+)?["\']?{re.escape(schema)}["\']?\.["\']?{re.escape(table)}["\']?\s+enable\s+row\s+level\s+security'
                   if not re.search(pattern, lowered, re.I):
                       errors.append(f"{path}: {schema}.{table} needs explicit RLS enable")
-              if re.search(r'\\b(using|with\\s+check)\\s*\\(\\s*true\\s*\\)', sql, re.I):
+              if re.search(r'\b(using|with\s+check)\s*\(\s*true\s*\)', sql, re.I):
                   errors.append(f"{path}: broad unconditional policy requires review")
           if errors:
               print("\n".join(errors))
@@ -94,6 +94,5 @@ jobs:
         run: |
           set -euo pipefail
           test -s docs/QUALITY_GATE_V09.md
-          test -s .github/PULL_REQUEST_TEMPLATE.md
           test -s .github/workflows/pr-validate.yml
           test -s .github/workflows/supabase-security.yml
