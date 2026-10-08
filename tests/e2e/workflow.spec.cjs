@@ -86,7 +86,7 @@ test('oversized prescription files are rejected without leaving the browser flow
 })
 
 
-test('team-visible foreign supplies open read-only instead of failing on save', async ({ page }) => {
+test('approved staff can edit and save supplies created by another employee', async ({ page }) => {
   await openSignedInApp(page)
 
   await page.evaluate(() => {
@@ -116,15 +116,25 @@ test('team-visible foreign supplies open read-only instead of failing on save', 
   await expect(page.locator('#supplyOverviewBody')).toContainText('Fall')
 
   await page.locator('#supplyOverviewBody [data-supply-id]').first().click()
-  await expect(page.locator('#readOnlyBanner')).toBeVisible()
-  await expect(page.locator('[data-case-field="patientFirstName"]')).toBeDisabled()
-  await expect(page.locator('#careKasse')).toBeDisabled()
-  await expect(page.locator('#clearButton')).toBeDisabled()
-  await expect(page.locator('#archiveSupplyButton')).toBeDisabled()
+  await expect(page.locator('#readOnlyBanner')).toHaveCount(0)
+  await expect(page.locator('[data-case-field="patientFirstName"]')).toBeEnabled()
+  await expect(page.locator('#careKasse')).toBeEnabled()
+  await expect(page.locator('#clearButton')).toBeEnabled()
   await expect(page.locator('#printButton')).toBeEnabled()
-  await expect(page.locator('.wizard-step[data-step="1"]')).toBeEnabled()
-  await page.locator('.wizard-step[data-step="1"]').click()
-  await expect(page.locator('.wizard-panel[data-panel="1"]')).toBeVisible()
+  await page.locator('[data-case-field="patientFirstName"]').fill('Gemeinsam')
+  await expect.poll(async()=>{
+    return page.evaluate(()=>{
+      const cases=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
+      return cases.find(item=>item.id==='22222222-2222-4222-8222-222222222222')?.payload?.patientFirstName
+    })
+  }).toBe('Gemeinsam')
+  const saved=await page.evaluate(()=>{
+    const cases=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
+    return cases.find(item=>item.id==='22222222-2222-4222-8222-222222222222')
+  })
+  expect(saved.owner_user_id).toBe('22222222-2222-4222-8222-222222222222')
+  await page.reload()
+  await expect(page.locator('#supplyOverviewBody')).toContainText('Gemeinsam')
 })
 
 
