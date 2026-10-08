@@ -21,7 +21,7 @@ function originAllowed(req:Request) {
   const origin = req.headers.get("origin") || "";
   return !origin || allowedOrigins().has(origin);
 }
-function corsHeaders(req:Request) {
+function corsHeaders(req:Request):Record<string,string>{
   const origin = req.headers.get("origin") || "";
   if (!origin || !originAllowed(req)) return {};
   return {
@@ -44,7 +44,7 @@ function jwtClaims(token:string) {
 }
 
 async function sha256Hex(bytes:Uint8Array) {
-  const d = await crypto.subtle.digest("SHA-256", bytes);
+  const d = await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>);
   return [...new Uint8Array(d)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
@@ -143,7 +143,7 @@ async function verifiedPut(token:string, apiKey:string, key:string, bytes:Uint8A
       "x-archive-kind":kind,
       "x-source-path":sourcePath || ""
     },
-    body:bytes
+    body:bytes as Uint8Array<ArrayBuffer>
   });
   const uploadData = await upload.json().catch(() => ({}));
   if (!upload.ok || !uploadData?.ok) {
