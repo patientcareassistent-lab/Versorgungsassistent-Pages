@@ -135,8 +135,8 @@ async function fileToBase64(file){
   return btoa(binary);
 }
 
-async function importInitialPrescriberWorkbook(file,button){
-  const state=byId('prescriberDirectoryState');
+async function importInitialPrescriberWorkbook(file,button,feedback){
+  const state=feedback||byId('prescriberDirectoryState');
   if(!file) return;
   if(file.size>6*1024*1024){
     state.className='status-card open prescriber-directory-state';
@@ -158,6 +158,8 @@ async function importInitialPrescriberWorkbook(file,button){
     if(countEl) countEl.textContent=count.toLocaleString('de-DE')+' Verordner';
     const importBox=byId('prescriberInitialImport');
     if(importBox) importBox.remove();
+    byId('prescriberInitialImportOverview')?.remove();
+    byId('prescriberDirectoryCount') && (byId('prescriberDirectoryCount').textContent=count.toLocaleString('de-DE')+' Verordner');
     state.className='status-card ready prescriber-directory-state';
     state.textContent=count.toLocaleString('de-DE')+' Verordner wurden fest hinterlegt. OCR-Matching über LANR/BSNR ist aktiv.';
   }catch(err){
@@ -167,6 +169,65 @@ async function importInitialPrescriberWorkbook(file,button){
     button.disabled=false;
     button.textContent=old;
   }
+}
+
+// One-time administrative data load belongs on the order overview, not
+// inside a patient prescription. Show it only while the directory is empty.
+function installOverviewImportUi(){
+  const view=byId('supplyOverviewView');
+  const grid=view?.querySelector('.page-grid');
+  if(!view || !grid) return;
+  let checking=false;
+  let importBusy=false;
+  const refresh=async()=>{
+    if(checking || importBusy || view.classList.contains('hidden')) return;
+    checking=true;
+    try{
+      const {data,error}=await prescriberClient.rpc('prescriber_directory_count');
+      if(error) return;
+      const count=Number(data);
+      if(!Number.isFinite(count)) return;
+      if(count>0){byId('prescriberInitialImportOverview')?.remove();return;}
+      if(byId('prescriberInitialImportOverview')) return;
+
+      const box=document.createElement('section');
+      box.id='prescriberInitialImportOverview';
+      box.className='card span2 prescriber-import-overview no-print';
+      const title=document.createElement('h3');
+      title.textContent='Verordnerverzeichnis einmalig einlesen';
+      const desc=document.createElement('p');
+      desc.textContent='Das Verzeichnis ist noch leer. Die Excel-Datei wird ausschließlich über die geschützte Supabase-Importfunktion verarbeitet, nicht über GitHub Pages veröffentlicht.';
+      const row=document.createElement('div');
+      row.className='prescriber-import';
+      const picker=document.createElement('input');
+      picker.type='file';
+      picker.accept='.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel';
+      picker.setAttribute('aria-label','Verordner-Excel-Datei auswählen');
+      const button=document.createElement('button');
+      button.type='button';
+      button.className='secondary';
+      button.textContent='Verordnerdatei importieren';
+      button.disabled=true;
+      const state=document.createElement('div');
+      state.id='prescriberOverviewImportState';
+      state.className='status-card open prescriber-directory-state';
+      state.textContent='Datei auswählen; Import nur bei leerem Verzeichnis möglich.';
+      picker.addEventListener('change',()=>{button.disabled=!picker.files?.length;});
+      button.addEventListener('click',async()=>{
+        const selected=picker.files?.[0];
+        if(!selected)return;
+        importBusy=true;
+        try{await importInitialPrescriberWorkbook(selected,button,state);}
+        finally{importBusy=false;}
+      });
+      row.append(picker,button,state);
+      box.append(title,desc,row);
+      grid.prepend(box);
+    }finally{checking=false;}
+  };
+  const observer=new MutationObserver(()=>{void refresh();});
+  observer.observe(view,{attributes:true,attributeFilter:['class']});
+  void refresh();
 }
 
 function installDirectoryUi(){
@@ -263,5 +324,9 @@ function installDirectoryUi(){
   });
 }
 
-if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',installDirectoryUi);
-else installDirectoryUi();
+function installPrescriberFeatures(){
+  installDirectoryUi();
+  installOverviewImportUi();
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',installPrescriberFeatures);
+else installPrescriberFeatures();
