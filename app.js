@@ -3054,7 +3054,6 @@
       if(label==='nachname' || label==='name') return values.patientLastName||''
       if(['versichertennummer','kv-nummer','kv.-nr.'].includes(label)) return values.insuredNo||''
       if(label==='geburtsdatum') return values.patientBirthDate||''
-      if(id.includes('_supply_type_') && label==='versorgungsart') return values.supplyType||''
       if(label==='seite' || label==='betroffene seite') return values.side||''
       return ''
     }
