@@ -3,6 +3,27 @@
 -- is_anonymous=false and trusted origin before calling this service-only RPC.
 -- The atomic completion deletes the active copy ONLY once the archive manifest
 -- has been uploaded and read back with matching SHA-256 and size.
+-- Durable audit for destructive R2 delete attempts. Completed deletions remain in
+-- the immutable care_case_archive_delete_log with objects_deleted >= 1.
+create table if not exists app_private.care_case_archive_delete_attempts(
+  attempt_id uuid primary key default gen_random_uuid(),
+  care_case_id uuid not null,
+  archive_id uuid not null,
+  executed_by uuid not null,
+  created_at timestamptz not null default now(),
+  state text not null default 'PENDING'
+    check (state in ('PENDING','FAILED','COMPLETED')),
+  objects_deleted integer not null default 0
+    check (objects_deleted between 0 and 15),
+  note text not null check (length(btrim(note)) between 12 and 500),
+  error_message text
+);
+alter table app_private.care_case_archive_delete_attempts enable row level security;
+revoke all on table app_private.care_case_archive_delete_attempts
+  from public,anon,authenticated;
+grant select,insert,update on table app_private.care_case_archive_delete_attempts
+  to service_role;
+
 create or replace function public.archive_mutation_for_service(
   p_actor_id uuid, p_care_case_id uuid, p_action text,
   p_data jsonb default '{}'::jsonb
@@ -95,30 +116,31 @@ begin
       if length(coalesce(v_error,'')) not between 12 and 500 then
         raise exception 'deletion_documentation_required' using errcode='22023';
       end if;
-      insert into app_private.care_case_archive_delete_log(
-        care_case_id,archive_id,executed_by,deleted_objects,note
-      ) values(p_care_case_id,v_idx.archive_id,p_actor_id,0,'INTENT: '||v_error);
+      insert into app_private.care_case_archive_delete_attempts(
+        care_case_id,archive_id,executed_by,note
+      ) values(p_care_case_id,v_idx.archive_id,p_actor_id,v_error);
       return jsonb_build_object('ok',true,'archive_id',v_idx.archive_id,
         'care_case_id',p_care_case_id,'delete_prepared',true);
     end if;
     if not exists (
-      select 1 from app_private.care_case_archive_delete_log d
+      select 1 from app_private.care_case_archive_delete_attempts d
       where d.care_case_id=p_care_case_id
         and d.archive_id=v_idx.archive_id
         and d.executed_by=p_actor_id
-        and d.note like 'INTENT:%'
-        and d.executed_at>now()-interval '1 hour'
+        and d.state='PENDING'
+        and d.created_at>now()-interval '1 hour'
     ) then
       raise exception 'recent_deletion_intent_required' using errcode='23514';
     end if;
     if p_action='delete_fail' then
       v_error:=left(coalesce(p_data->>'error','archive_object_delete_failed'),500);
-      update app_private.care_case_archive_delete_log d
-      set note='FAILED: '||v_error
-      where d.id=(
-        select max(d2.id) from app_private.care_case_archive_delete_log d2
+      update app_private.care_case_archive_delete_attempts d
+      set state='FAILED',error_message=v_error
+      where d.attempt_id=(
+        select d2.attempt_id from app_private.care_case_archive_delete_attempts d2
         where d2.care_case_id=p_care_case_id and d2.archive_id=v_idx.archive_id
-          and d2.executed_by=p_actor_id and d2.note like 'INTENT:%'
+          and d2.executed_by=p_actor_id and d2.state='PENDING'
+        order by d2.created_at desc limit 1
       );
       if coalesce((p_data->>'external_objects_deleted')::boolean,false) then
         update app_private.care_case_archives set
@@ -132,13 +154,21 @@ begin
     if v_photos is null or v_photos not between 1 and 15 then
       raise exception 'invalid_deleted_object_count' using errcode='22023';
     end if;
-    update app_private.care_case_archive_delete_log d
-    set deleted_objects=v_photos,note='COMPLETED: '||substring(d.note from 9)
-    where d.id=(
-      select max(d2.id) from app_private.care_case_archive_delete_log d2
+    update app_private.care_case_archive_delete_attempts d
+    set state='COMPLETED',objects_deleted=v_photos
+    where d.attempt_id=(
+      select d2.attempt_id from app_private.care_case_archive_delete_attempts d2
       where d2.care_case_id=p_care_case_id and d2.archive_id=v_idx.archive_id
-        and d2.executed_by=p_actor_id and d2.note like 'INTENT:%'
+        and d2.executed_by=p_actor_id and d2.state='PENDING'
+      order by d2.created_at desc limit 1
     );
+    insert into app_private.care_case_archive_delete_log(
+      care_case_id,archive_id,executed_by,deleted_objects,note
+    ) select p_care_case_id,v_idx.archive_id,p_actor_id,v_photos,d.note
+    from app_private.care_case_archive_delete_attempts d
+    where d.care_case_id=p_care_case_id and d.archive_id=v_idx.archive_id
+      and d.executed_by=p_actor_id and d.state='COMPLETED'
+    order by d.created_at desc limit 1;
     delete from app_private.care_case_archives where archive_id=v_idx.archive_id;
     return jsonb_build_object('ok',true,'archive_id',v_idx.archive_id,
       'care_case_id',p_care_case_id,'deleted_objects',v_photos);
