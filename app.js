@@ -4610,11 +4610,15 @@ import { versorgungsziele } from './versorgungsziele.js'
       button.classList.remove('hidden')
       button.removeAttribute('aria-hidden')
       button.removeAttribute('tabindex')
-      const editable=supplyHasEditableContext()
-      const missing=editable?archiveMissingSteps():['bearbeitbarer Vorgang']
-      button.disabled=!editable || missing.length>0
-      button.title=!editable
-        ? 'Archivierung erfordert eine freigeschaltete Mitarbeitersitzung.'
+      // Archive Edge Functions still enforce the original owner and are being
+      // migrated separately (P0 / issue #12). Do not expose a broken action
+      // to the team until the server also supports shared archive operations.
+      const archiveSupported=supplyHasEditableContext()
+        && activeSupplyRecord()?.ownerUserId===currentSession?.user?.id
+      const missing=archiveSupported?archiveMissingSteps():['Archiv-Backend für Teamzugriff ausstehend']
+      button.disabled=!archiveSupported || missing.length>0
+      button.title=!archiveSupported
+        ? 'Archivierung fremder Vorgänge wird serverseitig noch umgestellt.'
         : missing.length
           ? 'Archivierung nach vollständiger v0.9-Dokumentation: '+missing.slice(0,3).join(' · ')
           : 'Vollständig dokumentierten Vorgang geschützt archivieren.'
@@ -4641,6 +4645,10 @@ import { versorgungsziele } from './versorgungsziele.js'
 
     async function archiveActiveSupply(){
       if(!supplyHasEditableContext()) return
+      if(activeSupplyRecord()?.ownerUserId!==currentSession?.user?.id){
+        showWizardError('Die Archivierung durch andere Teammitglieder ist serverseitig noch nicht freigeschaltet.')
+        return
+      }
       const missing=archiveMissingSteps()
       if(missing.length){
         showWizardError('Archivierung ist erst nach vollständiger v0.9-Dokumentation möglich:',missing)
