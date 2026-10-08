@@ -14,6 +14,8 @@ async function prepareNewSupply(page) {
 
   await page.locator('[data-case-field="patientFirstName"]').fill('Ada')
   await page.locator('[data-case-field="patientLastName"]').fill('Lovelace')
+  await page.locator('[data-case-field="patientBirthDate"]').fill('1980-01-02')
+  await page.locator('.wizard-panel[data-panel="0"] [data-case-field="insuredNo"]').fill('TEST')
   await page.locator('#careKasse').selectOption({ label: 'Privat' })
   await page.locator('#carePg').selectOption('10')
 
