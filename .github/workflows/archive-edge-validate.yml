@@ -30,7 +30,7 @@ jobs:
       - name: Type-check archive Edge Functions (no deployment)
         run: |
           set -euo pipefail
-          deno check \
+          deno check --node-modules-dir=auto \
             supabase/functions/archive-care-case/index.ts \
             supabase/functions/verify-care-case-archive/index.ts \
             supabase/functions/restore-care-case/index.ts \
