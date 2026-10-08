@@ -4,6 +4,10 @@ Stand: 07.10.2026
 
 ## Ergebnis
 
+## Versionsumfang 0.9
+
+Version 0.9 dient im ersten Schritt der digitalen Ablösung der papierhaften Anamnese/Profilerhebung. Sichtbar bleiben die fachliche Aufnahme, Rezept-, Profil-, Maß- und Versorgungsdokumentation. Abrechnungsfelder, Kalkulationsbausteine, Preisansichten und die externe Archivierungsaktion sind in der Benutzeroberfläche bewusst ausgeblendet. Die bereits gehärteten Backend-Bausteine für spätere Versionen bleiben technisch vorhanden, sind aber nicht Teil des 0.9-Anwenderumfangs.
+
 Der Versorgungsassistent ist als statische GitHub-Pages-Anwendung mit Supabase-Backend vollständig webbasiert. Für den laufenden technischen Umfang ist die Architektur mit GitHub Pages und Supabase Free kompatibel. Der aktuelle Stand wurde nach der Team-Sichtbarkeitsänderung erneut technisch tief geprüft und gehärtet.
 
 ## Verifizierter Betriebsstand

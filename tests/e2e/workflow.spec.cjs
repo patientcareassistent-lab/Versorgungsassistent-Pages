@@ -118,7 +118,7 @@ test('team-visible foreign supplies open read-only instead of failing on save', 
   await expect(page.locator('[data-case-field="patientFirstName"]')).toBeDisabled()
   await expect(page.locator('#careKasse')).toBeDisabled()
   await expect(page.locator('#clearButton')).toBeDisabled()
-  await expect(page.locator('#archiveSupplyButton')).toBeDisabled()
+  await expect(page.locator('#archiveSupplyButton')).toBeHidden()
   await expect(page.locator('#printButton')).toBeEnabled()
   await expect(page.locator('.wizard-step[data-step="1"]')).toBeEnabled()
   await page.locator('.wizard-step[data-step="1"]').click()
@@ -282,56 +282,16 @@ test('failed photo-reference removal keeps the private object and case reference
 })
 
 
-test('archive action stays disabled until every applicable step is complete', async ({ page }) => {
+test('version 0.9 hides billing, calculation and external archiving from the user interface', async ({ page }) => {
   await openSignedInApp(page)
-  await prepareNewSupply(page)
-  await expect(page.locator('#archiveSupplyButton')).toBeDisabled()
-})
 
-test('completed owner repair case becomes eligible for protected archiving', async ({ page }) => {
-  await installSupabaseMock(page, { mode: 'signed-in' })
-  await page.addInitScript(() => {
-    localStorage.setItem('va:e2e:mock-care-cases', JSON.stringify([{
-      id: '55555555-5555-4555-8555-555555555555',
-      owner_user_id: '11111111-1111-4111-8111-111111111111',
-      last_modified_by: '11111111-1111-4111-8111-111111111111',
-      created_at: '2026-10-07T10:00:00.000Z',
-      updated_at: '2026-10-07T11:00:00.000Z',
-      wizard_index: 10,
-      insurer: 'Privat',
-      product_group: '10',
-      himi_id: 'Gehstock / Unterarmgehstütze',
-      himi: 'Gehstock / Unterarmgehstütze',
-      status: 'Abschluss offen',
-      schema_version: 1,
-      payload: {
-        patientFirstName: 'Archiv',
-        patientLastName: 'Bereit',
-        caseKind: 'Reparatur',
-        supplyType: 'Reparatur',
-        rxPresent: 'Nein',
-        repairSicHimiId: 'SIC-1',
-        repairDate: '2026-10-07',
-        repairTechnician: 'E2E',
-        repairPreperformed: 'Ja',
-        repairComplaint: 'Test',
-        repairWork: 'Test',
-        repairFunctionTest: 'Ja',
-        repairUsable: 'Ja',
-        repairCompleted: 'Ja',
-        quotePositions: 'Testposition',
-        approvalState: 'Nicht genehmigungspflichtig',
-        deliveryDate: '2026-10-07',
-        deliveryUsable: true,
-        deliveryInstruction: true,
-        deliveryReceipt: true,
-        billingState: 'Abgerechnet'
-      }
-    }]))
-  })
+  await expect(page.locator('#archiveSupplyButton')).toBeHidden()
+  await expect(page.locator('.wizard-step[data-step="10"]')).toBeHidden()
+  await expect(page.locator('.wizard-panel[data-panel="10"]')).toBeHidden()
+  await expect(page.locator('[data-case-field="quoteCalc"]')).toHaveCount(0)
 
-  await page.goto('/index.html')
-  await page.locator('#supplyOverviewBody [data-supply-id]').first().click()
-  await expect(page.locator('#archiveSupplyButton')).toBeEnabled()
-  await expect(page.locator('#archiveSupplyButton')).toHaveAttribute('title', /geschützt archivieren/i)
+  await page.locator('[data-view="pg26"]').click()
+  await expect(page.locator('#pg26View')).toBeVisible()
+  await expect(page.getByText('Kalkulationsbausteine')).toBeHidden()
+  await expect(page.getByRole('columnheader', { name: 'Preis netto' })).toHaveCount(0)
 })

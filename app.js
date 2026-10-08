@@ -65,6 +65,7 @@
       if(previous!==className) el.classList.add(className)
       assignments.set(slot,className)
     }
+    const V09_ANAMNESIS_SCOPE=true
     const views = ['overview','care','supplyOverview','forms','contractQuestions','pg26','sources']
     const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Auftragsübersicht',forms:'Formularregeln',contractQuestions:'Vertragsfragen',pg26:'PG 26',sources:'Quellen'}
     const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[],contractQuestions:[],contractKnowledge:[],approvedKnowledge:[]}
@@ -184,7 +185,7 @@
     function currentSupplyStatus(snapshotValues=values,stepIndex=wizardIndex){
       if(snapshotValues.approvalState==='Rückfrage' || snapshotValues.approvalState==='Abgelehnt') return 'Rückfrage / offen'
       if(snapshotValues.approvalState==='Eingereicht') return 'Warten / Genehmigung'
-      if(snapshotValues.deliveryDate || snapshotValues.billingState || stepIndex>=9) return 'Abschluss offen'
+      if(snapshotValues.deliveryDate || stepIndex>=9) return 'Abschluss offen'
       return 'Laufend'
     }
 
@@ -576,8 +577,10 @@
           $('pg26Kasse').innerHTML='<option value="">Alle</option>'+kassen.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
           if(kassen.includes(current)) $('pg26Kasse').value=current
           renderPg26()
-          $('calcCount').textContent=data.kalk.length+' Positionen'
-          $('calcBody').innerHTML=data.kalk.map(r=>'<tr><td>'+escapeHtml(r.Abschnitt)+'</td><td>'+escapeHtml(r.Art_Nr)+'</td><td>'+escapeHtml(r.Bezeichnung)+'</td><td>'+(r.AZ_gerundet_min?escapeHtml(r.AZ_gerundet_min)+' min':'—')+'</td><td>'+(r.Material_Position_EUR?escapeHtml(r.Material_Position_EUR)+' €':'—')+'</td><td>'+escapeHtml(r.Summe_oder_Regel)+'</td></tr>').join('')
+          if(!V09_ANAMNESIS_SCOPE){
+            $('calcCount').textContent=data.kalk.length+' Positionen'
+            $('calcBody').innerHTML=data.kalk.map(r=>'<tr><td>'+escapeHtml(r.Abschnitt)+'</td><td>'+escapeHtml(r.Art_Nr)+'</td><td>'+escapeHtml(r.Bezeichnung)+'</td><td>'+(r.AZ_gerundet_min?escapeHtml(r.AZ_gerundet_min)+' min':'—')+'</td><td>'+(r.Material_Position_EUR?escapeHtml(r.Material_Position_EUR)+' €':'—')+'</td><td>'+escapeHtml(r.Summe_oder_Regel)+'</td></tr>').join('')
+          }
         }else if(section==='contractQuestions'){
           renderContractKnowledge($('knowledgeSearch')?.value||'')
         }else if(section==='sources'){
@@ -1068,7 +1071,7 @@
     function renderPg26(){
       const kasse=$('pg26Kasse').value
       const rows=data.pg26.filter(r=>!kasse||r.Kasse===kasse)
-      $('positionBody').innerHTML=rows.map(r=>'<tr><td>'+escapeHtml(r.Kasse)+'</td><td>'+escapeHtml(r.Kategorie)+'</td><td>'+escapeHtml(r.Art_Nr)+'</td><td>'+escapeHtml(r.HMV_Nr)+'</td><td>'+escapeHtml(r.Inhalt)+'</td><td class="num">'+(r.Preis_Netto_EUR?escapeHtml(r.Preis_Netto_EUR)+' €':'—')+'</td></tr>').join('')
+      $('positionBody').innerHTML=rows.map(r=>'<tr><td>'+escapeHtml(r.Kasse)+'</td><td>'+escapeHtml(r.Kategorie)+'</td><td>'+escapeHtml(r.Art_Nr)+'</td><td>'+escapeHtml(r.HMV_Nr)+'</td><td>'+escapeHtml(r.Inhalt)+'</td></tr>').join('')
     }
 
     function updateCare(){
@@ -3104,6 +3107,7 @@
       return !!meta?.Erprobung_erforderlich || supplyType()==='Funktionsbauteilerprobung' || supplyType()==='Erprobung' || values.requiresTrialEvidence==='Ja' || values.evidenceRequired===true
     }
     function stepApplicable(i){
+      if(V09_ANAMNESIS_SCOPE && i===10) return false
       if(i===2) return selectedCaseKind()==='Neuversorgung' || selectedCaseKind()==='Reparatur'
       if(i===3) return !isRepairCase() && requiresMeasure()
       if(i===4) return !isRepairCase()
@@ -4004,7 +4008,7 @@
       if(box){
         if(!missing.length){
           box.className='status-card ready'
-          box.innerHTML='<strong>Versorgung im Assistenten vollständig bearbeitet</strong>Alle für diesen Versorgungspfad relevanten Arbeitsschritte sind vollständig. Vor Einreichung oder Abrechnung bleibt die fachliche und vertragliche Prüfung erforderlich.'
+          box.innerHTML='<strong>Anamnese im Assistenten vollständig bearbeitet</strong>Alle für Version 0.9 relevanten Arbeitsschritte sind vollständig. Abrechnung und Kalkulation sind in dieser Version nicht Bestandteil der Oberfläche.'
         }else{
           box.className='status-card open'
           box.innerHTML='<strong>Noch '+missing.length+' relevante Arbeitsschritte offen</strong>'+escapeHtml(missing.slice(0,5).join(' · '))+(missing.length>5?' …':'')+'<br><small>Nicht erforderliche Schritte werden automatisch übersprungen.</small>'
@@ -4056,6 +4060,12 @@
     function updateArchiveButtonState(missingSteps=null){
       const button=$('archiveSupplyButton')
       if(!button) return
+      if(V09_ANAMNESIS_SCOPE){
+        button.classList.add('hidden')
+        button.disabled=true
+        button.title='Archivierung ist in Version 0.9 noch nicht Teil des Anamnese-Umfangs.'
+        return
+      }
       const editable=supplyHasEditableContext()
       const missing=editable?(missingSteps||archiveMissingSteps()):['Vorgang nicht bearbeitbar']
       button.disabled=!editable || missing.length>0
@@ -4082,6 +4092,7 @@
     }
 
     async function archiveActiveSupply(){
+      if(V09_ANAMNESIS_SCOPE) return
       if(!supplyHasEditableContext()) return
       const missing=archiveMissingSteps()
       if(missing.length){

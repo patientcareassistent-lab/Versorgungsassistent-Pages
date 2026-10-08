@@ -17,7 +17,7 @@
 
   <main id="auth" class="auth-page hidden">
     <section class="auth-card">
-      <div class="brand-lockup"><img class="brand-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" /><div><h1>Versorgungsassistent</h1><p>Teststand v0.4.3 · VN 2.1</p></div></div>
+      <div class="brand-lockup"><img class="brand-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" /><div><h1>Versorgungsassistent</h1><p>Teststand v0.9 · Anamnese</p></div></div>
       <div id="loginPane">
         <h2>Anmelden</h2>
         <p class="muted">Zugriff nur für freigegebene Tester. Nach dem Passwort ist die Authenticator-MFA erforderlich.</p>
@@ -87,7 +87,7 @@
                 <div class="supply-status-card"><span>Laufend</span><strong id="supplyCountActive">0</strong><small>aktiv in Bearbeitung</small></div>
                 <div class="supply-status-card"><span>Warten / Genehmigung</span><strong id="supplyCountWaiting">0</strong><small>externe Rückmeldung ausstehend</small></div>
                 <div class="supply-status-card"><span>Rückfrage / offen</span><strong id="supplyCountQuery">0</strong><small>Klärung erforderlich</small></div>
-                <div class="supply-status-card"><span>Abschluss offen</span><strong id="supplyCountClose">0</strong><small>Abgabe / Abrechnung noch offen</small></div>
+                <div class="supply-status-card"><span>Abschluss offen</span><strong id="supplyCountClose">0</strong><small>Abgabe / Dokumentation noch offen</small></div>
               </div>
             </section>
             <section class="card span2 supply-list-card">
@@ -108,7 +108,7 @@
 
         <section id="overviewView">
           <div class="page-grid">
-            <section class="hero"><div><span class="pill blue">Version 0.4.3 · VN 2.1</span><h2>Versorgung strukturiert vorbereiten</h2><p>Krankenkasse und Produktgruppe auswählen. Der Assistent zeigt bekannte Formularpflichten, kassenbezogene Besonderheiten und die hinterlegte Quellenbasis.</p></div><div class="hero-mark">⚕</div></section>
+            <section class="hero"><div><span class="pill blue">Version 0.9 · Anamnese</span><h2>Papierhafte Anamnese digital ersetzen</h2><p>Version 0.9 fokussiert Auftrag, Rezept, Profilerhebung, Maßdokumentation und die fachliche Versorgungsdokumentation. Abrechnung und Kalkulation sind in dieser Version bewusst nicht Bestandteil der sichtbaren Oberfläche.</p></div><div class="hero-mark">⚕</div></section>
             <section class="metrics">
               <div class="metric"><span>Krankenkassen</span><strong id="metricKassen">0</strong><small>Kassenmatrix</small></div>
               <div class="metric"><span>Formularregeln</span><strong id="metricForms">0</strong><small>Vertrags-/Formularlogik</small></div>
@@ -124,8 +124,8 @@
           <div class="page-grid">
             <section class="card span2">
               <div class="wizard-top">
-                <div><h3>Versorgung Schritt für Schritt</h3><p>Ein Vorgang führt durch alle fachlich relevanten Arbeitsschritte. Kasse, Produktgruppe und Versorgungssituation steuern Formular- und Regelhinweise.</p></div>
-                <div class="actions no-print"><button id="printButton" class="secondary">Drucken / PDF</button><button id="archiveSupplyButton" class="secondary">Archivieren</button><button id="clearButton" class="secondary">Eingaben leeren</button></div>
+                <div><h3>Anamnese & Versorgungsdokumentation</h3><p>Version 0.9 ersetzt im ersten Schritt die papierhafte Anamnese. Kasse, Produktgruppe und Versorgungssituation steuern die passenden Erhebungs- und Maßblätter.</p></div>
+                <div class="actions no-print"><button id="printButton" class="secondary">Drucken / PDF</button><button id="archiveSupplyButton" class="secondary hidden" aria-hidden="true" tabindex="-1">Archivieren</button><button id="clearButton" class="secondary">Eingaben leeren</button></div>
               </div>
               <div id="wizardContext" class="wizard-context"><span class="pill">Neuer Vorgang</span></div>
               <div id="readOnlyBanner" class="status-card open hidden"><strong>Nur-Lesen-Modus</strong>Diese Versorgung wurde von einem anderen Mitarbeiter angelegt. Sie können alle Angaben und zugehörigen Fotos einsehen und drucken; Änderungen, Uploads und Löschungen bleiben dem Ersteller vorbehalten.</div>
@@ -134,7 +134,7 @@
             <section class="span2 wizard-shell">
               <aside class="wizard-rail no-print">
                 <div class="wizard-progress"><i id="wizardProgressBar"></i></div>
-                <div class="wizard-progress-text"><span id="wizardProgressText">0 von 11 Arbeitsschritten bearbeitet</span></div>
+                <div class="wizard-progress-text"><span id="wizardProgressText">Arbeitsstand wird geprüft</span></div>
                 <button class="wizard-step active" data-step="0"><span class="step-no">1</span><span class="step-label">Auftragserfassung</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="1"><span class="step-no">2</span><span class="step-label">Rezepterfassung</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="2"><span class="step-no">3</span><span class="step-label">Profilerhebung</span><span class="step-state"></span></button>
@@ -145,7 +145,7 @@
                 <button class="wizard-step" data-step="7"><span class="step-no">8</span><span class="step-label">Versorgungsverlauf</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="8"><span class="step-no">9</span><span class="step-label">Erprobung / Bild / Video</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="9"><span class="step-no">10</span><span class="step-label">Abgabe</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="10"><span class="step-no">11</span><span class="step-label">Abrechnung & Abschluss</span><span class="step-state"></span></button>
+                <button class="wizard-step hidden" data-step="10" aria-hidden="true" tabindex="-1"><span class="step-no">11</span><span class="step-label">Abrechnung & Abschluss</span><span class="step-state"></span></button>
               </aside>
 
               <div class="wizard-stage">
@@ -453,7 +453,6 @@
                     <label>Beantragte Positionen / HMV / GPOS<textarea data-case-field="quotePositions" rows="5"></textarea></label>
                     <label>Begründung / medizinische Notwendigkeit<textarea data-case-field="quoteReason" rows="5"></textarea></label>
                     <label>Hersteller-/Fremdfertigungsnachweis<textarea data-case-field="manufacturerEvidence" rows="3"></textarea></label>
-                    <label>Kalkulationsnotiz<textarea data-case-field="quoteCalc" rows="3"></textarea></label>
                   </div></div>
                 </div></section>
 
@@ -511,8 +510,8 @@
                   </div>
                 </div></section>
 
-                <section class="wizard-panel" data-panel="10"><div class="card">
-                  <h2>11. Abrechnung & Abschluss</h2><p class="lead">Zum Abschluss werden Genehmigung, Abrechnungsdaten und die rechnungsbegründenden Unterlagen gemeinsam geprüft.</p>
+                <section class="wizard-panel hidden" data-panel="10" aria-hidden="true"><div class="card">
+                  <h2>11. Abrechnung & Abschluss</h2><p class="lead">Dieser Schritt ist in Version 0.9 nicht Teil der sichtbaren Anamnese-Oberfläche.</p>
                   <div class="mini-grid three">
                     <label>Abrechnungsposition<input data-case-field="billingPosition" /></label>
                     <label>VWKZ<input data-case-field="billingVwkz" /></label>
@@ -538,8 +537,8 @@
 
         <section id="pg26View" class="hidden">
           <div class="page-grid">
-            <section class="card span2"><div class="section-title"><div><h3>Sitzschalen · PG 26</h3><p>Vertragspositionen</p></div><label class="minw-220">Kasse<select id="pg26Kasse"><option value="">Alle</option></select></label></div><div class="table-wrap"><table><thead><tr><th>Kasse</th><th>Kategorie</th><th>Art.-Nr.</th><th>HMV</th><th>Inhalt</th><th>Preis netto</th></tr></thead><tbody id="positionBody"></tbody></table></div></section>
-            <section class="card span2"><div class="section-title"><div><h3>Kalkulationsbausteine</h3><p>Änderung Sitzschale / anatomischer Sitz oder Rücken</p></div><span id="calcCount" class="pill blue"></span></div><div class="table-wrap"><table><thead><tr><th>Abschnitt</th><th>Art.-Nr.</th><th>Bezeichnung</th><th>Arbeitszeit</th><th>Material</th><th>Summe / Regel</th></tr></thead><tbody id="calcBody"></tbody></table></div></section>
+            <section class="card span2"><div class="section-title"><div><h3>Sitzschalen · PG 26</h3><p>Vertragspositionen · ohne Preis- und Kalkulationsanzeige in Version 0.9</p></div><label class="minw-220">Kasse<select id="pg26Kasse"><option value="">Alle</option></select></label></div><div class="table-wrap"><table><thead><tr><th>Kasse</th><th>Kategorie</th><th>Art.-Nr.</th><th>HMV</th><th>Inhalt</th></tr></thead><tbody id="positionBody"></tbody></table></div></section>
+            <section class="card span2 hidden" aria-hidden="true"><div class="section-title"><div><h3>Kalkulationsbausteine</h3><p>In Version 0.9 nicht sichtbar.</p></div><span id="calcCount" class="pill blue"></span></div><div class="table-wrap"><table><thead><tr><th>Abschnitt</th><th>Art.-Nr.</th><th>Bezeichnung</th><th>Arbeitszeit</th><th>Material</th><th>Summe / Regel</th></tr></thead><tbody id="calcBody"></tbody></table></div></section>
           </div>
         </section>
 
