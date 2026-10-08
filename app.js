@@ -3420,6 +3420,12 @@
       else if(value===undefined||value===null) el.value=''
     }
 
+    function syncCaseFieldControls(key,value,source=null){
+      document.querySelectorAll('[data-case-field="'+CSS.escape(String(key))+'"]').forEach(el=>{
+        if(el!==source) writeCaseField(el,value)
+      })
+    }
+
     const ALL_SUPPLY_TYPES=['Post-OP','Interim','Definitiv','Folge','Wechsel','Reparatur','Änderung','Instandhaltung','Funktionsbauteilerprobung']
     const NEW_SUPPLY_TYPES=['Post-OP','Interim','Definitiv','Folge','Wechsel','Funktionsbauteilerprobung']
     const REPAIR_SUPPLY_TYPES=['Reparatur','Änderung','Instandhaltung']
@@ -4028,7 +4034,10 @@
         const save=(event)=>{
           if(el.type==='radio' && !el.checked) return
           const next=readCaseField(el)
-          if(next!==undefined) values[key]=next
+          if(next!==undefined){
+            values[key]=next
+            syncCaseFieldControls(key,next,el)
+          }
           if(key==='caseKind') syncCaseKind()
           if(key==='supplyType'){syncSituationFields();renderMeasureFields();updateCareFields()}
           if(key==='rxPresent') syncRxPresence()
@@ -4193,8 +4202,7 @@
       if(!value) return
       if(!overwrite && String(values[key]||'').trim()) return
       values[key]=value
-      const el=document.querySelector('[data-case-field="'+key+'"]')
-      if(el) el.value=value
+      syncCaseFieldControls(key,value)
       if(['patientFirstName','patientLastName','patientBirthDate','insuredNo'].includes(key)) updateCareFields()
     }
 
