@@ -104,8 +104,12 @@ begin
     if v_idx.verification_status<>'VERIFIED' and p_action<>'delete_fail' then
       raise exception 'archive_not_verified' using errcode='23514';
     end if;
-    if v_idx.legal_hold or v_idx.retention_until is null
-      or v_idx.retention_until>=current_date then
+    -- Failure reporting must stay available even if governance changes
+    -- after a destructive R2 request has begun. Begin/finalize still enforce
+    -- current retention and legal-hold requirements.
+    if p_action<>'delete_fail' and
+       (v_idx.legal_hold or v_idx.retention_until is null
+        or v_idx.retention_until>=current_date) then
       raise exception 'archive_retention_or_legal_hold_blocks_deletion' using errcode='42501';
     end if;
     if exists(select 1 from public.care_cases c where c.id=p_care_case_id) then
@@ -115,6 +119,15 @@ begin
       v_error:=nullif(btrim(coalesce(p_data->>'note','')),'');
       if length(coalesce(v_error,'')) not between 12 and 500 then
         raise exception 'deletion_documentation_required' using errcode='22023';
+      end if;
+      -- One destructive request at a time for each archive. Advisory
+      -- xact lock serializes concurrent service calls on the case ID.
+      if exists (
+        select 1 from app_private.care_case_archive_delete_attempts d
+         where d.archive_id=v_idx.archive_id and d.state='PENDING'
+           and d.created_at > now()-interval '1 hour'
+      ) then
+        raise exception 'archive_deletion_already_pending' using errcode='23514';
       end if;
       insert into app_private.care_case_archive_delete_attempts(
         care_case_id,archive_id,executed_by,note
@@ -151,8 +164,9 @@ begin
       return jsonb_build_object('ok',true,'archive_id',v_idx.archive_id,'delete_failed',true);
     end if;
     v_photos:=(p_data->>'deleted_objects')::integer;
-    if v_photos is null or v_photos not between 1 and 15 then
-      raise exception 'invalid_deleted_object_count' using errcode='22023';
+    if v_photos is null or v_photos not between 1 and 15
+       or v_photos <> v_idx.photo_count+1 then
+      raise exception 'archive_deleted_object_count_mismatch' using errcode='23514';
     end if;
     update app_private.care_case_archive_delete_attempts d
     set state='COMPLETED',objects_deleted=v_photos
