@@ -30,6 +30,7 @@ assert.match(archive, /patientFirstName/, 'archive: patient core-data gate missi
 assert.match(archive, /repairSicHimiId/, 'archive: repair completion gate missing')
 assert.match(archive, /quotePositions/, 'archive: quote completion gate missing')
 assert.match(archive, /billingPosition/, 'archive: AOK billing completion gate missing')
+assert.doesNotMatch(archive, /patient_first_name|patient_last_name|case_number:/, 'archive: personal metadata must not be duplicated into the archive index')
 
 assert.match(verify, /npm:@aws-sdk\/client-s3@3\.1147\.0/, 'verify: AWS SDK must be pinned')
 assert.match(verify, /only_owner_can_verify/, 'verify: owner-only gate missing')
