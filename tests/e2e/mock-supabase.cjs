@@ -178,6 +178,16 @@ async function installSupabaseMock(page, options = {}) {
         return Promise.resolve({ data, error: null })
       },
       from(table) { return makeQueryBuilder(table) },
+      // Production startup queries the archive gateway before making the app visible.
+      // A successful empty archive response keeps tests isolated from live data.
+      functions: {
+        async invoke(name) {
+          if (name === 'list-care-case-archives') {
+            return { data: { archives: [] }, error: null }
+          }
+          return { data: null, error: { message: 'Unexpected mocked function: ' + name } }
+        }
+      },
       storage: {
         from() {
           const readStoragePaths = () => {
