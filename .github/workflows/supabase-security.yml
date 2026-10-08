@@ -50,5 +50,5 @@ jobs:
 
       - name: Ensure backend sources are excluded from Pages
         run: |
-          grep -q "'supabase/**'" .github/workflows/pages.yml
-          grep -q "dist/supabase" .github/workflows/pages.yml
+          grep -Fq "      - 'supabase/**'" .github/workflows/pages.yml
+          grep -Fq "dist/supabase" .github/workflows/pages.yml
