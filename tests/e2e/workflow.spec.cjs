@@ -354,7 +354,7 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
   })
 
   await page.goto('/index.html')
-  await page.locator('#newSupplyButton').click()
+  await page.locator('#newSupplyOverviewButton').click()
   await page.locator('[data-case-field="patientFirstName"]').fill('Anna')
   await page.locator('[data-case-field="patientLastName"]').fill('Muster')
   await page.locator('[data-case-field="patientBirthDate"]').fill('1980-01-02')
@@ -413,7 +413,7 @@ test('source-backed conditional anamnesis fields become required only when their
   })
 
   await page.goto('/index.html')
-  await page.locator('#newSupplyButton').click()
+  await page.locator('#newSupplyOverviewButton').click()
   await page.locator('#careKasse').selectOption({ label: 'Testkasse' })
   await page.locator('#carePg').selectOption('23')
   await page.locator('#careHimi').selectOption('PG23_UE')
@@ -485,7 +485,7 @@ test('multi-PG contract forms remain discoverable for a selected product group',
   })
 
   await page.goto('/index.html')
-  await page.locator('#newSupplyButton').click()
+  await page.locator('#newSupplyOverviewButton').click()
   await page.locator('#careKasse').selectOption({ label: 'DAK-Gesundheit' })
   await page.locator('#carePg').selectOption('18')
   await page.locator('#careHimi').selectOption('PG18_E')
@@ -534,7 +534,7 @@ test('single mandatory payer form is auto-selected even without structured Himi 
   })
 
   await page.goto('/index.html')
-  await page.locator('#newSupplyButton').click()
+  await page.locator('#newSupplyOverviewButton').click()
   await page.locator('#careKasse').selectOption({ label: 'AOK Hessen' })
   await page.locator('#carePg').selectOption('04')
   await expect(page.locator('#careHimi')).toContainText('Badehilfe')
