@@ -1199,7 +1199,7 @@
         void ensureHimiFormRules(himiId)
         return
       }
-      const current=$('careForm').value
+      const current=values.formId||$('careForm').value
       const meta=selectedHimiMeta()
       const rules=data.himiformularregeln
         .filter(r=>r.Himi_ID===himiId && r.Kasse===kasse)
@@ -1224,6 +1224,8 @@
       if([...$('careForm').options].some(o=>o.value===current)) $('careForm').value=current
       else if(rules.length===1 && rules[0].Formular_ID) $('careForm').value=rules[0].Formular_ID
       else if(!rules.length && genericId) $('careForm').value=genericId
+      else $('careForm').value=''
+      values.formId=$('careForm').value||''
       updateCareFields()
       syncSupplyTypeOptions()
       syncSituationFields()
@@ -4752,10 +4754,10 @@
     $('logoutButton').addEventListener('click',async()=>{await supabase.auth.signOut(); location.reload()})
     $('formSearch').addEventListener('input',e=>renderForms(e.target.value))
     $('pg26Kasse').addEventListener('change',renderPg26)
-    $('careKasse').addEventListener('change',()=>{updateCare();showWizardError('');renderWizard()})
-    $('carePg').addEventListener('change',()=>{values.himiId='';populateHimiOptions();updateCare();showWizardError('');renderWizard()})
-    $('careHimi').addEventListener('change',()=>{values.himiId=$('careHimi').value;syncPg24Level();syncSituationFields();updateCare();showWizardError('');renderWizard()})
-    $('careForm').addEventListener('change',()=>{updateCareFields();showWizardError('');renderWizard()})
+    $('careKasse').addEventListener('change',()=>{values.formId='';updateCare();showWizardError('');renderWizard()})
+    $('carePg').addEventListener('change',()=>{values.himiId='';values.formId='';populateHimiOptions();updateCare();showWizardError('');renderWizard()})
+    $('careHimi').addEventListener('change',()=>{values.himiId=$('careHimi').value;values.formId='';syncPg24Level();syncSituationFields();updateCare();showWizardError('');renderWizard()})
+    $('careForm').addEventListener('change',()=>{values.formId=$('careForm').value||'';updateCareFields();showWizardError('');renderWizard();queueAutosaveSupply()})
     $('printButton').addEventListener('click',()=>window.print())
     $('archiveSupplyButton').addEventListener('click',archiveActiveSupply)
     $('clearButton').addEventListener('click',clearCurrentSupplyInputs)
