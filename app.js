@@ -86,6 +86,7 @@
     let activeSupplyId = null
     let draftSaveTimer = null
     let supplyDraftCache = []
+    let archiveCache = []
     let autosaveInFlight = Promise.resolve()
     let lastPersistedSupplyFingerprint = ''
 
@@ -298,6 +299,105 @@
     function formatDraftTime(iso){
       if(!iso) return '—'
       try{return new Intl.DateTimeFormat('de-DE',{dateStyle:'short',timeStyle:'short'}).format(new Date(iso))}catch(_){return iso}
+    }
+
+    function formatArchiveBytes(bytes){
+      const value=Number(bytes)||0
+      if(value<1024) return value+' B'
+      if(value<1024*1024) return (value/1024).toFixed(1)+' KB'
+      if(value<1024*1024*1024) return (value/(1024*1024)).toFixed(1)+' MB'
+      return (value/(1024*1024*1024)).toFixed(2)+' GB'
+    }
+
+    async function loadArchiveOverview(){
+      if(!currentSession) return false
+      const response=await supabase.functions.invoke('list-care-case-archives',{body:{}})
+      if(response.error){
+        archiveCache=[]
+        renderArchiveOverview()
+        showError('appError','Archivübersicht konnte nicht geladen werden: '+(response.error.message||String(response.error)))
+        return false
+      }
+      archiveCache=Array.isArray(response.data?.archives)?response.data.archives:[]
+      renderArchiveOverview()
+      return true
+    }
+
+    function renderArchiveOverview(){
+      const body=$('archiveOverviewBody')
+      if(!body) return
+      if(!archiveCache.length){
+        body.innerHTML='<tr><td colspan="7" class="supply-empty"><strong>Noch keine archivierten Versorgungen vorhanden.</strong><small>Archivierte Vorgänge werden hier nach erfolgreicher R2-Prüfung angezeigt.</small></td></tr>'
+        return
+      }
+      body.innerHTML=archiveCache.map(item=>{
+        const patient=[item.patient_first_name,item.patient_last_name].filter(Boolean).join(' ')||item.case_number||'Versorgung'
+        const caseLine=item.case_number?'<small>Vorgang: '+escapeHtml(item.case_number)+'</small>':''
+        const pg=[item.product_group?'PG '+item.product_group:'',item.himi||''].filter(Boolean).join(' · ')||'—'
+        const content=escapeHtml(String(item.photo_count||0))+' Bilder · '+escapeHtml(String(item.revision_count||0))+' Versionen · '+escapeHtml(formatArchiveBytes(item.archive_bytes))
+        const verified=item.verification_status==='VERIFIED'
+        const restored=item.status==='RESTORED'
+        const status=restored
+          ?'<span class="pill blue">Wiederhergestellt</span>'
+          :verified
+            ?'<span class="pill success">Verifiziert & ausgelagert</span>'
+            :'<span class="pill warning">Prüfung offen</span>'
+        const own=item.owner_user_id===currentSession?.user?.id
+        const action=restored
+          ?'<span class="muted">bereits aktiv</span>'
+          :own
+            ?'<button class="secondary no-print" type="button" data-archive-restore="'+escapeHtml(item.care_case_id)+'">Wiederherstellen</button>'
+            :'<span class="muted">Nur Lesen</span>'
+        return '<tr>'+
+          '<td><strong>'+escapeHtml(patient)+'</strong>'+caseLine+'</td>'+
+          '<td>'+escapeHtml(item.insurer||'—')+'</td>'+
+          '<td>'+escapeHtml(pg)+'</td>'+
+          '<td>'+escapeHtml(formatDraftTime(item.archived_at))+'</td>'+
+          '<td>'+content+'</td>'+
+          '<td>'+status+'</td>'+
+          '<td>'+action+'</td>'+
+        '</tr>'
+      }).join('')
+    }
+
+    async function restoreArchivedSupply(id,button=null){
+      const item=archiveCache.find(x=>x.care_case_id===id)
+      if(!item) return
+      if(item.owner_user_id!==currentSession?.user?.id){
+        showError('appError','Nur der Ersteller kann diesen archivierten Vorgang wiederherstellen.')
+        return
+      }
+      const patient=[item.patient_first_name,item.patient_last_name].filter(Boolean).join(' ')||item.case_number||'diese Versorgung'
+      if(!window.confirm('Archivierte Versorgung „'+patient+'“ wieder in den aktiven Bestand übernehmen?')) return
+      const oldText=button?.textContent||'Wiederherstellen'
+      if(button){button.disabled=true;button.textContent='Wiederherstellung …'}
+      try{
+        const result=await supabase.functions.invoke('restore-care-case',{body:{care_case_id:id}})
+        if(result.error){
+          let detail=result.error.message||'Wiederherstellungsdienst nicht erreichbar.'
+          try{
+            const context=result.error.context
+            if(context?.json){
+              const body=await context.json()
+              if(body?.detail) detail=body.detail
+              else if(body?.error) detail=body.error
+            }
+          }catch(_){}
+          throw new Error(detail)
+        }
+        if(!result.data?.ok) throw new Error(result.data?.error||'Wiederherstellung wurde nicht bestätigt.')
+        await loadSupplyDrafts()
+        await loadArchiveOverview()
+        const restored=readSupplyDrafts().find(x=>x.id===id)
+        if(restored) await restoreSupplyDraft(id)
+        else setView('supplyOverview')
+        showError('appError','')
+      }catch(err){
+        console.error(err)
+        showError('appError','Wiederherstellung fehlgeschlagen: '+(err?.message||String(err)))
+      }finally{
+        if(button){button.textContent=oldText;button.disabled=false}
+      }
     }
 
     function supplyStepLabel(item){
@@ -842,6 +942,7 @@
         await failClosedStartup('Die Versorgungsübersicht konnte nicht sicher geladen werden. Die Anwendung wurde nicht geöffnet.')
         return
       }
+      await loadArchiveOverview()
 
       $('currentUser').textContent=friendlyUser(session.user.email)
       $('auth').classList.add('hidden'); $('app').classList.remove('hidden')
@@ -4057,23 +4158,17 @@
         .map(step=>step.name)
     }
 
-    function updateArchiveButtonState(missingSteps=null){
+    function updateArchiveButtonState(){
       const button=$('archiveSupplyButton')
       if(!button) return
-      if(V09_ANAMNESIS_SCOPE){
-        button.classList.add('hidden')
-        button.disabled=true
-        button.title='Archivierung ist in Version 0.9 noch nicht Teil des Anamnese-Umfangs.'
-        return
-      }
+      button.classList.remove('hidden')
+      button.removeAttribute('aria-hidden')
+      button.removeAttribute('tabindex')
       const editable=supplyHasEditableContext()
-      const missing=editable?(missingSteps||archiveMissingSteps()):['Vorgang nicht bearbeitbar']
-      button.disabled=!editable || missing.length>0
-      button.title=!editable
-        ? 'Archivierung ist nur für eigene Vorgänge möglich.'
-        : missing.length
-          ? 'Archivierung erst nach vollständigem Abschluss: '+missing.slice(0,3).join(' · ')
-          : 'Vollständig bearbeiteten Vorgang geschützt archivieren.'
+      button.disabled=!editable
+      button.title=editable
+        ? 'Aktuellen Stand, Revisionshistorie und Bilder geschützt extern archivieren.'
+        : 'Archivierung ist nur für eigene Vorgänge möglich.'
     }
 
     function updateSupplyEditState(){
@@ -4092,16 +4187,9 @@
     }
 
     async function archiveActiveSupply(){
-      if(V09_ANAMNESIS_SCOPE) return
       if(!supplyHasEditableContext()) return
-      const missing=archiveMissingSteps()
-      if(missing.length){
-        showWizardError('Archivierung ist erst nach vollständigem Abschluss aller relevanten Arbeitsschritte möglich:',missing)
-        updateArchiveButtonState(missing)
-        return
-      }
       const patient=([values.patientFirstName,values.patientLastName].filter(Boolean).join(' ')||values.patientName||values.caseNumber||'diese Versorgung')
-      if(!window.confirm('Versorgung „'+patient+'“ extern archivieren? Der aktuelle Stand, die Revisionshistorie und zugehörige Bilder werden zuerst in das geschützte Archiv kopiert.')) return
+      if(!window.confirm('Versorgung „'+patient+'“ extern archivieren? Der aktuelle Stand, die Revisionshistorie und zugehörige Bilder werden nach Prüfsummenprüfung in das geschützte EU-Archiv übertragen und anschließend aus dem operativen Bestand entfernt.')) return
 
       const button=$('archiveSupplyButton')
       const oldText=button?.textContent||'Archivieren'
@@ -4119,8 +4207,7 @@
             const context=result.error.context
             if(context?.json){
               const body=await context.json()
-              if(body?.error==='archive_backend_not_configured') detail='Das externe R2-Archiv ist serverseitig noch nicht konfiguriert.'
-              else if(body?.detail) detail=body.detail
+              if(body?.detail) detail=body.detail
               else if(body?.error) detail=body.error
             }
           }catch(_){}
@@ -4133,9 +4220,14 @@
         activeSupplyId=null
         lastPersistedSupplyFingerprint=''
         renderSupplyOverview()
+        await loadArchiveOverview()
         resetWizard()
         setView('supplyOverview')
-        showError('appError','')
+        if(result.data?.cleanup_complete===false){
+          showError('appError','Archivierung wurde verifiziert; bei der lokalen Speicherbereinigung besteht noch ein Restfehler. Die Archivkopie ist vorhanden.')
+        }else{
+          showError('appError','')
+        }
       }catch(err){
         console.error(err)
         showWizardError('Archivierung fehlgeschlagen. Die Versorgung bleibt im operativen Bestand.',[err?.message||String(err)])
@@ -4319,6 +4411,11 @@
     $('supplyPgFilter').addEventListener('change',renderSupplyOverview)
     $('supplyOverviewBody').addEventListener('click',e=>{const row=e.target.closest('[data-supply-id]');if(row)restoreSupplyDraft(row.dataset.supplyId)})
     $('supplyOverviewBody').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-supply-id]')){e.preventDefault();restoreSupplyDraft(e.target.dataset.supplyId)}})
+    if($('archiveRefreshButton')) $('archiveRefreshButton').addEventListener('click',()=>loadArchiveOverview())
+    if($('archiveOverviewBody')) $('archiveOverviewBody').addEventListener('click',e=>{
+      const button=e.target.closest('[data-archive-restore]')
+      if(button) restoreArchivedSupply(button.dataset.archiveRestore,button)
+    })
 
     document.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)))
     $('knowledgeSearch').addEventListener('input',e=>renderContractKnowledge(e.target.value))
