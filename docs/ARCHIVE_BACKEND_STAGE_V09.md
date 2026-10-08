@@ -15,6 +15,14 @@ Status: **ENTWURF – nicht live deployen**, bis der untenstehende Integrationsn
 - `delete-care-case-archive` prüft die Datenschutz- und Aufbewahrungsvorgaben aus dem Archivindex (der aktive Vorgang existiert nach Archivierung nicht mehr), legt VOR jeder R2-Löschung einen Audit-Eintrag an, verifiziert Datei-Hashes und schließt die Löschung in einem SQL-Commit ab.
 - `app.js` entfernt die ursprüngliche Eigentümerbeschränkung beim Archivieren; diese Datei **erst zusammen mit dem gesamten freigegebenen Backend** veröffentlichen.
 
+## R2-Jurisdiktion und Endpunkte (08.10.2026)
+- Die aktive Cloudflare-Worker-Bindung `ARCHIVE` verweist auf den Bucket `versorgungsassistent-archiv` mit `jurisdiction: eu`.
+- Die Cloudflare-Standard-Bucket-Liste (`default`) ist deshalb **kein** Nachweis für einen fehlenden EU-Bucket: diese API-Abfrage wurde ohne erforderlichen Header `cf-r2-jurisdiction: eu` ausgeführt.
+- Der direkte S3-Zugriff in `verify-care-case-archive` und `delete-care-case-archive` muss `https://<R2_ACCOUNT_ID>.eu.r2.cloudflarestorage.com` verwenden. Diese Referenz ist auf dem Entwicklungsbranch korrigiert und durch einen Security-Regressionscheck abgesichert.
+- `archive-care-case` und `restore-care-case` arbeiten über den separat authentisierten Cloudflare-Gateway-Worker und dessen EU-R2-Bindung.
+- Die EU-Zugehörigkeit, das tatsächliche Lesen und Schreiben isolierter, rein synthetischer R2-Objekte und die S3-Zugangsdaten müssen im Ende-zu-Ende-Test bestätigt werden. Noch **keine** R2-Live-Probe erfolgreich absolviert.
+- Kein R2-Bucket in Standard-Jurisdiktion als Ersatz anlegen; das würde die vorgesehene regionale Datenspeicherung nicht gewährleisten.
+
 ## Sicherheitsbedingungen
 MFA AAL2, gültiger Benutzer, aktive Freigabeliste, nur Service-Role für DB-RPCs, keine REST-Freigabe von `app_private`. Originaleigentümer bleibt unverändert, tatsächlicher Bearbeiter wird protokolliert.
 
