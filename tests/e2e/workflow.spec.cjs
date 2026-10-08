@@ -464,6 +464,10 @@ test('source-backed conditional anamnesis fields become required only when their
     const rows=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
     return Object.prototype.hasOwnProperty.call(rows[0]?.payload||{},'GEN_23_rom_lower_25')
   }), { timeout: 10000 }).toBe(false)
+  // The same PG23_UE selection must not progress with a Rumpf region
+  // because its automatically chosen measuring profile is lower-extremity.
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('#wizardError')).toContainText('Anwendungsregion widerspricht dem ausgewählten Hilfsmittel')
 })
 
 
