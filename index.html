@@ -103,6 +103,20 @@
                 </table>
               </div>
             </section>
+            <section class="card span2 supply-list-card">
+              <div class="supply-list-head">
+                <div class="section-title"><div><h3>Archivierte Versorgungen</h3><p>Extern im geschützten Cloudflare-R2-Archiv abgelegte Vorgänge. Wiederherstellung ist für eigene Vorgänge möglich.</p></div></div>
+                <button id="archiveRefreshButton" class="secondary no-print" type="button">Aktualisieren</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Kunde / Vorgang</th><th>Kasse</th><th>PG / Hilfsmittel</th><th>Archiviert</th><th>Archivinhalt</th><th>Status</th><th>Aktion</th></tr></thead>
+                  <tbody id="archiveOverviewBody">
+                    <tr><td colspan="7" class="supply-empty"><strong>Noch keine archivierten Versorgungen vorhanden.</strong><small>Archivierte Vorgänge werden hier nach erfolgreicher R2-Prüfung angezeigt.</small></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
         </section>
 
@@ -125,7 +139,7 @@
             <section class="card span2">
               <div class="wizard-top">
                 <div><h3>Anamnese & Versorgungsdokumentation</h3><p>Version 0.9 ersetzt im ersten Schritt die papierhafte Anamnese. Kasse, Produktgruppe und Versorgungssituation steuern die passenden Erhebungs- und Maßblätter.</p></div>
-                <div class="actions no-print"><button id="printButton" class="secondary">Drucken / PDF</button><button id="archiveSupplyButton" class="secondary hidden" aria-hidden="true" tabindex="-1">Archivieren</button><button id="clearButton" class="secondary">Eingaben leeren</button></div>
+                <div class="actions no-print"><button id="printButton" class="secondary">Drucken / PDF</button><button id="archiveSupplyButton" class="secondary">Archivieren</button><button id="clearButton" class="secondary">Eingaben leeren</button></div>
               </div>
               <div id="wizardContext" class="wizard-context"><span class="pill">Neuer Vorgang</span></div>
               <div id="readOnlyBanner" class="status-card open hidden"><strong>Nur-Lesen-Modus</strong>Diese Versorgung wurde von einem anderen Mitarbeiter angelegt. Sie können alle Angaben und zugehörigen Fotos einsehen und drucken; Änderungen, Uploads und Löschungen bleiben dem Ersteller vorbehalten.</div>
