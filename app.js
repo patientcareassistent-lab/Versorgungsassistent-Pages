@@ -1,3 +1,4 @@
+import { versorgungsziele } from './versorgungsziele.js'
     const { createClient } = window.supabase
 
     try{
@@ -1062,6 +1063,57 @@
       const save=()=>{values[key]=control.value;showWizardError('');updateWizardStatus()}
       control.addEventListener('input',save);control.addEventListener('change',save)
       return control
+    }
+
+    function goalSuggestionsForCurrentSupply(){
+      const pg=String($('carePg')?.value||'')
+      if(!['23','24'].includes(pg)) return []
+      const kind=String(values.supplyType||$('careSupplyType')?.value||'')
+      const region=String(values['GEN_23_region_24']||values.region||selectedHimi()||'').toLowerCase()
+      const regionType=region.includes('rumpf')||region.includes('wirbels')?'rumpf':region.includes('obere')||region.includes('arm')?'obere':region.includes('untere')||region.includes('bein')?'untere':'alle'
+      const kindMatch=(x)=>{
+        if(x.art==='alle') return true
+        if(x.art==='Reparatur') return /reparatur|instand|änderung/i.test(kind)
+        if(x.art==='Folge') return /folge|wechsel/i.test(kind)
+        return kind.toLowerCase().includes(x.art.toLowerCase())
+      }
+      return versorgungsziele.filter(x=>x.pg===pg&&(x.region==='alle'||regionType==='alle'||x.region===regionType)&&kindMatch(x))
+    }
+
+    function renderGoalSuggestions(){
+      const host=$('versorgungGoalSuggestions')
+      if(!host) return
+      const pg=String($('carePg')?.value||'')
+      const enabled=['23','24'].includes(pg)&&!!selectedHimiId()
+      host.classList.toggle('hidden',!enabled)
+      if(!enabled){host.replaceChildren();return}
+      const key='versorgungGoalText'
+      const section=document.createElement('section')
+      section.className='field'
+      const headline=document.createElement('strong')
+      headline.textContent='Versorgungsziel – fachliche Vorschläge und Freitext'
+      const notice=document.createElement('small')
+      notice.textContent='Vorschläge sind redaktionelle Formulierungshilfen nach GKV-Hilfsmittelverzeichnis. Individuell prüfen und konkretisieren; keine automatische Diagnose oder Kassenfreigabe.'
+      const pick=document.createElement('select')
+      pick.setAttribute('aria-label','Versorgungszielvorschlag')
+      pick.innerHTML='<option value="">Zielvorschlag auswählen …</option>'+goalSuggestionsForCurrentSupply().map(x=>'<option value="'+escapeHtml(x.id)+'">'+escapeHtml(x.ziel)+'</option>').join('')
+      const text=document.createElement('textarea')
+      text.rows=4
+      text.placeholder='Individuelles Versorgungsziel und messbare/alltagsbezogene Konkretisierung eingeben …'
+      text.value=String(values[key]||'')
+      pick.addEventListener('change',()=>{
+        const goal=versorgungsziele.find(x=>x.id===pick.value)
+        if(!goal)return
+        const current=text.value.trim()
+        text.value=current?(current.includes(goal.ziel)?current:current+'\n'+goal.ziel):goal.ziel
+        values[key]=text.value
+        queueAutosaveSupply()
+        updateWizardStatus()
+        pick.value=''
+      })
+      text.addEventListener('input',()=>{values[key]=text.value;queueAutosaveSupply();updateWizardStatus()})
+      section.append(headline,notice,pick,text)
+      host.replaceChildren(section)
     }
 
     function renderMeasureFields(){
@@ -2993,6 +3045,7 @@
       const formId=$('careForm').value
       const selected=data.formulare.find(f=>f.Formular_ID===formId)
       $('fieldList').className='field-list'
+      renderGoalSuggestions()
       if(pg && !himiId){
         $('ruleBox').classList.remove('hidden')
         $('ruleBox').innerHTML='<div><strong>Hilfsmittel noch nicht festgelegt</strong><p>Die Formularlogik wird erst nach Auswahl des konkreten Hilfsmittels innerhalb der Produktgruppe freigegeben.</p></div><span class="pill warning">PG '+escapeHtml(pg)+'</span>'
