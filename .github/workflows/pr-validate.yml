@@ -64,4 +64,21 @@ jobs:
 
       - name: Run critical browser regressions
         run: |
-          npx playwright test             tests/e2e/auth.spec.cjs             tests/e2e/workflow.spec.cjs             tests/e2e/live-security.spec.cjs
+          set -euo pipefail
+          # Fail fast: a broken application bootstrap must not consume 20 minutes.
+          # All tests are still required to pass before the 'validate' check succeeds.
+          npx playwright test --retries=0 --max-failures=1 \
+            tests/e2e/auth.spec.cjs \
+            tests/e2e/workflow.spec.cjs \
+            tests/e2e/live-security.spec.cjs
+          
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pr-playwright-failure
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
