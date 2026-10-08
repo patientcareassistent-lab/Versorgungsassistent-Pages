@@ -44,6 +44,7 @@ assert.match(archive, /Number\(row\.wizard_index\) < 9/, 'archive: v0.9 completi
 assert.doesNotMatch(archive, /patient_first_name|patient_last_name|case_number:/, 'archive: personal metadata must not be duplicated into the archive index')
 
 assert.match(verify, /npm:@aws-sdk\/client-s3@3\.1147\.0/, 'verify: AWS SDK must be pinned')
+assert.ok(verify.includes('.eu.r2.cloudflarestorage.com'), 'verify: S3 endpoint must use EU jurisdiction')
 assert.match(verify, /archive_mutation_for_service/, 'verify: status gateway missing')
 assert.match(verify, /validateArchiveManifest/, 'verify: manifest validator missing')
 assert.match(verify, /archive_checksum_mismatch/, 'verify: main checksum gate missing')
@@ -51,6 +52,7 @@ assert.match(verify, /archive_file_checksum_mismatch/, 'verify: file checksum ga
 assert.match(verify, /verification_status:"VERIFIED"/, 'verify: verified state missing')
 
 assert.match(remove, /npm:@aws-sdk\/client-s3@3\.1147\.0/, 'delete: AWS SDK must be pinned')
+assert.ok(remove.includes('.eu.r2.cloudflarestorage.com'), 'delete: S3 endpoint must use EU jurisdiction')
 assert.match(remove, /admin_required/, 'delete: admin role gate missing')
 assert.match(remove, /legal_hold_active/, 'delete: legal-hold gate missing')
 assert.match(remove, /retention_not_due/, 'delete: retention gate missing')
