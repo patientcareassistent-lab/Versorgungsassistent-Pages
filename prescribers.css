@@ -1,0 +1,9 @@
+.prescriber-directory{border-top:1px solid var(--border,#d9e2ec);padding-top:14px}
+.prescriber-search-row{display:flex;gap:10px;align-items:center}
+.prescriber-search-row input{flex:1;min-width:0}
+.prescriber-directory-state{margin-top:10px}
+.prescriber-results{display:grid;gap:8px;margin-top:10px;max-height:280px;overflow:auto}
+.prescriber-result{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:3px;width:100%;padding:10px 12px;border:1px solid #d8e2ee;border-radius:10px;background:#fff;color:inherit;cursor:pointer}
+.prescriber-result:hover,.prescriber-result:focus-visible{border-color:#1d4ed8;box-shadow:0 0 0 2px rgba(29,78,216,.08)}
+.prescriber-result small{color:#5d6b7a;font-weight:400}
+@media(max-width:720px){.prescriber-search-row{align-items:stretch;flex-direction:column}.prescriber-results{max-height:340px}}
