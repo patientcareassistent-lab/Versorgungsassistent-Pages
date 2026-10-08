@@ -6,7 +6,7 @@ const GATEWAY="https://versorgungsassistent-archive-gateway.patientcare-assisten
 const SOURCE_BUCKET="repair-photos-private";
 
 const ALLOWED_ORIGINS=new Set(["https://patientcareassistent-lab.github.io"]);
-function corsHeaders(req:Request){
+function corsHeaders(req:Request):Record<string,string>{
   const origin=req.headers.get("origin")||"";
   return origin && ALLOWED_ORIGINS.has(origin)
     ? {"access-control-allow-origin":origin,"vary":"Origin",
@@ -25,7 +25,7 @@ function claims(token:string){
 }
 
 async function sha256Hex(bytes:Uint8Array){
-  const d=await crypto.subtle.digest("SHA-256",bytes);
+  const d=await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>);
   return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 
