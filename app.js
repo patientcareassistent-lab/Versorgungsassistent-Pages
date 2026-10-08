@@ -3008,12 +3008,35 @@
       fields.forEach(renderField)
     }
 
+    function profileAutofillValue(f){
+      const label=String(f.Feldbezeichnung||'').trim().toLowerCase()
+      const id=String(f.Feldzeile_ID||'').toLowerCase()
+      if(label==='name, vorname' || label==='name / vorname'){
+        const name=[values.patientLastName,values.patientFirstName].filter(Boolean).join(', ')
+        return name||''
+      }
+      if(label==='vorname') return values.patientFirstName||''
+      if(label==='nachname' || label==='name') return values.patientLastName||''
+      if(label==='versichertennummer') return values.insuredNo||''
+      if(id.includes('_supply_type_') && label==='versorgungsart') return values.supplyType||''
+      if(label==='seite' || label==='betroffene seite') return values.side||''
+      return ''
+    }
+
+    function fieldOptionValues(f){
+      const raw=String(f.Einheit_Optionen||f.Bedingung_UI||'').trim()
+      if(!raw.includes('|')) return []
+      const optionPart=raw.split(';')[0]
+      return optionPart.split('|').map(x=>x.trim()).filter(Boolean)
+    }
+
     function renderField(f){
       const id=f.Feldzeile_ID
       const type=String(f.Datentyp||'Text')
       const required=String(f.Pflichtstatus).toLowerCase()==='ja'
-      const options=String(f.Einheit_Optionen||f.Bedingung_UI||'')
-        .split('|').map(x=>x.trim()).filter(Boolean)
+      const options=fieldOptionValues(f)
+      const autoValue=profileAutofillValue(f)
+      if((values[id]===undefined || values[id]===null || values[id]==='') && autoValue!=='') values[id]=autoValue
       const meta=[f.Abschnitt,f.Einheit_Optionen,f.Bedingung_UI].filter(Boolean).join(' · ')
 
       const title=document.createElement('span')
@@ -3224,8 +3247,13 @@
       }else if(type==='Langtext'||type==='Messreihe'||type==='Messwert/Anhang'){
         control=document.createElement('textarea');control.rows=3
       }else if(type==='Auswahl'){
-        control=document.createElement('select')
-        control.innerHTML='<option value="">Bitte wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
+        if(options.length){
+          control=document.createElement('select')
+          control.innerHTML='<option value="">Bitte wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
+        }else{
+          control=document.createElement('input')
+          control.placeholder='Angabe'
+        }
       }else{
         control=document.createElement('input')
       }

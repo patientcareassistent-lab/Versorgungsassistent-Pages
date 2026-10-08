@@ -341,13 +341,17 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
         { Feldzeile_ID: 'multi', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Hilfsmitteloptionen', Datentyp: 'Mehrfachauswahl', Pflichtstatus: 'ja', Bedingung_UI: 'Option A | Option B' },
         { Feldzeile_ID: 'confirm', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Bestätigung', Datentyp: 'Bestätigung', Pflichtstatus: 'ja' },
         { Feldzeile_ID: 'yntext', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Ja/Nein mit Bemerkung', Datentyp: 'Ja/Nein + Bemerkung', Pflichtstatus: 'ja' },
-        { Feldzeile_ID: 'hint', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Nur Hinweis', Datentyp: 'Hinweis', Pflichtstatus: 'bedingt', Bedingung_UI: 'Nur bei besonderer Konstellation' }
+        { Feldzeile_ID: 'hint', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Nur Hinweis', Datentyp: 'Hinweis', Pflichtstatus: 'bedingt', Bedingung_UI: 'Nur bei besonderer Konstellation' },
+        { Feldzeile_ID: 'patient_name', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Name / Vorname', Datentyp: 'Text', Pflichtstatus: 'ja' },
+        { Feldzeile_ID: 'free_selection', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Freie Auswahl ohne Vorgaben', Datentyp: 'Auswahl', Pflichtstatus: 'nein' }
       ]
     }
   })
 
   await page.goto('/index.html')
   await page.locator('#newSupplyButton').click()
+  await page.locator('[data-case-field="patientFirstName"]').fill('Anna')
+  await page.locator('[data-case-field="patientLastName"]').fill('Muster')
   await page.locator('#careKasse').selectOption({ label: 'BARMER' })
   await page.locator('#carePg').selectOption('22')
   await expect(page.locator('#careHimi')).toContainText('Patientenlifter')
@@ -359,4 +363,6 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
   await expect(page.locator('#fieldList input[type="checkbox"][data-required="true"]')).toHaveCount(1)
   await expect(page.locator('#fieldList select[data-required="true"]')).toHaveCount(1)
   await expect(page.getByText('Nur bei besonderer Konstellation')).toBeVisible()
+  await expect(page.locator('#fieldList label').filter({ hasText: 'Name / Vorname' }).locator('input')).toHaveValue('Muster, Anna')
+  await expect(page.locator('#fieldList label').filter({ hasText: 'Freie Auswahl ohne Vorgaben' }).locator('input')).toHaveCount(1)
 })
