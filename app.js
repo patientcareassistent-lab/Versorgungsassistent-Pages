@@ -3595,7 +3595,7 @@
         if(!$('carePg').value) missing.push('Produktgruppe')
         if(!selectedHimiId()) missing.push('Hilfsmittel / Versorgungsbereich')
         if(!values.caseKind) missing.push('Vorgangsart')
-        missing.push(...missingValues(['patientFirstName','patientLastName','patientBirthDate','insuredNo','supplyType']))
+        missing.push(...missingValues(['patientFirstName','patientLastName','patientBirthDate','supplyType']))
         if(requiresSide()) missing.push(...missingValues(['side']))
         if($('carePg').value==='24') missing.push(...missingValues(['ampLevel']))
       } else if(i===1){
