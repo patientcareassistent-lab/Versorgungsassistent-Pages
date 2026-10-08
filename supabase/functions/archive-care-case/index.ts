@@ -64,13 +64,71 @@ function archiveRefs(payload:Record<string,unknown>,owner:string,caseId:string){
 }
 function completionProblems(row:Record<string,unknown>,payload:Record<string,unknown>){
   const missing:string[]=[];
+  const insurer=textValue(row.insurer);
+  const productGroup=textValue(row.product_group);
+  const himiId=textValue(row.himi_id);
+  const himi=textValue(row.himi);
+  const caseKind=textValue(payload.caseKind);
+  const supplyType=textValue(payload.supplyType);
+  const isRepair=caseKind==="Reparatur";
+  const isAok=insurer==="AOK Baden-Württemberg";
+  const needsSide=productGroup==="24" || productGroup==="05" || productGroup==="08" || ["PG23_UE","PG23_OE"].includes(himiId);
+
   if(row.status!=="Abschluss offen") missing.push("status");
+  if(Number(row.wizard_index)<10) missing.push("wizardIndex");
+  if(!insurer) missing.push("insurer");
+  if(!productGroup) missing.push("productGroup");
+  if(!himiId && !himi) missing.push("himi");
+  if(!textValue(payload.patientFirstName)) missing.push("patientFirstName");
+  if(!textValue(payload.patientLastName)) missing.push("patientLastName");
+  if(!["Neuversorgung","Reparatur"].includes(caseKind)) missing.push("caseKind");
+  if(!supplyType) missing.push("supplyType");
+  if(needsSide && !textValue(payload.side)) missing.push("side");
+  if(productGroup==="24" && !textValue(payload.ampLevel)) missing.push("ampLevel");
+
+  if(!textValue(payload.rxPresent)) missing.push("rxPresent");
+  if(payload.rxPresent==="Ja"){
+    if(payload.rxFileCaptured!==true) missing.push("rxFileCaptured");
+    if(!textValue(payload.rxText)) missing.push("rxText");
+  }else if(payload.rxPresent==="Nein" && !isRepair){
+    if(!textValue(payload.rxNeededText)) missing.push("rxNeededText");
+  }
+
+  if(isRepair){
+    for(const key of [
+      "repairSicHimiId","repairDate","repairTechnician","repairPreperformed",
+      "repairComplaint","repairWork","repairFunctionTest","repairUsable","repairCompleted"
+    ]){
+      const value=payload[key];
+      if(value===undefined || value===null || value===false || !String(value).trim()) missing.push(key);
+    }
+  }else{
+    if(!textValue(payload.planGoal)) missing.push("planGoal");
+    if(!textValue(payload.planShaft) && !textValue(payload.planParts)) missing.push("planConcept");
+  }
+
+  if(!textValue(payload.quotePositions)) missing.push("quotePositions");
+  const approval=textValue(payload.approvalState);
+  if(!approval) missing.push("approvalState");
+  if(approval && approval!=="Nicht genehmigungspflichtig"){
+    if(payload.docQuote!==true) missing.push("docQuote");
+    if(isAok && !["Reparatur","Instandhaltung"].includes(supplyType) && payload.docRx!==true) missing.push("docRx");
+    if(!isRepair && payload.docProfile!==true) missing.push("docProfile");
+    if(approval==="Genehmigt" && !textValue(payload.approvalDate)) missing.push("approvalDate");
+  }
+
   if(!textValue(payload.deliveryDate)) missing.push("deliveryDate");
   if(payload.deliveryUsable!==true) missing.push("deliveryUsable");
   if(payload.deliveryInstruction!==true) missing.push("deliveryInstruction");
   if(payload.deliveryReceipt!==true) missing.push("deliveryReceipt");
+
   if(!textValue(payload.billingState)) missing.push("billingState");
-  return missing;
+  if(isAok && textValue(payload.billingState)){
+    if(!textValue(payload.billingPosition)) missing.push("billingPosition");
+    if(!textValue(payload.billingVwkz)) missing.push("billingVwkz");
+  }
+
+  return [...new Set(missing)];
 }
 
 Deno.serve(async(req:Request)=>{
