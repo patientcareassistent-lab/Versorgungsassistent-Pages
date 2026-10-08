@@ -1128,8 +1128,10 @@ import { versorgungsziele } from './versorgungsziele.js'
       const host=$('measureFieldList')
       if(!host) return
       host.className='field-list'
-      if($('carePg').value==='24' && renderPg24SourceMeasureSheet()) return
+      // AOK BW PG24: the contractually required Annex 5a–5e takes precedence over
+      // internal FMB measurement sheets. Other payers retain the technician sheet.
       if(renderAokPg24MeasureSheet()) return
+      if($('carePg').value==='24' && renderPg24SourceMeasureSheet()) return
       const meta=selectedHimiMeta()
       host.innerHTML=''
       const note=$('measureLogicNote')
@@ -3712,13 +3714,20 @@ import { versorgungsziele } from './versorgungsziele.js'
         return profileValidation()
       } else if(i===3){
         missing=missingValues(['measureDate'])
+        if($('carePg').value==='24' && isAokCase() && aokPg24MeasureAsset()){
+          // A date alone must not mark an otherwise empty AOK contract sheet complete.
+          // Require a manually entered entry in the original PDF widget layer.
+          const originalMeasures=[...$('measureFieldList').querySelectorAll('[data-measure-key]')]
+          const anyOriginal=originalMeasures.some(x=>x.type==='checkbox'?x.checked:String(x.value||'').trim())
+          if(!anyOriginal) missing.push('mindestens eine Maßangabe im AOK-Originalmaßblatt')
+          return {ok:missing.length===0,missing}
+        }
         if($('carePg').value==='24' && pg24SourceMeasureSchema()){
           const sourceMeasures=[...$('measureFieldList').querySelectorAll('[data-measure-value="true"]')]
           const anySource=sourceMeasures.some(x=>x.type==='checkbox'?x.checked:String(x.value||'').trim())
           if(!anySource) missing.push('mindestens ein Maßwert')
           return {ok:missing.length===0,missing}
         }
-        if($('carePg').value==='24' && isAokCase() && aokPg24MeasureAsset()) return {ok:missing.length===0,missing}
         const measureControls=[...$('measureFieldList').querySelectorAll('[data-measure-key]')]
         const required=measureControls.filter(x=>x.dataset.required==='true')
         required.forEach(x=>{if(!String(x.value||'').trim()) missing.push(x.closest('label')?.querySelector('span')?.childNodes?.[0]?.textContent?.trim()||'Maßfeld')})
