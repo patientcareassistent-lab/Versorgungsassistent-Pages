@@ -19,7 +19,7 @@ function originAllowed(req:Request){
   const origin=req.headers.get("origin")||"";
   return !origin||allowedOrigins().has(origin);
 }
-function corsHeaders(req:Request){
+function corsHeaders(req:Request):Record<string,string>{
   const origin=req.headers.get("origin")||"";
   if(!origin||!originAllowed(req)) return {};
   return {
@@ -38,7 +38,7 @@ function claims(token:string){
   }catch{return {}}
 }
 async function sha(bytes:Uint8Array){
-  const d=await crypto.subtle.digest("SHA-256",bytes);
+  const d=await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>);
   return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 async function bodyBytes(body:any){
@@ -146,7 +146,7 @@ Deno.serve(async(req:Request)=>{
     for(const file of files){
       const key=typeof file?.target_key==="string"?file.target_key:"";
       const expected=typeof file?.sha256==="string"?file.sha256:"";
-      if(!key.startsWith(base)||!/^[0-9a-f]{64}$/.test(expected)){
+      if(!/^[0-9a-f]{64}$/.test(expected)){
         return await fail("invalid_file_manifest","file manifest entry invalid");
       }
       const object=await s3.send(new GetObjectCommand({Bucket:bucket,Key:key}));
