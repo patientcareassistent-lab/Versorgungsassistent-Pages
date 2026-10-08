@@ -17,7 +17,7 @@ test('PG23 source-defined goal accepts suggestions and edited free text', async 
   const picker=goal.locator('select[aria-label="Versorgungszielvorschlag"]')
   await expect(picker.locator('option')).not.toHaveCount(1)
   await picker.selectOption('23-11')
-  await expect(goal.locator('textarea')).toContainText('Erhalt oder Verbesserung')
+  await expect(goal.locator('textarea')).toHaveValue(/Erhalt oder Verbesserung/)
   await goal.locator('textarea').fill('Individuelles Ziel: selbständig zur Küche gehen')
   await expect(goal.locator('textarea')).toHaveValue('Individuelles Ziel: selbständig zur Küche gehen')
   await expect(page.locator('#versorgungGoalSuggestions')).toBeHidden()
