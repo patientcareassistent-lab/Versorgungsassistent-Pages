@@ -3852,7 +3852,10 @@ import { versorgungsziele } from './versorgungsziele.js'
     async function uploadRepairPhoto(prepared,folder='repair'){
       if(!currentSession?.user?.id || !activeSupplyId) throw new Error('Kein aktiver Versorgungsvorgang.')
       const safeFolder=folder==='labels'?'labels':'repair'
-      const path=currentSession.user.id+'/'+activeSupplyId+'/'+safeFolder+'/'+prepared.meta.id+'.jpg'
+      // Keep all media under the immutable case owner's path, including
+      // photos added by other approved staff, so existing URLs remain valid.
+      const ownerId=activeSupplyRecord()?.ownerUserId||currentSession.user.id
+      const path=ownerId+'/'+activeSupplyId+'/'+safeFolder+'/'+prepared.meta.id+'.jpg'
       const upload=await supabase.storage.from(REPAIR_PHOTO_BUCKET).upload(path,prepared.blob,{
         contentType:'image/jpeg',
         cacheControl:'0',
@@ -4585,16 +4588,17 @@ import { versorgungsziele } from './versorgungsziele.js'
     }
 
     function activeSupplyIsReadOnly(){
-      const item=activeSupplyRecord()
-      return !!(item?.ownerUserId && currentSession?.user?.id && item.ownerUserId!==currentSession.user.id)
+      // Team access is enforced by MFA and the server-side member allowlist,
+      // not by the care-case creator's user ID.
+      return !!activeSupplyId && !currentSession?.user?.id
     }
 
     function supplyHasEditableContext(){
-      return !!activeSupplyId && !activeSupplyIsReadOnly()
+      return !!activeSupplyId && !!currentSession?.user?.id && !activeSupplyIsReadOnly()
     }
 
     function archiveMissingSteps(){
-      if(!supplyHasEditableContext()) return ['eigener bearbeitbarer Vorgang']
+      if(!supplyHasEditableContext()) return ['bearbeitbarer Vorgang']
       return wizardSteps
         .filter((_,i)=>stepApplicable(i) && !validateStep(i).ok)
         .map(step=>step.name)
@@ -4607,10 +4611,10 @@ import { versorgungsziele } from './versorgungsziele.js'
       button.removeAttribute('aria-hidden')
       button.removeAttribute('tabindex')
       const editable=supplyHasEditableContext()
-      const missing=editable?archiveMissingSteps():['eigener bearbeitbarer Vorgang']
+      const missing=editable?archiveMissingSteps():['bearbeitbarer Vorgang']
       button.disabled=!editable || missing.length>0
       button.title=!editable
-        ? 'Archivierung ist nur für eigene Vorgänge möglich.'
+        ? 'Archivierung erfordert eine freigeschaltete Mitarbeitersitzung.'
         : missing.length
           ? 'Archivierung nach vollständiger v0.9-Dokumentation: '+missing.slice(0,3).join(' · ')
           : 'Vollständig dokumentierten Vorgang geschützt archivieren.'
