@@ -139,10 +139,26 @@ jobs:
       - name: Validate Supabase archive security invariants
         run: npm run test:security
 
+      # Cached only when the pinned Whisper revision and local WASM sources match.
+      # Browser regression and security gates still run on every deployment.
+      - name: Restore pinned whisper.cpp release assets
+        id: whisper-cache
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809
+        with:
+          path: |
+            whispercpp/whisper.js
+            whispercpp/ggml-tiny-q5_1.bin
+            whispercpp/UPSTREAM_REVISION
+            whispercpp/MODEL_SHA256
+            whispercpp/RUNTIME_SHA256
+          key: ${{ runner.os }}-whisper-d1be6fde-tiny-q5-v1-${{ hashFiles('whispercpp/emscripten.cpp', 'whispercpp/CMakeLists.txt', 'whispercpp/runtime.js', 'whispercpp/worker.js') }}
+
       - name: Setup pinned Emscripten toolchain
+        if: steps.whisper-cache.outputs.cache-hit != 'true'
         uses: emscripten-core/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021
 
       - name: Build pinned single-thread whisper.cpp WebAssembly
+        if: steps.whisper-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -170,6 +186,7 @@ jobs:
           rm -rf .whisper-src .whisper-build
 
       - name: Fetch pinned multilingual whisper.cpp model
+        if: steps.whisper-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -183,6 +200,17 @@ jobs:
 
           sha256sum whispercpp/ggml-tiny-q5_1.bin > whispercpp/MODEL_SHA256
           sha256sum whispercpp/whisper.js whispercpp/runtime.js whispercpp/worker.js > whispercpp/RUNTIME_SHA256
+
+      - name: Verify cached or newly built Whisper assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s whispercpp/whisper.js
+          grep -q "whisper_factory" whispercpp/whisper.js
+          test "$(cat whispercpp/UPSTREAM_REVISION)" = "d1be6fde11ac6e0407606b4e42fe72d34add8037"
+          echo "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7  whispercpp/ggml-tiny-q5_1.bin" | sha256sum -c -
+          sha256sum -c whispercpp/MODEL_SHA256
+          sha256sum -c whispercpp/RUNTIME_SHA256
           sha256sum package-lock.json > DEPENDENCY_LOCK_SHA256
 
       - name: Runtime dependency gate
