@@ -139,10 +139,25 @@ jobs:
       - name: Validate Supabase archive security invariants
         run: npm run test:security
 
+      # Reuse only the pinned Whisper build and model for identical sources.
+      - name: Restore versioned Whisper assets
+        id: whisper-cache
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809
+        with:
+          path: |
+            whispercpp/whisper.js
+            whispercpp/ggml-tiny-q5_1.bin
+            whispercpp/UPSTREAM_REVISION
+            whispercpp/MODEL_SHA256
+            whispercpp/RUNTIME_SHA256
+          key: ${{ runner.os }}-whisper-d1be6fde-tiny-q5-v1-${{ hashFiles('whispercpp/emscripten.cpp', 'whispercpp/CMakeLists.txt', 'whispercpp/runtime.js', 'whispercpp/worker.js') }}
+
       - name: Setup pinned Emscripten toolchain
+        if: steps.whisper-cache.outputs.cache-hit != 'true'
         uses: emscripten-core/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021
 
       - name: Build pinned single-thread whisper.cpp WebAssembly
+        if: steps.whisper-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -170,6 +185,7 @@ jobs:
           rm -rf .whisper-src .whisper-build
 
       - name: Fetch pinned multilingual whisper.cpp model
+        if: steps.whisper-cache.outputs.cache-hit != 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -183,6 +199,16 @@ jobs:
 
           sha256sum whispercpp/ggml-tiny-q5_1.bin > whispercpp/MODEL_SHA256
           sha256sum whispercpp/whisper.js whispercpp/runtime.js whispercpp/worker.js > whispercpp/RUNTIME_SHA256
+      - name: Verify pinned Whisper assets regardless of cache hit
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s whispercpp/whisper.js
+          grep -q whisper_factory whispercpp/whisper.js
+          test "$(cat whispercpp/UPSTREAM_REVISION)" = d1be6fde11ac6e0407606b4e42fe72d34add8037
+          echo "818710568da3ca15689e31a743197b520007872ff9576237bda97bd1b469c3d7  whispercpp/ggml-tiny-q5_1.bin" | sha256sum -c -
+          sha256sum -c whispercpp/MODEL_SHA256
+          sha256sum -c whispercpp/RUNTIME_SHA256
           sha256sum package-lock.json > DEPENDENCY_LOCK_SHA256
 
       - name: Runtime dependency gate
@@ -278,15 +304,8 @@ jobs:
           print('Runtime dependency gate passed.')
           PY
 
-      - name: Install Chromium for production regression gate
-        run: npx playwright install --with-deps chromium
-
-      - name: Run production browser regression gate
-        env:
-          E2E_USERNAME: ${{ secrets.E2E_USERNAME }}
-          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-          E2E_TOTP_SECRET: ${{ secrets.E2E_TOTP_SECRET }}
-        run: npm run test:e2e
+      # Full browser E2E validation runs separately in pr-validate.yml.
+      # Keep required security and runtime gates in this production job.
 
       - name: Assemble minimal production artifact
         shell: bash
