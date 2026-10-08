@@ -2,5 +2,5 @@
 
 ## Versionsumfang 0.9
 
-Version 0.9 fokussiert die digitale Ablösung der papierhaften Anamnese/Profilerhebung einschließlich Auftrag, Rezept, Maßdokumentation und fachlicher Versorgungsdokumentation. Abrechnung, Kalkulation und die externe Archivierung sind in dieser Version nicht Bestandteil der sichtbaren Benutzeroberfläche; die technische Vorarbeit bleibt für spätere Versionen erhalten.\n
+Version 0.9 fokussiert die digitale Ablösung der papierhaften Anamnese/Profilerhebung einschließlich Auftrag, Rezept, Maßdokumentation und fachlicher Versorgungsdokumentation. Abrechnung und Kalkulation sind in dieser Version nicht Bestandteil der sichtbaren Benutzeroberfläche. Archivübersicht und geschützte Archivierung bleiben Bestandteil von Version 0.9.\n
 Deployment: GitHub Pages (`main`, GitHub Actions).

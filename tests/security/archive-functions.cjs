@@ -29,7 +29,8 @@ assert.match(archive, /wizardIndex/, 'archive: final wizard position gate missin
 assert.match(archive, /patientFirstName/, 'archive: patient core-data gate missing')
 assert.match(archive, /repairSicHimiId/, 'archive: repair completion gate missing')
 assert.match(archive, /quotePositions/, 'archive: quote completion gate missing')
-assert.match(archive, /billingPosition/, 'archive: AOK billing completion gate missing')
+assert.doesNotMatch(archive, /missing\("billingState"\)|missing\("billingPosition"\)|missing\("billingVwkz"\)/, 'archive: v0.9 must not require hidden billing fields')
+assert.match(archive, /Number\(row\.wizard_index\)<9/, 'archive: v0.9 completion must use the last visible wizard step')
 assert.doesNotMatch(archive, /patient_first_name|patient_last_name|case_number:/, 'archive: personal metadata must not be duplicated into the archive index')
 
 assert.match(verify, /npm:@aws-sdk\/client-s3@3\.1147\.0/, 'verify: AWS SDK must be pinned')

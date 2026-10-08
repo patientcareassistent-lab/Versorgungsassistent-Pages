@@ -118,7 +118,7 @@ test('team-visible foreign supplies open read-only instead of failing on save', 
   await expect(page.locator('[data-case-field="patientFirstName"]')).toBeDisabled()
   await expect(page.locator('#careKasse')).toBeDisabled()
   await expect(page.locator('#clearButton')).toBeDisabled()
-  await expect(page.locator('#archiveSupplyButton')).toBeHidden()
+  await expect(page.locator('#archiveSupplyButton')).toBeDisabled()
   await expect(page.locator('#printButton')).toBeEnabled()
   await expect(page.locator('.wizard-step[data-step="1"]')).toBeEnabled()
   await page.locator('.wizard-step[data-step="1"]').click()
@@ -282,10 +282,11 @@ test('failed photo-reference removal keeps the private object and case reference
 })
 
 
-test('version 0.9 hides billing, calculation and external archiving from the user interface', async ({ page }) => {
+test('version 0.9 keeps archiving but hides billing and calculation from the user interface', async ({ page }) => {
   await openSignedInApp(page)
 
-  await expect(page.locator('#archiveSupplyButton')).toBeHidden()
+  await expect(page.locator('#archiveSupplyButton')).toBeVisible()
+  await expect(page.locator('#archiveSupplyButton')).toBeDisabled()
   await expect(page.locator('.wizard-step[data-step="10"]')).toBeHidden()
   await expect(page.locator('.wizard-panel[data-panel="10"]')).toBeHidden()
   await expect(page.locator('[data-case-field="quoteCalc"]')).toHaveCount(0)

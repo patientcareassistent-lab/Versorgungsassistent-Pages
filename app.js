@@ -4382,10 +4382,13 @@
       button.removeAttribute('aria-hidden')
       button.removeAttribute('tabindex')
       const editable=supplyHasEditableContext()
-      button.disabled=!editable
-      button.title=editable
-        ? 'Aktuellen Stand, Revisionshistorie und Bilder geschützt extern archivieren.'
-        : 'Archivierung ist nur für eigene Vorgänge möglich.'
+      const missing=editable?archiveMissingSteps():['eigener bearbeitbarer Vorgang']
+      button.disabled=!editable || missing.length>0
+      button.title=!editable
+        ? 'Archivierung ist nur für eigene Vorgänge möglich.'
+        : missing.length
+          ? 'Archivierung nach vollständiger v0.9-Dokumentation: '+missing.slice(0,3).join(' · ')
+          : 'Vollständig dokumentierten Vorgang geschützt archivieren.'
     }
 
     function updateSupplyEditState(){
@@ -4407,6 +4410,12 @@
 
     async function archiveActiveSupply(){
       if(!supplyHasEditableContext()) return
+      const missing=archiveMissingSteps()
+      if(missing.length){
+        showWizardError('Archivierung ist erst nach vollständiger v0.9-Dokumentation möglich:',missing)
+        updateArchiveButtonState()
+        return
+      }
       const patient=([values.patientFirstName,values.patientLastName].filter(Boolean).join(' ')||values.patientName||values.caseNumber||'diese Versorgung')
       if(!window.confirm('Versorgung „'+patient+'“ extern archivieren? Der aktuelle Stand, die Revisionshistorie und zugehörige Bilder werden nach Prüfsummenprüfung in das geschützte EU-Archiv übertragen und anschließend aus dem operativen Bestand entfernt.')) return
 
