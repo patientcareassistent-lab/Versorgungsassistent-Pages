@@ -127,7 +127,7 @@ async function installSupabaseMock(page, options = {}) {
       care_reference_bootstrap: {
         kassen: [{ Kasse_Kanonisch: 'AOK Baden-Württemberg' }],
         produktgruppen: [
-          { PG: '10', Generisches_Blatt: 'Regressionstest PG10', Reifegrad: 'TEST' },
+          { PG: '23', Generisches_Blatt: 'Regressionstest PG23', Reifegrad: 'TEST' },
           { PG: '24', Generisches_Blatt: 'Regressionstest PG24', Reifegrad: 'TEST' }
         ],
         sourceCount: 1,
@@ -178,6 +178,16 @@ async function installSupabaseMock(page, options = {}) {
         return Promise.resolve({ data, error: null })
       },
       from(table) { return makeQueryBuilder(table) },
+      // Production startup queries the archive gateway before making the app visible.
+      // A successful empty archive response keeps tests isolated from live data.
+      functions: {
+        async invoke(name) {
+          if (name === 'list-care-case-archives') {
+            return { data: { archives: [] }, error: null }
+          }
+          return { data: null, error: { message: 'Unexpected mocked function: ' + name } }
+        }
+      },
       storage: {
         from() {
           const readStoragePaths = () => {
