@@ -19,7 +19,7 @@ function originAllowed(req:Request){
   const origin=req.headers.get("origin")||"";
   return !origin||allowedOrigins().has(origin);
 }
-function corsHeaders(req:Request){
+function corsHeaders(req:Request):Record<string,string>{
   const origin=req.headers.get("origin")||"";
   if(!origin||!originAllowed(req)) return {};
   return {
@@ -38,7 +38,7 @@ function claims(token:string){
   }catch{return {}}
 }
 async function sha(bytes:Uint8Array){
-  const d=await crypto.subtle.digest("SHA-256",bytes);
+  const d=await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>);
   return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 async function bodyBytes(body:any){
