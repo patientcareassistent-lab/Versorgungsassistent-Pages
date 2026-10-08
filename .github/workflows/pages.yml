@@ -293,7 +293,7 @@ jobs:
           rm -rf dist
           mkdir -p dist/vendor dist/whispercpp dist/assets/aok-pg24
 
-          cp index.html app.js frame-guard.js styles.css brand-logo.jpg .nojekyll dist/
+          cp index.html app.js prescribers.js frame-guard.js styles.css prescribers.css brand-logo.jpg .nojekyll dist/
           cp -a vendor/. dist/vendor/
           cp whispercpp/runtime.js whispercpp/worker.js whispercpp/whisper.js whispercpp/ggml-tiny-q5_1.bin dist/whispercpp/
           cp -a assets/aok-pg24/. dist/assets/aok-pg24/
