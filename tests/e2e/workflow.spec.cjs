@@ -286,6 +286,8 @@ test('failed photo-reference removal keeps the private object and case reference
 
 test('version 0.9 keeps archiving but hides billing and calculation from the user interface', async ({ page }) => {
   await openSignedInApp(page)
+  await page.locator('#newSupplyOverviewButton').click()
+  await expect(page.locator('#careView')).toBeVisible()
 
   await expect(page.locator('#archiveSupplyButton')).toBeVisible()
   await expect(page.locator('#archiveSupplyButton')).toBeDisabled()
