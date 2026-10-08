@@ -26,7 +26,7 @@ begin
   if p_actor_id is null or p_care_case_id is null then
     raise exception 'missing_archive_actor_or_case' using errcode='22023';
   end if;
-  if p_action not in ('reserve','complete','cleanup','verify') then
+  if p_action not in ('reserve','complete','cleanup','verify','delete_begin','delete_finalize','delete_fail') then
     raise exception 'unsupported_archive_action' using errcode='22023';
   end if;
   select m.role into v_role
@@ -73,6 +73,77 @@ begin
   if v_idx.archive_id is null then
     raise exception 'archive_reservation_missing' using errcode='P0002';
   end if;
+  if p_action in ('delete_begin','delete_finalize','delete_fail') then
+    if v_role is distinct from 'admin' then
+      raise exception 'archive_admin_required' using errcode='42501';
+    end if;
+    if v_idx.status<>'READY' then
+      raise exception 'archive_not_ready' using errcode='23514';
+    end if;
+    if v_idx.verification_status<>'VERIFIED' and p_action<>'delete_fail' then
+      raise exception 'archive_not_verified' using errcode='23514';
+    end if;
+    if v_idx.legal_hold or v_idx.retention_until is null
+      or v_idx.retention_until>=current_date then
+      raise exception 'archive_retention_or_legal_hold_blocks_deletion' using errcode='42501';
+    end if;
+    if exists(select 1 from public.care_cases c where c.id=p_care_case_id) then
+      raise exception 'active_case_requires_separate_purge' using errcode='42501';
+    end if;
+    if p_action='delete_begin' then
+      v_error:=nullif(btrim(coalesce(p_data->>'note','')),'');
+      if length(coalesce(v_error,'')) not between 12 and 500 then
+        raise exception 'deletion_documentation_required' using errcode='22023';
+      end if;
+      insert into app_private.care_case_archive_delete_log(
+        care_case_id,archive_id,executed_by,deleted_objects,note
+      ) values(p_care_case_id,v_idx.archive_id,p_actor_id,0,'INTENT: '||v_error);
+      return jsonb_build_object('ok',true,'archive_id',v_idx.archive_id,
+        'care_case_id',p_care_case_id,'delete_prepared',true);
+    end if;
+    if not exists (
+      select 1 from app_private.care_case_archive_delete_log d
+      where d.care_case_id=p_care_case_id
+        and d.archive_id=v_idx.archive_id
+        and d.executed_by=p_actor_id
+        and d.note like 'INTENT:%'
+        and d.executed_at>now()-interval '1 hour'
+    ) then
+      raise exception 'recent_deletion_intent_required' using errcode='23514';
+    end if;
+    if p_action='delete_fail' then
+      v_error:=left(coalesce(p_data->>'error','archive_object_delete_failed'),500);
+      update app_private.care_case_archive_delete_log d
+      set note='FAILED: '||v_error
+      where d.id=(
+        select max(d2.id) from app_private.care_case_archive_delete_log d2
+        where d2.care_case_id=p_care_case_id and d2.archive_id=v_idx.archive_id
+          and d2.executed_by=p_actor_id and d2.note like 'INTENT:%'
+      );
+      if coalesce((p_data->>'external_objects_deleted')::boolean,false) then
+        update app_private.care_case_archives set
+          verification_status='FAILED',verification_error='Deletion partially completed; administrator reconciliation required.',
+          verified_at=null,verified_by=null
+        where archive_id=v_idx.archive_id;
+      end if;
+      return jsonb_build_object('ok',true,'archive_id',v_idx.archive_id,'delete_failed',true);
+    end if;
+    v_photos:=(p_data->>'deleted_objects')::integer;
+    if v_photos is null or v_photos not between 1 and 15 then
+      raise exception 'invalid_deleted_object_count' using errcode='22023';
+    end if;
+    update app_private.care_case_archive_delete_log d
+    set deleted_objects=v_photos,note='COMPLETED: '||substring(d.note from 9)
+    where d.id=(
+      select max(d2.id) from app_private.care_case_archive_delete_log d2
+      where d2.care_case_id=p_care_case_id and d2.archive_id=v_idx.archive_id
+        and d2.executed_by=p_actor_id and d2.note like 'INTENT:%'
+    );
+    delete from app_private.care_case_archives where archive_id=v_idx.archive_id;
+    return jsonb_build_object('ok',true,'archive_id',v_idx.archive_id,
+      'care_case_id',p_care_case_id,'deleted_objects',v_photos);
+  end if;
+
   if p_action='complete' then
     if v_idx.status<>'PENDING' then
       raise exception 'archive_not_pending' using errcode='23514';
