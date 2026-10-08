@@ -430,3 +430,59 @@ test('source-backed conditional anamnesis fields become required only when their
   await expect(page.getByText('Cobb-Winkel')).toBeVisible()
   await expect(page.getByText('Gelenkbeweglichkeit Neutral-Null unten')).toHaveCount(0)
 })
+
+
+test('multi-PG contract forms remain discoverable for a selected product group', async ({ page }) => {
+  await installSupabaseMock(page, {
+    mode: 'signed-in',
+    rpcOverrides: {
+      care_reference_bootstrap: {
+        kassen: [{ Kasse_Kanonisch: 'DAK-Gesundheit' }],
+        produktgruppen: [{ PG: '18', Generisches_Blatt: 'PG18_Rollstuhl', Reifegrad: 'TEST' }],
+        sourceCount: 1,
+        formCount: 1
+      },
+      himi_logic_for_pg: [{
+        Himi_ID: 'PG18_E',
+        PG: '18',
+        Bezeichnung: 'E-Rollstuhl',
+        Generisches_Formular_ID: 'PG18_Rollstuhl',
+        Versorgungsarten: ['Erstversorgung'],
+        Profil_erforderlich: true,
+        Mass_erforderlich: false,
+        Erprobung_erforderlich: true,
+        Verlauf_erforderlich: false,
+        Aktiv: true
+      }],
+      forms_for_pg: [{
+        Formular_ID: 'FORM_MULTI',
+        Kasse: 'DAK-Gesundheit',
+        PG: '11/18/23/24/26/31',
+        Versorgungsart: 'mehrere Reha-/OT-Bereiche',
+        Status: 'VERTRAG_PRUEFEN',
+        Aktion_Versorgungsassistent: 'Vertrag prüfen'
+      }],
+      himi_form_rules_for_himi: [],
+      form_fields_for_pg: [{
+        Feldzeile_ID: 'GEN_18_goal',
+        Formular_ID: 'PG18_Rollstuhl',
+        PG: '18',
+        Formular_Typ: 'GENERISCH',
+        Feldbezeichnung: 'Versorgungsziel',
+        Datentyp: 'Langtext',
+        Pflichtstatus: 'ja'
+      }]
+    }
+  })
+
+  await page.goto('/index.html')
+  await page.locator('#newSupplyButton').click()
+  await page.locator('#careKasse').selectOption({ label: 'DAK-Gesundheit' })
+  await page.locator('#carePg').selectOption('18')
+  await page.locator('#careHimi').selectOption('PG18_E')
+
+  await expect(page.locator('#careForm')).toContainText('mehrere Reha-/OT-Bereiche')
+  await page.locator('#careForm').selectOption('FORM_MULTI')
+  await expect(page.locator('#ruleBox')).toContainText('Voraufnahme')
+  await expect(page.locator('#fieldInfo')).toContainText('allgemeine Voraufnahme')
+})

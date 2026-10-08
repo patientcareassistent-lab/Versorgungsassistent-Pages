@@ -1011,6 +1011,8 @@
     function formMatchesHimi(form){
       const meta=selectedHimiMeta()
       if(!selectedHimiId()) return true
+      const formPg=String(form.PG||'').trim()
+      if(formPg.includes('/') || norm(formPg)==='diverse') return true
       const text=norm([form.Versorgungsart,form.Region_Vertrag,form.Beleg,form.Aktion_Versorgungsassistent].join(' '))
       const keys=himiKeywordsFromMeta(meta).map(norm)
       return !keys.length || keys.some(k=>text.includes(k))
