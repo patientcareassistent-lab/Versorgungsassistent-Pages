@@ -2996,14 +2996,35 @@
       }else $('ruleBox').classList.add('hidden')
 
       let fields=[]
-      if(formId) fields=data.formularfelder.filter(f=>f.Formular_ID===formId)
+      let fieldSource='none'
+      if(formId){
+        fields=data.formularfelder.filter(f=>f.Formular_ID===formId)
+        if(fields.length) fieldSource='exact'
+      }
       const map={FORM_001:'BARMER_PG18_ANH4',FORM_002:'BARMER_PG22_ANHB'}
-      if(!fields.length && map[formId]) fields=data.formularfelder.filter(f=>f.Formular_ID===map[formId])
-      if(!fields.length && meta?.Generisches_Formular_ID) fields=data.formularfelder.filter(f=>f.Formular_ID===meta.Generisches_Formular_ID)
-      if(!fields.length && pg) fields=data.formularfelder.filter(f=>String(f.PG)===String(pg)&&f.Formular_Typ==='GENERISCH')
+      if(!fields.length && map[formId]){
+        fields=data.formularfelder.filter(f=>f.Formular_ID===map[formId])
+        if(fields.length) fieldSource='mapped-contract'
+      }
+      if(!fields.length && meta?.Generisches_Formular_ID){
+        fields=data.formularfelder.filter(f=>f.Formular_ID===meta.Generisches_Formular_ID)
+        if(fields.length) fieldSource=formId?'generic-fallback':'generic'
+      }
+      if(!fields.length && pg){
+        fields=data.formularfelder.filter(f=>String(f.PG)===String(pg)&&f.Formular_Typ==='GENERISCH')
+        if(fields.length) fieldSource=formId?'generic-fallback':'generic'
+      }
       if(meta?.Massprofil_ID) fields=fields.filter(f=>!['maße','masse'].includes(norm(f.Abschnitt)))
 
-      $('fieldInfo').textContent=fields.length?fields.length+' Felder aus der hinterlegten Formularlogik':'Für diese Auswahl sind noch keine Felddefinitionen hinterlegt.'
+      const fallbackContract=selected && fieldSource==='generic-fallback' && ['EXPLIZIT_PFLICHT','VERTRAGSFORMULAR','PFLICHT_AUF_ANFORDERUNG','VERTRAG_PRUEFEN'].includes(selected.Status)
+      if(fallbackContract){
+        $('ruleBox').classList.remove('hidden')
+        $('ruleBox').innerHTML='<div><strong>'+escapeHtml(selected.Status)+'</strong><p>'+escapeHtml(selected.Aktion_Versorgungsassistent)+'</p><small>Digitale Voraufnahme: Die angezeigten Felder stammen aus dem allgemeinen PG-/Hilfsmittelbogen, nicht aus dem exakten Kassenformular.</small></div><span class="pill warning">Voraufnahme</span>'
+      }
+
+      $('fieldInfo').textContent=fields.length
+        ? fields.length+' Felder aus der hinterlegten Formularlogik'+(fallbackContract?' · allgemeine Voraufnahme':'')
+        :'Für diese Auswahl sind noch keine Felddefinitionen hinterlegt.'
       $('fieldList').innerHTML=''
       fields.forEach(renderField)
     }
