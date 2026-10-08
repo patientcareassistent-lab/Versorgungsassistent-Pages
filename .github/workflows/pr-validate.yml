@@ -34,9 +34,17 @@ jobs:
       - name: Prepare browser runtime used by regression tests
         run: |
           set -euo pipefail
-          mkdir -p vendor
+          mkdir -p vendor/tesseract/core vendor/tesseract/lang
           cp node_modules/@supabase/supabase-js/dist/umd/supabase.js vendor/supabase.js
+          cp node_modules/tesseract.js/dist/tesseract.esm.min.js vendor/tesseract/tesseract.esm.min.js
+          cp node_modules/tesseract.js/dist/worker.min.js vendor/tesseract/worker.min.js
+          cp node_modules/tesseract.js-core/tesseract-core* vendor/tesseract/core/
+          LANG_FILE="$(find node_modules/@tesseract.js-data/deu -type f -name 'deu.traineddata.gz' -print -quit)"
+          test -n "$LANG_FILE"
+          cp "$LANG_FILE" vendor/tesseract/lang/deu.traineddata.gz
           test -s vendor/supabase.js
+          test -s vendor/tesseract/worker.min.js
+          test -s vendor/tesseract/lang/deu.traineddata.gz
 
       - name: Validate Supabase archive security invariants
         run: npm run test:security
@@ -70,7 +78,10 @@ jobs:
           npx playwright test --retries=0 --max-failures=1 \
             tests/e2e/auth.spec.cjs \
             tests/e2e/workflow.spec.cjs \
-            tests/e2e/live-security.spec.cjs
+            tests/e2e/live-security.spec.cjs \
+            tests/e2e/ocr.spec.cjs \
+            tests/e2e/pg-production-scope.spec.cjs \
+            tests/e2e/versorgungsziele.spec.cjs
           
       - name: Upload failure diagnostics
         if: failure()
