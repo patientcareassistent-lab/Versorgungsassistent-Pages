@@ -1000,6 +1000,14 @@
       return h.split(' ').filter(x=>x.length>3)
     }
 
+    function formMatchesPgValue(formPg,pg){
+      if(!pg) return true
+      const raw=String(formPg||'').trim()
+      if(!raw) return true
+      if(norm(raw)==='diverse') return true
+      return raw.split(/[\/;,]+/).map(x=>x.trim()).filter(Boolean).includes(String(pg))
+    }
+
     function formMatchesHimi(form){
       const meta=selectedHimiMeta()
       if(!selectedHimiId()) return true
@@ -1196,7 +1204,7 @@
         .sort((a,b)=>(a.Sortierung||100)-(b.Sortierung||100))
       const ruleFormIds=[...new Set(rules.map(r=>r.Formular_ID).filter(Boolean))]
       const exactForms=data.formulare.filter(f=>ruleFormIds.includes(f.Formular_ID))
-      const broad=data.formulare.filter(f=>(!kasse||f.Kasse===kasse)&&(!pg||String(f.PG)===String(pg))&&formMatchesHimi(f))
+      const broad=data.formulare.filter(f=>(!kasse||f.Kasse===kasse)&&formMatchesPgValue(f.PG,pg)&&formMatchesHimi(f))
       const byId=new Map()
       exactForms.forEach(f=>byId.set(f.Formular_ID,f))
       broad.forEach(f=>{if(!byId.has(f.Formular_ID))byId.set(f.Formular_ID,f)})
@@ -3038,7 +3046,7 @@
       }
       if(label==='vorname') return values.patientFirstName||''
       if(label==='nachname' || label==='name') return values.patientLastName||''
-      if(label==='versichertennummer') return values.insuredNo||''
+      if(['versichertennummer','kv-nummer','kv.-nr.'].includes(label)) return values.insuredNo||''
       if(label==='geburtsdatum') return values.patientBirthDate||''
       if(id.includes('_supply_type_') && label==='versorgungsart') return values.supplyType||''
       if(label==='seite' || label==='betroffene seite') return values.side||''
@@ -3127,11 +3135,15 @@
       const type=String(f.Datentyp||'Text')
       const conditional=profileConditionalState(f)
       if(!conditional.visible) return
-      const required=conditional.required
+      const sourceStatus=String(f.Pflichtstatus||'').toLowerCase()
+      const required=type==='Hinweis'?false:conditional.required
       const options=fieldOptionValues(f)
       const autoValue=profileAutofillValue(f)
       if((values[id]===undefined || values[id]===null || values[id]==='') && autoValue!=='') values[id]=autoValue
-      const meta=[f.Abschnitt,f.Einheit_Optionen,f.Bedingung_UI].filter(Boolean).join(' · ')
+      const metaParts=[f.Abschnitt,f.Einheit_Optionen,f.Bedingung_UI].filter(Boolean)
+      if(sourceStatus==='bedingt' && !f.Bedingung_UI) metaParts.push('bedingt laut Quelle · Auslöser nicht eindeutig hinterlegt')
+      if(type==='Hinweis') metaParts.push('Hinweis · keine Eingabe erforderlich')
+      const meta=metaParts.join(' · ')
 
       const title=document.createElement('span')
       title.innerHTML=escapeHtml(f.Feldbezeichnung)+(required?'<b>*</b>':'')+(meta?'<small>'+escapeHtml(meta)+'</small>':'')
