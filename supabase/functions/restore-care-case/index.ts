@@ -119,12 +119,25 @@ Deno.serve(async(req:Request)=>{
     const hash=await sha256Hex(object.bytes);
     if(hash!==file.sha256) return reply(409,{error:"archive_file_checksum_mismatch",path:file.source_path});
     if(object.bytes.byteLength>3*1024*1024) return reply(409,{error:"restore_file_too_large"});
-    const upload=await admin.storage.from(SOURCE_BUCKET).upload(String(file.source_path),object.bytes,{
-      upsert:true,
+    // Never overwrite existing care-case photos. A previous failed restore
+    // may already have staged a correct copy: verify it and resume safely.
+    const upload=await admin.storage.from(SOURCE_BUCKET).upload(sourcePath,object.bytes,{
+      upsert:false,
       contentType:String(file.content_type||object.contentType||"application/octet-stream")
     });
-    if(upload.error) return reply(500,{error:"restore_file_failed",path:file.source_path,detail:upload.error.message});
-    restoredPaths.push(String(file.source_path));
+    if(upload.error){
+      const current=await admin.storage.from(SOURCE_BUCKET).download(sourcePath);
+      if(current.error||!current.data) return reply(500,{
+        error:"restore_file_staging_unconfirmed",path:sourcePath,
+        warning:"Verified R2 archive remains intact. Retry or reconcile staged files."
+      });
+      const currentBytes=new Uint8Array(await current.data.arrayBuffer());
+      if(currentBytes.byteLength>3*1024*1024
+        ||await sha256Hex(currentBytes)!==file.sha256)
+        return reply(409,{error:"restore_existing_file_checksum_mismatch",path:sourcePath});
+    }else{
+      restoredPaths.push(sourcePath);
+    }
   }
 
   const restored=await admin.rpc("archive_restore_for_service",{
