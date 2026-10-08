@@ -3039,6 +3039,7 @@
       if(label==='vorname') return values.patientFirstName||''
       if(label==='nachname' || label==='name') return values.patientLastName||''
       if(label==='versichertennummer') return values.insuredNo||''
+      if(label==='geburtsdatum') return values.patientBirthDate||''
       if(id.includes('_supply_type_') && label==='versorgungsart') return values.supplyType||''
       if(label==='seite' || label==='betroffene seite') return values.side||''
       return ''
@@ -3594,7 +3595,7 @@
         if(!$('carePg').value) missing.push('Produktgruppe')
         if(!selectedHimiId()) missing.push('Hilfsmittel / Versorgungsbereich')
         if(!values.caseKind) missing.push('Vorgangsart')
-        missing.push(...missingValues(['patientFirstName','patientLastName','supplyType']))
+        missing.push(...missingValues(['patientFirstName','patientLastName','patientBirthDate','insuredNo','supplyType']))
         if(requiresSide()) missing.push(...missingValues(['side']))
         if($('carePg').value==='24') missing.push(...missingValues(['ampLevel']))
       } else if(i===1){
