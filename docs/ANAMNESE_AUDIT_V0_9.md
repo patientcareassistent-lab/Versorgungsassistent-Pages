@@ -131,10 +131,11 @@ Zentral erfasst bzw. übernommen werden:
 - Nachname
 - Geburtsdatum
 - Versichertennummer
-- Versorgungsart
 - betroffene Seite, soweit erforderlich
 
 Die Versichertennummer kann vor der Rezeptaufnahme leer bleiben und durch die lokale OCR ergänzt werden. Beim Anzeigen eines Anamnesebogens werden vorhandene Stammdaten in gleichbedeutende Formularfelder gespiegelt. Varianten wie `Versichertennummer`, `KV-Nummer` und `KV.-Nr.` werden berücksichtigt.
+
+Die Bezeichnung `Versorgungsart` wird dagegen nicht automatisch aus der internen Versorgungskategorie übernommen. Die Quellen verwenden dieses Feld nicht einheitlich: in vielen generischen Bögen stehen dort `Erstversorgung | Folgeversorgung | Änderung/Reparatur`, in PG15 dagegen `ableitend | aufsaugend`. Eine automatische Gleichsetzung mit internen Kategorien wie `Post-OP`, `Interim`, `Definitiv` oder `Folge` wäre fachlich falsch.
 
 Die fallbezogene Auswahl des konkreten Anamnesebogens wird inzwischen im Vorgang gespeichert und geht beim Autosave nicht mehr verloren.
 
