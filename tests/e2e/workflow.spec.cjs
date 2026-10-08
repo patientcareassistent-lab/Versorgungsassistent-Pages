@@ -537,7 +537,7 @@ test('single mandatory payer form is auto-selected even without structured Himi 
     rpcOverrides: {
       care_reference_bootstrap: {
         kassen: [{ Kasse_Kanonisch: 'AOK Hessen' }],
-        produktgruppen: [{ PG: '24', Generisches_Blatt: 'PG24_Beinprothese', Reifegrad: 'TEST' }],
+        produktgruppen: [{ PG: '23', Generisches_Blatt: 'PG23_Orthesen', Reifegrad: 'TEST' }],
         sourceCount: 1,
         formCount: 1
       },
@@ -545,17 +545,17 @@ test('single mandatory payer form is auto-selected even without structured Himi 
       forms_for_pg: [{
         Formular_ID: 'FORM_005',
         Kasse: 'AOK Hessen',
-        PG: '24',
-        Versorgungsart: 'Beinprothesen',
+        PG: '23',
+        Versorgungsart: 'Individuelle Orthesen',
         Status: 'EXPLIZIT_PFLICHT',
         Aktion_Versorgungsassistent: 'AOK-Hessen-Bogen erzwingen.'
       }],
       himi_form_rules_for_himi: [],
       form_fields_for_pg: [{
-        Feldzeile_ID: 'GEN_24_goal',
-        Formular_ID: 'PG24_Beinprothese',
+        Feldzeile_ID: 'GEN_23_goal',
+        Formular_ID: 'PG23_Orthesen',
         Formular_Typ: 'GENERISCH',
-        PG: '24',
+        PG: '23',
         Feldbezeichnung: 'Versorgungsziel',
         Datentyp: 'Langtext',
         Pflichtstatus: 'ja'
@@ -566,9 +566,9 @@ test('single mandatory payer form is auto-selected even without structured Himi 
   await page.goto('/index.html')
   await page.locator('#newSupplyOverviewButton').click()
   await page.locator('#careKasse').selectOption({ label: 'AOK Hessen' })
-  await page.locator('#carePg').selectOption('24')
-  await expect(page.locator('#careHimi')).toContainText('Vor-/Mittelfußprothese')
-  await page.locator('#careHimi').selectOption({ label: 'Vor-/Mittelfußprothese' })
+  await page.locator('#carePg').selectOption('23')
+  await expect(page.locator('#careHimi')).toContainText('Orthese untere Extremität')
+  await page.locator('#careHimi').selectOption({ label: 'Orthese untere Extremität' })
 
   await expect(page.locator('#careForm')).toHaveValue('FORM_005')
   await expect(page.locator('#ruleBox')).toContainText('EXPLIZIT_PFLICHT')
