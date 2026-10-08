@@ -3140,7 +3140,10 @@
       const id=f.Feldzeile_ID
       const type=String(f.Datentyp||'Text')
       const conditional=profileConditionalState(f)
-      if(!conditional.visible) return
+      if(!conditional.visible){
+        if(Object.prototype.hasOwnProperty.call(values,id)) delete values[id]
+        return
+      }
       const sourceStatus=String(f.Pflichtstatus||'').toLowerCase()
       const required=type==='Hinweis'?false:conditional.required
       const options=fieldOptionValues(f)

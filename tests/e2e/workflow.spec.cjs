@@ -425,12 +425,18 @@ test('source-backed conditional anamnesis fields become required only when their
 
   await region.selectOption({ label: 'untere Extremität' })
   await expect(page.getByText('Gelenkbeweglichkeit Neutral-Null unten')).toBeVisible()
-  await expect(page.locator('#fieldList').getByText('Gelenkbeweglichkeit Neutral-Null unten').locator('xpath=..').locator('textarea[data-required="true"]')).toHaveCount(1)
+  const lowerRom=page.locator('#fieldList').getByText('Gelenkbeweglichkeit Neutral-Null unten').locator('xpath=..').locator('textarea[data-required="true"]')
+  await expect(lowerRom).toHaveCount(1)
+  await lowerRom.fill('10/0/10')
   await expect(page.getByText('Gelenkbeweglichkeit Neutral-Null oben')).toHaveCount(0)
 
   await page.locator('#fieldList label').filter({ hasText: 'Anwendungsregion' }).locator('select').selectOption({ label: 'Rumpf/Wirbelsäule' })
   await expect(page.getByText('Cobb-Winkel')).toBeVisible()
   await expect(page.getByText('Gelenkbeweglichkeit Neutral-Null unten')).toHaveCount(0)
+  await expect.poll(async () => page.evaluate(() => {
+    const rows=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
+    return Object.prototype.hasOwnProperty.call(rows[0]?.payload||{},'GEN_23_rom_lower_25')
+  }), { timeout: 10000 }).toBe(false)
 })
 
 
