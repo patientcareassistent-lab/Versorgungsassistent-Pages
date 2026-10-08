@@ -419,6 +419,20 @@ test('source-backed conditional anamnesis fields become required only when their
   await page.locator('#careKasse').selectOption({ label: 'Testkasse' })
   await page.locator('#carePg').selectOption('23')
   await page.locator('#careHimi').selectOption('PG23_UE')
+  // Profile fields belong to wizard step 2; reach them through the real
+  // required order and prescription inputs instead of inspecting a hidden step.
+  await page.locator('[data-case-field="patientFirstName"]').fill('Test')
+  await page.locator('[data-case-field="patientLastName"]').fill('Orthesenfall')
+  await page.locator('[data-case-field="patientBirthDate"]').fill('1980-01-02')
+  await page.locator('input[name="caseKindChoice"][value="Neuversorgung"]').check()
+  await page.locator('#careSupplyType').selectOption('Post-OP')
+  await page.locator('#careSide').selectOption('rechts')
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('.wizard-panel[data-panel="1"]')).toBeVisible()
+  await page.locator('#rxPresent').selectOption('Nein')
+  await page.locator('#rxNeededText').fill('Orthesenversorgung nach Befund')
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
 
   const region = page.locator('#fieldList label').filter({ hasText: 'Anwendungsregion' }).locator('select')
   await expect(region).toBeVisible()
