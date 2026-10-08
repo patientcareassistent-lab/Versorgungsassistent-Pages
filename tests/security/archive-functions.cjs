@@ -63,6 +63,9 @@ assert.match(remove, /validateArchiveManifest/, 'delete: manifest validation mis
 assert.match(restore, /archive_restore_for_service/, 'restore: atomic restored history gateway missing')
 assert.match(restore, /validateArchiveManifest/, 'restore: manifest validator missing')
 assert.match(restore, /restore_invalid_source_path/, 'restore: photo source path ownership missing')
+assert.match(restore, /upsert:false/, 'restore: must never overwrite another existing patient photo')
+assert.doesNotMatch(restore, /upsert:true/, 'restore: unsafe photo overwrite mode')
+assert.match(restore, /restore_existing_file_checksum_mismatch/, 'restore: retry must check staged photo checksum')
 
 for(const [name, migration] of [['mutation',archiveMutationMigration],['restore',archiveRestoreMigration]]){
   const lower=migration.toLowerCase().replace(/\\s+/g,' ')
