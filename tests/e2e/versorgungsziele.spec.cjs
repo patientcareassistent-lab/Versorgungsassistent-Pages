@@ -57,6 +57,9 @@ test('PG24 Techniker therapy goal keeps the editable original input', async ({pa
   await page.locator('#rxNeededText').fill('Orthopädietechnische Versorgung entsprechend Befund')
   await page.locator('#wizardNext').click()
   await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
+  // Demographic prefill does not count as a completed PG24 assessment.
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('#wizardError')).toContainText('Therapieziel / individuelles Versorgungsziel')
   const original=page.locator('[data-tech-key="tech:therapyGoal"]')
   await expect(original).toBeVisible()
   const picker=original.locator('xpath=..').locator('select[aria-label="Versorgungszielvorschlag"]')
