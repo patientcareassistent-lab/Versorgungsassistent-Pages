@@ -101,6 +101,19 @@ function completionProblems(row:Record<string,unknown>, payload:Record<string,un
     missing.push("rxNeededText");
   }
 
+  if (isRepair) {
+    for (const key of [
+      "repairSicHimiId","repairDate","repairTechnician","repairPreperformed",
+      "repairComplaint","repairWork","repairFunctionTest","repairUsable","repairCompleted"
+    ]) {
+      const value = payload[key];
+      if (value === undefined || value === null || value === false || !String(value).trim()) missing.push(key);
+    }
+  } else {
+    if (!textValue(payload.planGoal)) missing.push("planGoal");
+    if (!textValue(payload.planShaft) && !textValue(payload.planParts)) missing.push("planConcept");
+  }
+
   if (!textValue(payload.quotePositions)) missing.push("quotePositions");
   if (!textValue(payload.approvalState)) missing.push("approvalState");
 
