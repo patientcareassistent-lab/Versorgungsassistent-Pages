@@ -65,3 +65,32 @@ test('PG24 Techniker therapy goal keeps the editable original input', async ({pa
   await original.fill('Individuelles Therapieziel')
   await expect(original).toHaveValue('Individuelles Therapieziel')
 })
+
+
+test('PG24 AOK BW displays the contract Annex 5b before internal UKB FMB', async ({page}) => {
+  await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{
+    care_reference_bootstrap:{
+      kassen:[{Kasse_Kanonisch:'AOK Baden-Württemberg'},{Kasse_Kanonisch:'Privat'}],
+      produktgruppen:[{PG:'24',Generisches_Blatt:'Beinprothesen',Reifegrad:'PRODUKTIV'}],sourceCount:1,formCount:1
+    },
+    himi_logic_for_pg:[{
+      Himi_ID:'PG24_UKB',PG:'24',Bezeichnung:'Unterschenkelprothese',
+      Generisches_Formular_ID:'PG24',Profil_erforderlich:true,Mass_erforderlich:true,
+      Massprofil_ID:'',Erprobung_erforderlich:false,Verlauf_erforderlich:false,Aktiv:true
+    }],
+    forms_for_pg:[],himi_form_rules_for_himi:[],form_fields_for_pg:[]
+  }})
+  await page.goto('/index.html')
+  await page.locator('#newSupplyOverviewButton').click()
+  await page.locator('#carePg').selectOption('24')
+  await page.locator('#careHimi').selectOption('PG24_UKB')
+  await page.locator('input[name="caseKindChoice"][value="Neuversorgung"]').check()
+  await page.locator('#careSupplyType').selectOption('Definitiv')
+  await page.locator('#careKasse').selectOption({label:'AOK Baden-Württemberg'})
+  await expect(page.locator('#measureLogicNote')).toContainText('Anlage 5b')
+  await expect(page.locator('#measureFieldList .aok-measure-frame-wrap')).toHaveCount(1)
+  await expect(page.locator('#sourceMeasureBody')).toHaveCount(0)
+  await page.locator('#careKasse').selectOption({label:'Privat'})
+  await expect(page.locator('#measureLogicNote')).toContainText('Maßblatt Unterschenkelprothetik')
+  await expect(page.locator('#sourceMeasureBody')).toHaveCount(1)
+})
