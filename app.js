@@ -66,8 +66,10 @@
       assignments.set(slot,className)
     }
     const V09_ANAMNESIS_SCOPE=true
-    const views = ['overview','care','supplyOverview','forms','contractQuestions','pg26','sources']
-    const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Auftragsübersicht',forms:'Formularregeln',contractQuestions:'Vertragsfragen',pg26:'PG 26',sources:'Quellen'}
+    const ACTIVE_PRODUCT_GROUPS=new Set(['23','24'])
+    const isActiveProductGroup=(pg)=>ACTIVE_PRODUCT_GROUPS.has(String(pg||'').padStart(2,'0'))
+    const views = ['overview','care','supplyOverview','forms','contractQuestions','sources']
+    const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Auftragsübersicht',forms:'Formularregeln',contractQuestions:'Vertragsfragen',sources:'Quellen'}
     const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[],contractQuestions:[],contractKnowledge:[],approvedKnowledge:[]}
     const dataCounts = {sources:0,forms:0}
     const optionalDataLoaded = {pg26:false,contractQuestions:false,sources:false,forms:false}
@@ -408,7 +410,7 @@
     function renderSupplyOverview(){
       const body=$('supplyOverviewBody')
       if(!body) return
-      const drafts=readSupplyDrafts().filter(x=>x.status!=='Abgeschlossen')
+      const drafts=readSupplyDrafts().filter(x=>x.status!=='Abgeschlossen' && isActiveProductGroup(x.pg))
       const q=($('supplySearch')?.value||'').trim().toLowerCase()
       const status=$('supplyStatusFilter')?.value||''
       const pg=$('supplyPgFilter')?.value||''
@@ -1105,7 +1107,7 @@
 
     function populateSelectors(){
       const kassen=[...new Set([...data.kassen.map(x=>x.Kasse_Kanonisch).filter(Boolean),'Privat','Selbstzahler'])].sort((a,b)=>a.localeCompare(b,'de'))
-      const pgs=[...new Set(data.produktgruppen.map(x=>String(x.PG)).filter(Boolean))].sort((a,b)=>Number(a)-Number(b))
+      const pgs=[...new Set(data.produktgruppen.map(x=>String(x.PG)).filter(isActiveProductGroup))].sort((a,b)=>Number(a)-Number(b))
       $('careKasse').innerHTML='<option value="">Bitte wählen</option>'+kassen.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
       $('carePg').innerHTML='<option value="">Bitte wählen</option>'+pgs.map(x=>'<option value="'+escapeHtml(x)+'">PG '+escapeHtml(x)+'</option>').join('')
       populateHimiOptions()
@@ -1165,17 +1167,17 @@
     function renderAll(){
       $('metricKassen').textContent=data.kassen.length
       $('metricForms').textContent=dataCounts.forms
-      $('metricPg').textContent=data.produktgruppen.length
+      $('metricPg').textContent=data.produktgruppen.filter(r=>isActiveProductGroup(r.PG)).length
       $('metricSources').textContent=dataCounts.sources
 
-      $('productBody').innerHTML=data.produktgruppen.map(r=>'<tr><td><strong>PG '+escapeHtml(r.PG)+'</strong></td><td>'+escapeHtml(r.Generisches_Blatt)+'</td><td><span class="pill">'+escapeHtml(r.Reifegrad)+'</span></td><td>'+escapeHtml(r.Kritischer_Hinweis)+'</td></tr>').join('')
+      $('productBody').innerHTML=data.produktgruppen.filter(r=>isActiveProductGroup(r.PG)).map(r=>'<tr><td><strong>PG '+escapeHtml(r.PG)+'</strong></td><td>'+escapeHtml(r.Generisches_Blatt)+'</td><td><span class="pill">'+escapeHtml(r.Reifegrad)+'</span></td><td>'+escapeHtml(r.Kritischer_Hinweis)+'</td></tr>').join('')
       if(optionalDataLoaded.forms) renderForms('')
       if(optionalDataLoaded.sources) $('sourceGrid').innerHTML=data.quellen.map(r=>'<article class="source"><span class="pill">'+escapeHtml(r.Typ)+'</span><h4>'+escapeHtml(r.Beschreibung)+'</h4><p>'+escapeHtml(r.URL_oder_Datei)+'</p><small>'+escapeHtml(r.Quelle_ID)+'</small></article>').join('')
     }
 
     function renderForms(query=''){
       const q=query.toLowerCase()
-      const rows=data.formulare.filter(r=>JSON.stringify(r).toLowerCase().includes(q))
+      const rows=data.formulare.filter(r=>isActiveProductGroup(r.PG) && JSON.stringify(r).toLowerCase().includes(q))
       $('formsBody').innerHTML=rows.map(r=>'<tr><td>'+escapeHtml(r.Kasse)+'</td><td>PG '+escapeHtml(r.PG)+'</td><td>'+escapeHtml(r.Versorgungsart)+'</td><td><span class="pill">'+escapeHtml(r.Status)+'</span></td><td>'+escapeHtml(r.Aktion_Versorgungsassistent)+'</td><td>'+escapeHtml(r.Gueltigkeit_Stand)+'</td></tr>').join('')
     }
 
