@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { validateArchiveManifest } from "../_shared/archive-layout.mjs";
 import { S3Client, GetObjectCommand, DeleteObjectsCommand } from "npm:@aws-sdk/client-s3@3.1147.0";
 
 const H={
@@ -83,11 +84,6 @@ Deno.serve(async(req:Request)=>{
   const c=claims(token) as Record<string,unknown>;
   if(c.aal!=="aal2"||c.is_anonymous===true) return out(403,{error:"mfa_required"});
 
-  const member=await admin.schema("app_private").from("app_members")
-    .select("user_id,role").eq("user_id",user.id).eq("active",true).maybeSingle();
-  if(member.error||!member.data) return out(403,{error:"user_not_allowed"});
-  if(member.data.role!=="admin") return out(403,{error:"admin_required"});
-
   let bodyText="";
   try{bodyText=await req.text()}catch{return out(400,{error:"invalid_body"})}
   if(bodyText.length>8192) return out(413,{error:"request_too_large"});
@@ -100,21 +96,23 @@ Deno.serve(async(req:Request)=>{
   const note=typeof body.note==="string"?body.note.trim():"";
   if(note.length<12||note.length>500) return out(400,{error:"documented_note_required"});
 
-  const row=await admin.from("care_cases")
-    .select("id,status,retention_until,legal_hold").eq("id",id).maybeSingle();
-  if(row.error) return out(500,{error:"care_case_read_failed"});
-  if(!row.data) return out(404,{error:"care_case_not_found"});
-  if(row.data.status!=="Abgeschlossen") return out(409,{error:"care_case_not_completed"});
-  if(row.data.legal_hold===true) return out(409,{error:"legal_hold_active"});
-  if(!row.data.retention_until) return out(409,{error:"retention_date_missing"});
-  if(String(row.data.retention_until)>=new Date().toISOString().slice(0,10)) return out(409,{error:"retention_not_due"});
-
-  const idx=await admin.schema("app_private").from("care_case_archives")
-    .select("*").eq("care_case_id",id).maybeSingle();
-  if(idx.error) return out(500,{error:"archive_index_read_failed"});
+  const ctx=await admin.rpc("archive_context_for_service",{
+    p_actor_id:user.id,p_care_case_id:id,p_require_admin:true,p_include_history:false
+  });
+  if(ctx.error){
+    if(ctx.error.code==="42501") return out(403,{error:"admin_or_membership_required"});
+    return out(500,{error:"archive_context_read_failed"});
+  }
+  if(ctx.data?.member_role!=="admin") return out(403,{error:"admin_required"});
+  if(ctx.data?.care_case) return out(409,{error:"active_case_must_be_archived_first"});
+  const idx={data:ctx.data?.archive||null};
   if(!idx.data) return out(404,{error:"archive_not_found"});
   if(idx.data.status!=="READY") return out(409,{error:"archive_not_ready"});
   if(idx.data.verification_status!=="VERIFIED") return out(409,{error:"archive_not_verified"});
+  if(idx.data.legal_hold===true) return out(409,{error:"legal_hold_active"});
+  if(!idx.data.retention_until) return out(409,{error:"retention_date_missing"});
+  if(String(idx.data.retention_until)>=new Date().toISOString().slice(0,10))
+    return out(409,{error:"retention_not_due"});
   if(!idx.data.object_key||!idx.data.archive_sha256) return out(409,{error:"archive_index_incomplete"});
 
   const s3=new S3Client({
@@ -138,52 +136,44 @@ Deno.serve(async(req:Request)=>{
     let manifest:any;
     try{manifest=JSON.parse(new TextDecoder().decode(raw))}
     catch{return out(409,{error:"archive_manifest_invalid"})}
-    if(manifest?.archive_id!==idx.data.archive_id||manifest?.care_case?.id!==id){
-      return out(409,{error:"archive_manifest_identity_mismatch"});
+    let validated;
+    try{validated=validateArchiveManifest(manifest,idx.data);}
+    catch{return out(409,{error:"archive_manifest_identity_or_path_mismatch"});}
+    const keys:string[]=[validated.manifestKey,...validated.fileKeys];
+    for(const file of manifest.files){
+      const object=await s3.send(new GetObjectCommand({Bucket:bucket,Key:file.target_key}));
+      const bytes=await bodyBytes(object.Body);
+      if(bytes.byteLength>3*1024*1024) return out(409,{error:"archive_file_too_large"});
+      if(await sha(bytes)!==file.sha256) return out(409,{error:"archive_file_checksum_mismatch"});
     }
-
-    const files=Array.isArray(manifest?.files)?manifest.files:[];
-    if(files.length>14) return out(409,{error:"too_many_archive_files"});
-    const base=`care-cases/${id}/${idx.data.archive_id}/files/`;
-    const keys:string[]=[idx.data.object_key];
-
-    for(const file of files){
-      const key=typeof file?.target_key==="string"?file.target_key:"";
-      if(!key.startsWith(base)) return out(409,{error:"invalid_file_manifest"});
-      keys.push(key);
+    const intent=await admin.rpc("archive_mutation_for_service",{
+      p_actor_id:user.id,p_care_case_id:id,p_action:"delete_begin",p_data:{note}
+    });
+    if(intent.error){
+      if(intent.error.code==="42501") return out(403,{error:"archive_retention_or_admin_gate"});
+      return out(409,{error:"archive_delete_intent_rejected"});
     }
-
     const deleted=await s3.send(new DeleteObjectsCommand({
       Bucket:bucket,
       Delete:{Objects:keys.map(Key=>({Key})),Quiet:false}
     }));
     if((deleted.Errors||[]).length){
+      await admin.rpc("archive_mutation_for_service",{
+        p_actor_id:user.id,p_care_case_id:id,p_action:"delete_fail",
+        p_data:{error:"r2_delete_partial_failure",external_objects_deleted:(deleted.Deleted||[]).length>0}
+      });
       return out(500,{error:"archive_object_delete_failed",failed:(deleted.Errors||[]).length});
     }
-
-    const removed=await admin.schema("app_private").from("care_case_archives")
-      .delete().eq("archive_id",idx.data.archive_id).select("archive_id").maybeSingle();
-    if(removed.error||!removed.data){
-      await admin.schema("app_private").from("care_case_archives").update({
-        status:"FAILED",
-        error_message:"External archive objects were deleted, but archive index deletion failed.",
-        verification_status:"FAILED",
-        verification_error:"External archive objects deleted; administrative reconciliation required.",
-        verified_at:null,
-        verified_by:null
-      }).eq("archive_id",idx.data.archive_id);
-      return out(500,{error:"archive_index_delete_failed",external_objects_deleted:true});
-    }
-
-    const audit=await admin.schema("app_private").from("care_case_archive_delete_log").insert({
-      care_case_id:id,
-      archive_id:idx.data.archive_id,
-      executed_by:user.id,
-      deleted_objects:keys.length,
-      note
+    const finalized=await admin.rpc("archive_mutation_for_service",{
+      p_actor_id:user.id,p_care_case_id:id,p_action:"delete_finalize",
+      p_data:{deleted_objects:keys.length}
     });
-    if(audit.error){
-      return out(500,{error:"archive_delete_audit_failed",external_objects_deleted:true,index_deleted:true});
+    if(finalized.error){
+      await admin.rpc("archive_mutation_for_service",{
+        p_actor_id:user.id,p_care_case_id:id,p_action:"delete_fail",
+        p_data:{error:"r2_deleted_but_database_finalize_failed",external_objects_deleted:true}
+      });
+      return out(500,{error:"archive_index_delete_failed",external_objects_deleted:true});
     }
 
     return out(200,{
