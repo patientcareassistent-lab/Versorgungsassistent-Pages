@@ -127,7 +127,7 @@ async function installSupabaseMock(page, options = {}) {
       care_reference_bootstrap: {
         kassen: [{ Kasse_Kanonisch: 'AOK Baden-Württemberg' }],
         produktgruppen: [
-          { PG: '10', Generisches_Blatt: 'Regressionstest PG10', Reifegrad: 'TEST' },
+          { PG: '23', Generisches_Blatt: 'Regressionstest PG23', Reifegrad: 'TEST' },
           { PG: '24', Generisches_Blatt: 'Regressionstest PG24', Reifegrad: 'TEST' }
         ],
         sourceCount: 1,
