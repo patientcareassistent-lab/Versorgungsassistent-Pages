@@ -115,6 +115,7 @@ Deno.serve(async(req:Request)=>{
     return out(409,{error:"retention_not_due"});
   if(!idx.data.object_key||!idx.data.archive_sha256) return out(409,{error:"archive_index_incomplete"});
 
+  let deletionIntentStarted=false;
   const s3=new S3Client({
     region:"auto",
     endpoint:`https://${account}.r2.cloudflarestorage.com`,
@@ -153,6 +154,7 @@ Deno.serve(async(req:Request)=>{
       if(intent.error.code==="42501") return out(403,{error:"archive_retention_or_admin_gate"});
       return out(409,{error:"archive_delete_intent_rejected"});
     }
+    deletionIntentStarted=true;
     const deleted=await s3.send(new DeleteObjectsCommand({
       Bucket:bucket,
       Delete:{Objects:keys.map(Key=>({Key})),Quiet:false}
@@ -184,6 +186,15 @@ Deno.serve(async(req:Request)=>{
       next_step:"run_controlled_database_purge"
     });
   }catch(error){
+    if(deletionIntentStarted){
+      // The S3 request may have partially succeeded before throwing. Fail
+      // closed and preserve an audit trail for administrative reconciliation.
+      const recorded=await admin.rpc("archive_mutation_for_service",{
+        p_actor_id:user.id,p_care_case_id:id,p_action:"delete_fail",
+        p_data:{error:"r2_delete_unknown_partial_state",external_objects_deleted:true}
+      });
+      if(recorded.error) return out(500,{error:"archive_delete_audit_reconciliation_required"});
+    }
     return out(500,{error:"archive_delete_failed"});
   }
 });
