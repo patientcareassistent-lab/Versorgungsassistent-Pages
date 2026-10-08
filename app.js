@@ -1080,39 +1080,47 @@ import { versorgungsziele } from './versorgungsziele.js'
       return versorgungsziele.filter(x=>x.pg===pg&&(x.region==='alle'||regionType==='alle'||x.region===regionType)&&kindMatch(x))
     }
 
+    function attachGoalPicker(parent, control, key){
+      if(!parent||!control) return
+      const pick=document.createElement('select')
+      pick.setAttribute('aria-label','Versorgungszielvorschlag')
+      pick.innerHTML='<option value="">Versorgungsziel vorschlagen …</option>'+goalSuggestionsForCurrentSupply().map(x=>'<option value="'+escapeHtml(x.id)+'">'+escapeHtml(x.ziel)+'</option>').join('')
+      const info=document.createElement('small')
+      info.textContent='Fachliche Formulierungshilfe – individuell prüfen, anpassen und konkretisieren. Freitext bleibt möglich.'
+      pick.addEventListener('change',()=>{
+        const goal=versorgungsziele.find(x=>x.id===pick.value && goalSuggestionsForCurrentSupply().some(y=>y.id===x.id))
+        if(!goal)return
+        const old=String(control.value||'').trim()
+        control.value=old?(old.includes(goal.ziel)?old:old+'\\n'+goal.ziel):goal.ziel
+        control.dispatchEvent(new Event('input',{bubbles:true}))
+        pick.value=''
+      })
+      parent.append(pick,info)
+      if(key==='versorgungGoalText') control.dataset.goalText='true'
+    }
+
     function renderGoalSuggestions(){
       const host=$('versorgungGoalSuggestions')
       if(!host) return
       const pg=String($('carePg')?.value||'')
-      const enabled=['23','24'].includes(pg)&&!!selectedHimiId()
+      // PG23 uses its source-defined Versorgungsziel field. The generic PG24
+      // Techniker form has tech:therapyGoal. AOK original has no safe field
+      // mapping yet, so retain a supplemental free-text goal there.
+      const enabled=pg==='24'&&isAokCase()&&!!selectedHimiId()
       host.classList.toggle('hidden',!enabled)
       if(!enabled){host.replaceChildren();return}
       const key='versorgungGoalText'
       const section=document.createElement('section')
       section.className='field'
-      const headline=document.createElement('strong')
-      headline.textContent='Versorgungsziel – fachliche Vorschläge und Freitext'
-      const notice=document.createElement('small')
-      notice.textContent='Vorschläge sind redaktionelle Formulierungshilfen nach GKV-Hilfsmittelverzeichnis. Individuell prüfen und konkretisieren; keine automatische Diagnose oder Kassenfreigabe.'
-      const pick=document.createElement('select')
-      pick.setAttribute('aria-label','Versorgungszielvorschlag')
-      pick.innerHTML='<option value="">Zielvorschlag auswählen …</option>'+goalSuggestionsForCurrentSupply().map(x=>'<option value="'+escapeHtml(x.id)+'">'+escapeHtml(x.ziel)+'</option>').join('')
+      const title=document.createElement('strong')
+      title.textContent='Ergänzendes individuelles Versorgungsziel (AOK-Originalbogen unverändert)'
       const text=document.createElement('textarea')
       text.rows=4
-      text.placeholder='Individuelles Versorgungsziel und messbare/alltagsbezogene Konkretisierung eingeben …'
       text.value=String(values[key]||'')
-      pick.addEventListener('change',()=>{
-        const goal=versorgungsziele.find(x=>x.id===pick.value)
-        if(!goal)return
-        const current=text.value.trim()
-        text.value=current?(current.includes(goal.ziel)?current:current+'\n'+goal.ziel):goal.ziel
-        values[key]=text.value
-        queueAutosaveSupply()
-        updateWizardStatus()
-        pick.value=''
-      })
+      text.placeholder='Individuelles Ziel ergänzen …'
       text.addEventListener('input',()=>{values[key]=text.value;queueAutosaveSupply();updateWizardStatus()})
-      section.append(headline,notice,pick,text)
+      section.append(title,text)
+      attachGoalPicker(section,text,key)
       host.replaceChildren(section)
     }
 
@@ -2231,7 +2239,8 @@ import { versorgungsziele } from './versorgungsziele.js'
       host.appendChild(mobilitySection)
 
       g=techProfileSection(host,'Therapieziel / Bewertung',2)
-      techProfileField(g,'Beschreibung des Therapieziels unter Berücksichtigung der momentanen und realistisch zu erwartenden Fähigkeiten','tech:therapyGoal','textarea')
+      const therapyGoal=techProfileField(g,'Beschreibung des Therapieziels unter Berücksichtigung der momentanen und realistisch zu erwartenden Fähigkeiten','tech:therapyGoal','textarea')
+      attachGoalPicker(therapyGoal.parentElement,therapyGoal,'tech:therapyGoal')
       techProfileField(g,'Ermittelter Mobilitätsgrad','tech:mobilityGrade','select',['0 – Nichtgehfähiger','1 – Innenbereichsgeher','2 – Eingeschränkter Außenbereichsgeher','3 – Uneingeschränkter Außenbereichsgeher','4 – Uneingeschränkter Außenbereichsgeher mit besonders hohen Ansprüchen'])
       techProfileField(g,'Beschreibung der weiteren Fähigkeiten','tech:furtherAbilities','textarea')
       techProfileField(g,'Mit dem Therapieziel verbundene weitere Maßnahmen','tech:furtherMeasures','textarea')
@@ -3436,6 +3445,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
       persistSimple(control)
       label.append(title,control)
+      if($('carePg').value==='23' && /versorgungsziel/i.test(String(f.Feldbezeichnung||'')) && control.tagName!=='SELECT') attachGoalPicker(label,control,id)
       $('fieldList').appendChild(label)
     }
 
