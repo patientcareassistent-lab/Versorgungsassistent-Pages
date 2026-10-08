@@ -3,7 +3,8 @@ async function installSupabaseMock(page, options = {}) {
   const failBootstrap = options.failBootstrap === true
   const failCases = options.failCases === true
   const denyPreMfa = options.denyPreMfa === true
-  await page.addInitScript(({ mode, failBootstrap, failCases, denyPreMfa }) => {
+  const rpcOverrides = options.rpcOverrides || {}
+  await page.addInitScript(({ mode, failBootstrap, failCases, denyPreMfa, rpcOverrides }) => {
     const SESSION = {
       user: {
         id: '11111111-1111-4111-8111-111111111111',
@@ -140,7 +141,8 @@ async function installSupabaseMock(page, options = {}) {
       sources_reference_bootstrap: [],
       forms_reference_bootstrap: [],
       pg26_reference_bootstrap: { pg26: [], kalk: [] },
-      contract_knowledge_bootstrap: { contractQuestions: [], contractKnowledge: [], approvedKnowledge: [] }
+      contract_knowledge_bootstrap: { contractQuestions: [], contractKnowledge: [], approvedKnowledge: [] },
+      ...rpcOverrides
     }
 
     const client = {
@@ -215,7 +217,7 @@ async function installSupabaseMock(page, options = {}) {
         })
       }
     })
-  }, { mode, failBootstrap, failCases, denyPreMfa })
+  }, { mode, failBootstrap, failCases, denyPreMfa, rpcOverrides })
 }
 
 module.exports = { installSupabaseMock }

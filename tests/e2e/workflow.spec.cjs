@@ -295,3 +295,67 @@ test('version 0.9 hides billing, calculation and external archiving from the use
   await expect(page.getByText('Kalkulationsbausteine')).toBeHidden()
   await expect(page.getByRole('columnheader', { name: 'Preis netto' })).toHaveCount(0)
 })
+
+
+test('paper-form datatypes render as usable digital controls', async ({ page }) => {
+  await installSupabaseMock(page, {
+    mode: 'signed-in',
+    rpcOverrides: {
+      care_reference_bootstrap: {
+        kassen: [{ Kasse_Kanonisch: 'BARMER' }],
+        produktgruppen: [{ PG: '22', Generisches_Blatt: 'BARMER Test', Reifegrad: 'TEST' }],
+        sourceCount: 1,
+        formCount: 1
+      },
+      himi_logic_for_pg: [{
+        Himi_ID: 'PG22_TEST',
+        PG: '22',
+        Bezeichnung: 'Patientenlifter',
+        Generisches_Formular_ID: 'BARMER_PG22_ANHB',
+        Versorgungsarten: ['Erstversorgung'],
+        Profil_erforderlich: true,
+        Mass_erforderlich: false,
+        Erprobung_erforderlich: false,
+        Verlauf_erforderlich: false,
+        Aktiv: true
+      }],
+      forms_for_pg: [{
+        Formular_ID: 'BARMER_PG22_ANHB',
+        Kasse: 'BARMER',
+        PG: '22',
+        Versorgungsart: 'Patientenlifter',
+        Status: 'Test',
+        Aktion_Versorgungsassistent: 'Digital erfassen'
+      }],
+      himi_form_rules_for_himi: [{
+        Himi_ID: 'PG22_TEST',
+        Kasse: 'BARMER',
+        Formular_ID: 'BARMER_PG22_ANHB',
+        Formularbezeichnung: 'BARMER Test',
+        Status: 'Test',
+        Sortierung: 1
+      }],
+      form_fields_for_pg: [
+        { Feldzeile_ID: 'sig', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Unterschrift Leistungserbringer', Datentyp: 'Unterschrift', Pflichtstatus: 'nicht einzeln ausgewiesen' },
+        { Feldzeile_ID: 'multi', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Hilfsmitteloptionen', Datentyp: 'Mehrfachauswahl', Pflichtstatus: 'ja', Bedingung_UI: 'Option A | Option B' },
+        { Feldzeile_ID: 'confirm', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Bestätigung', Datentyp: 'Bestätigung', Pflichtstatus: 'ja' },
+        { Feldzeile_ID: 'yntext', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Ja/Nein mit Bemerkung', Datentyp: 'Ja/Nein + Bemerkung', Pflichtstatus: 'ja' },
+        { Feldzeile_ID: 'hint', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Nur Hinweis', Datentyp: 'Hinweis', Pflichtstatus: 'bedingt', Bedingung_UI: 'Nur bei besonderer Konstellation' }
+      ]
+    }
+  })
+
+  await page.goto('/index.html')
+  await page.locator('#newSupplyButton').click()
+  await page.locator('#careKasse').selectOption({ label: 'BARMER' })
+  await page.locator('#carePg').selectOption('22')
+  await expect(page.locator('#careHimi')).toContainText('Patientenlifter')
+  await page.locator('#careHimi').selectOption('PG22_TEST')
+  await expect(page.locator('#careForm')).toContainText('BARMER Test')
+
+  await expect(page.locator('#fieldList canvas[aria-label="Unterschrift Leistungserbringer"]')).toHaveCount(1)
+  await expect(page.locator('#fieldList [data-profile-group-key="multi"] input[type="checkbox"]')).toHaveCount(2)
+  await expect(page.locator('#fieldList input[type="checkbox"][data-required="true"]')).toHaveCount(1)
+  await expect(page.locator('#fieldList select[data-required="true"]')).toHaveCount(1)
+  await expect(page.getByText('Nur bei besonderer Konstellation')).toBeVisible()
+})

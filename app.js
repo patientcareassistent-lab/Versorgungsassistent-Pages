@@ -1308,6 +1308,7 @@
         return {x:Math.max(0,Math.min(1,(event.clientX-r.left)/Math.max(r.width,1))),y:Math.max(0,Math.min(1,(event.clientY-r.top)/Math.max(r.height,1)))}
       }
       canvas.addEventListener('pointerdown',event=>{
+        if(!supplyHasEditableContext()) return
         event.preventDefault();canvas.setPointerCapture?.(event.pointerId)
         drawing=true;current=[point(event)]
         const strokes=signatureStrokes(key).slice();strokes.push(current);values[key]=strokes
@@ -1326,7 +1327,9 @@
       canvas.addEventListener('pointercancel',finish)
       canvas.addEventListener('pointerleave',event=>{if(drawing && event.buttons===0) finish(event)})
       clear.addEventListener('click',event=>{
-        event.preventDefault();event.stopPropagation();values[key]=[];drawSignatureCanvas(canvas,key);queueAutosaveSupply();updateWizardStatus()
+        event.preventDefault();event.stopPropagation()
+        if(!supplyHasEditableContext()) return
+        values[key]=[];drawSignatureCanvas(canvas,key);queueAutosaveSupply();updateWizardStatus()
       })
       requestAnimationFrame(()=>drawSignatureCanvas(canvas,key))
       if(window.ResizeObserver){
@@ -3007,32 +3010,226 @@
 
     function renderField(f){
       const id=f.Feldzeile_ID
+      const type=String(f.Datentyp||'Text')
+      const required=String(f.Pflichtstatus).toLowerCase()==='ja'
+      const options=String(f.Einheit_Optionen||f.Bedingung_UI||'')
+        .split('|').map(x=>x.trim()).filter(Boolean)
+      const meta=[f.Abschnitt,f.Einheit_Optionen,f.Bedingung_UI].filter(Boolean).join(' · ')
+
+      const title=document.createElement('span')
+      title.innerHTML=escapeHtml(f.Feldbezeichnung)+(required?'<b>*</b>':'')+(meta?'<small>'+escapeHtml(meta)+'</small>':'')
+
+      const persistSimple=control=>{
+        if(values[id]!==undefined && values[id]!==null && typeof values[id]!=='object'){
+          if(control.type==='checkbox') control.checked=!!values[id]
+          else control.value=values[id]
+        }
+        control.dataset.required=required?'true':'false'
+        const save=()=>{
+          values[id]=control.type==='checkbox'?!!control.checked:control.value
+          showWizardError('')
+          updateWizardStatus()
+        }
+        control.addEventListener('input',save)
+        control.addEventListener('change',save)
+        return control
+      }
+
+      if(type==='Hinweis'){
+        const row=document.createElement('div')
+        row.className='field generic-info-field'
+        const info=document.createElement('div')
+        info.className='generic-field-note'
+        info.textContent=f.Bedingung_UI||f.Einheit_Optionen||'Hinweis aus der hinterlegten Formularlogik.'
+        row.append(title,info)
+        $('fieldList').appendChild(row)
+        return
+      }
+
+      if(type==='Unterschrift'){
+        const row=document.createElement('div')
+        row.className='signature-field generic-signature-field'
+        const cap=document.createElement('div')
+        cap.className='signature-field-label'
+        cap.innerHTML=title.innerHTML
+        const pad=createSignaturePad(id,{label:f.Feldbezeichnung,ariaLabel:f.Feldbezeichnung})
+        pad.dataset.required=required?'true':'false'
+        const hint=document.createElement('div')
+        hint.className='signature-pad-hint'
+        hint.textContent='Direkt mit Maus, Touch oder Stift unterschreiben.'
+        row.append(cap,pad,hint)
+        $('fieldList').appendChild(row)
+        return
+      }
+
+      if(type==='Mehrfachauswahl'){
+        const row=document.createElement('div')
+        row.className='field'
+        const group=document.createElement('div')
+        group.className='aok-profile-options generic-multi-options'
+        group.dataset.profileGroupKey=id
+        group.dataset.required=required?'true':'false'
+        const selected=Array.isArray(values[id])?values[id]:[]
+        const sourceOptions=options.length?options:['Angabe 1']
+        sourceOptions.forEach(value=>{
+          const item=document.createElement('label')
+          const check=document.createElement('input')
+          check.type='checkbox'
+          check.value=value
+          check.checked=selected.includes(value)
+          check.addEventListener('change',()=>{
+            values[id]=[...group.querySelectorAll('input[type="checkbox"]:checked')].map(x=>x.value)
+            showWizardError('')
+            updateWizardStatus()
+          })
+          item.append(check,document.createTextNode(value))
+          group.appendChild(item)
+        })
+        if(!options.length){
+          group.replaceChildren()
+          const free=document.createElement('textarea')
+          free.rows=2
+          free.placeholder='Mehrfachangaben dokumentieren'
+          free.value=Array.isArray(values[id])?values[id].join('; '):String(values[id]||'')
+          free.dataset.required=required?'true':'false'
+          free.addEventListener('input',()=>{
+            values[id]=free.value.split(';').map(x=>x.trim()).filter(Boolean)
+            updateWizardStatus()
+          })
+          group.appendChild(free)
+        }
+        row.append(title,group)
+        $('fieldList').appendChild(row)
+        return
+      }
+
+      if(type==='Bestätigung'){
+        const row=document.createElement('label')
+        row.className='field'
+        const control=document.createElement('input')
+        control.type='checkbox'
+        control.checked=values[id]===true
+        control.dataset.required=required?'true':'false'
+        const save=()=>{values[id]=!!control.checked;showWizardError('');updateWizardStatus()}
+        control.addEventListener('change',save)
+        row.append(title,control)
+        $('fieldList').appendChild(row)
+        return
+      }
+
+      if(type==='Bestätigung + Langtext'){
+        const row=document.createElement('div')
+        row.className='field'
+        const wrap=document.createElement('div')
+        wrap.className='generic-composite'
+        const stored=(values[id]&&typeof values[id]==='object')?values[id]:{}
+        const confirm=document.createElement('label')
+        confirm.className='generic-inline-check'
+        const check=document.createElement('input')
+        check.type='checkbox'
+        check.checked=stored.confirmed===true
+        check.dataset.required=required?'true':'false'
+        confirm.append(check,document.createTextNode('Bestätigt'))
+        const note=document.createElement('textarea')
+        note.rows=2
+        note.placeholder='Bemerkung'
+        note.value=stored.text||''
+        const save=()=>{
+          values[id]={confirmed:!!check.checked,text:note.value}
+          showWizardError('')
+          updateWizardStatus()
+        }
+        check.addEventListener('change',save);note.addEventListener('input',save)
+        wrap.append(confirm,note)
+        row.append(title,wrap)
+        $('fieldList').appendChild(row)
+        return
+      }
+
+      if(type.startsWith('Ja/Nein +')){
+        const row=document.createElement('div')
+        row.className='field'
+        const wrap=document.createElement('div')
+        wrap.className='generic-composite'
+        const stored=(values[id]&&typeof values[id]==='object')?values[id]:{}
+        const choice=document.createElement('select')
+        choice.innerHTML='<option value="">Bitte wählen</option><option>Ja</option><option>Nein</option>'
+        choice.value=stored.choice||((values[id]==='Ja'||values[id]==='Nein')?values[id]:'')
+        choice.dataset.required=required?'true':'false'
+        let detail
+        if(type.includes('Zahl')||type.includes('Distanz')){
+          detail=document.createElement('input')
+          detail.type='number'
+          detail.step='any'
+        }else{
+          detail=document.createElement('textarea')
+          detail.rows=2
+        }
+        detail.placeholder=type.includes('Bemerkung')?'Bemerkung':'Zusatzangabe'
+        detail.value=stored.detail||''
+        const save=()=>{
+          values[id]={choice:choice.value,detail:detail.value}
+          showWizardError('')
+          updateWizardStatus()
+        }
+        choice.addEventListener('change',save);detail.addEventListener('input',save)
+        wrap.append(choice,detail)
+        row.append(title,wrap)
+        $('fieldList').appendChild(row)
+        return
+      }
+
+      if(type==='Auswahl + Langtext'){
+        const row=document.createElement('div')
+        row.className='field'
+        const wrap=document.createElement('div')
+        wrap.className='generic-composite'
+        const stored=(values[id]&&typeof values[id]==='object')?values[id]:{}
+        let choice
+        if(options.length){
+          choice=document.createElement('select')
+          choice.innerHTML='<option value="">Bitte wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
+        }else{
+          choice=document.createElement('input')
+          choice.placeholder='Auswahl / Status'
+        }
+        choice.value=stored.choice||''
+        choice.dataset.required=required?'true':'false'
+        const detail=document.createElement('textarea')
+        detail.rows=2
+        detail.placeholder='Bemerkung'
+        detail.value=stored.detail||''
+        const save=()=>{
+          values[id]={choice:choice.value,detail:detail.value}
+          showWizardError('')
+          updateWizardStatus()
+        }
+        choice.addEventListener('input',save);choice.addEventListener('change',save);detail.addEventListener('input',save)
+        wrap.append(choice,detail)
+        row.append(title,wrap)
+        $('fieldList').appendChild(row)
+        return
+      }
+
       const label=document.createElement('label')
       label.className='field'
-      const title=document.createElement('span')
-      title.innerHTML=escapeHtml(f.Feldbezeichnung)+(String(f.Pflichtstatus).toLowerCase()==='ja'?'<b>*</b>':'')+'<small>'+escapeHtml([f.Abschnitt,f.Einheit_Optionen].filter(Boolean).join(' · '))+'</small>'
       let control
-      const type=String(f.Datentyp||'')
-      if(type.includes('Ja/Nein')){
+      if(type==='Ja/Nein'){
         control=document.createElement('select')
         control.innerHTML='<option value="">Bitte wählen</option><option>Ja</option><option>Nein</option>'
       }else if(type==='Datum'){
-        control=document.createElement('input'); control.type='date'
+        control=document.createElement('input');control.type='date'
       }else if(type==='Zahl'){
-        control=document.createElement('input'); control.type='number'
-      }else if(type==='Langtext'||type==='Messreihe'||type.includes('Langtext')){
-        control=document.createElement('textarea'); control.rows=3
+        control=document.createElement('input');control.type='number'
+      }else if(type==='Langtext'||type==='Messreihe'||type==='Messwert/Anhang'){
+        control=document.createElement('textarea');control.rows=3
       }else if(type==='Auswahl'){
         control=document.createElement('select')
-        const raw=String(f.Einheit_Optionen||f.Bedingung_UI||'')
-        const options=raw.split('|').map(x=>x.trim()).filter(Boolean)
         control.innerHTML='<option value="">Bitte wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
       }else{
         control=document.createElement('input')
       }
-      control.value=values[id]||''
-      control.dataset.required=String(f.Pflichtstatus).toLowerCase()==='ja'?'true':'false'
-      control.addEventListener('input',()=>{values[id]=control.value;updateWizardStatus()}); control.addEventListener('change',()=>{values[id]=control.value;updateWizardStatus()})
+      persistSimple(control)
       label.append(title,control)
       $('fieldList').appendChild(label)
     }
@@ -3229,19 +3426,39 @@
     }
 
     function profileValidation(){
-      const controls=[...$('fieldList').querySelectorAll('input,select,textarea')]
-      const signatures=[...$('fieldList').querySelectorAll('[data-signature-key]')]
-      if(!controls.length && !signatures.length) return {ok:false,missing:['passender Profilerhebungsbogen / Felddefinitionen']}
+      const host=$('fieldList')
+      const controls=[...host.querySelectorAll('input,select,textarea')]
+      const signatures=[...host.querySelectorAll('[data-signature-key]')]
+      const groups=[...host.querySelectorAll('[data-profile-group-key]')]
+      if(!controls.length && !signatures.length && !groups.length) return {ok:false,missing:['passender Profilerhebungsbogen / Felddefinitionen']}
+
       const required=controls.filter(x=>x.dataset.required==='true')
-      const relevant=required.length?required:controls
-      const empty=relevant.filter(x=>{
+      const emptyControls=required.filter(x=>{
         if(x.type==='checkbox') return !x.checked
         return !String(x.value||'').trim()
       })
-      if(required.length) {
-        return {ok:empty.length===0,missing:empty.slice(0,8).map(x=>x.closest('label')?.querySelector('span')?.childNodes?.[0]?.textContent?.trim()||'Pflichtfeld')}
+      const requiredGroups=groups.filter(x=>x.dataset.required==='true')
+      const emptyGroups=requiredGroups.filter(x=>{
+        const value=values[x.dataset.profileGroupKey]
+        return !Array.isArray(value)||value.length===0
+      })
+      const requiredSignatures=signatures.filter(x=>x.dataset.required==='true')
+      const emptySignatures=requiredSignatures.filter(x=>!signatureHasInk(x.dataset.signatureKey))
+
+      const missing=[
+        ...emptyControls.map(x=>x.closest('.field')?.querySelector(':scope > span')?.childNodes?.[0]?.textContent?.trim()||x.closest('label')?.querySelector('span')?.childNodes?.[0]?.textContent?.trim()||'Pflichtfeld'),
+        ...emptyGroups.map(x=>x.closest('.field')?.querySelector(':scope > span')?.childNodes?.[0]?.textContent?.trim()||'Mehrfachauswahl'),
+        ...emptySignatures.map(x=>x.dataset.signatureLabel||'Unterschrift')
+      ]
+
+      if(required.length || requiredGroups.length || requiredSignatures.length){
+        return {ok:missing.length===0,missing:missing.slice(0,8)}
       }
-      const anyFilled=controls.some(x=>x.type==='checkbox'?x.checked:String(x.value||'').trim()) || signatures.some(x=>signatureHasInk(x.dataset.signatureKey))
+
+      const anyFilled=
+        controls.some(x=>x.type==='checkbox'?x.checked:String(x.value||'').trim()) ||
+        groups.some(x=>Array.isArray(values[x.dataset.profileGroupKey])&&values[x.dataset.profileGroupKey].length>0) ||
+        signatures.some(x=>signatureHasInk(x.dataset.signatureKey))
       return {ok:anyFilled,missing:anyFilled?[]:['mindestens eine fachliche Angabe im Profilerhebungsbogen']}
     }
 
@@ -4179,6 +4396,8 @@
         el.disabled=!editable
       })
       if($('clearButton')) $('clearButton').disabled=!editable
+      document.querySelectorAll('#careView .signature-pad-clear').forEach(el=>{el.disabled=!editable})
+      document.querySelectorAll('#careView .signature-pad canvas').forEach(el=>{el.setAttribute('aria-disabled',editable?'false':'true')})
       updateArchiveButtonState()
       if($('printButton')) $('printButton').disabled=!hasContext
       if($('readOnlyBanner')) $('readOnlyBanner').classList.toggle('hidden',!activeSupplyIsReadOnly())
