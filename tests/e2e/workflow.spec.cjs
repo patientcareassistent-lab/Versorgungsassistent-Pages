@@ -345,6 +345,8 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
         { Feldzeile_ID: 'yntext', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Ja/Nein mit Bemerkung', Datentyp: 'Ja/Nein + Bemerkung', Pflichtstatus: 'ja' },
         { Feldzeile_ID: 'hint', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Nur Hinweis', Datentyp: 'Hinweis', Pflichtstatus: 'bedingt', Bedingung_UI: 'Nur bei besonderer Konstellation' },
         { Feldzeile_ID: 'patient_name', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Name / Vorname', Datentyp: 'Text', Pflichtstatus: 'ja' },
+        { Feldzeile_ID: 'patient_dob', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Geburtsdatum', Datentyp: 'Datum', Pflichtstatus: 'ja' },
+        { Feldzeile_ID: 'patient_insured', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Versichertennummer', Datentyp: 'Text', Pflichtstatus: 'ja' },
         { Feldzeile_ID: 'free_selection', Formular_ID: 'BARMER_PG22_ANHB', PG: '22', Feldbezeichnung: 'Freie Auswahl ohne Vorgaben', Datentyp: 'Auswahl', Pflichtstatus: 'nein' }
       ]
     }
@@ -354,6 +356,8 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
   await page.locator('#newSupplyButton').click()
   await page.locator('[data-case-field="patientFirstName"]').fill('Anna')
   await page.locator('[data-case-field="patientLastName"]').fill('Muster')
+  await page.locator('[data-case-field="patientBirthDate"]').fill('1980-01-02')
+  await page.locator('.wizard-panel[data-panel="0"] [data-case-field="insuredNo"]').fill('TEST')
   await page.locator('#careKasse').selectOption({ label: 'BARMER' })
   await page.locator('#carePg').selectOption('22')
   await expect(page.locator('#careHimi')).toContainText('Patientenlifter')
@@ -366,6 +370,8 @@ test('paper-form datatypes render as usable digital controls', async ({ page }) 
   await expect(page.locator('#fieldList select[data-required="true"]')).toHaveCount(1)
   await expect(page.getByText('Nur bei besonderer Konstellation')).toBeVisible()
   await expect(page.locator('#fieldList label').filter({ hasText: 'Name / Vorname' }).locator('input')).toHaveValue('Muster, Anna')
+  await expect(page.locator('#fieldList label').filter({ hasText: 'Geburtsdatum' }).locator('input')).toHaveValue('1980-01-02')
+  await expect(page.locator('#fieldList label').filter({ hasText: 'Versichertennummer' }).locator('input')).toHaveValue('TEST')
   await expect(page.locator('#fieldList label').filter({ hasText: 'Freie Auswahl ohne Vorgaben' }).locator('input')).toHaveCount(1)
 })
 
