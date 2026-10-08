@@ -11,17 +11,20 @@ Status: **ENTWURF – nicht live deployen**, bis der untenstehende Integrationsn
 ## Dienste (noch nicht deployed)
 - `archive-care-case` nutzt `archive_context_for_service` und `archive_mutation_for_service`, persistiert `archive_id` vor Upload, verwendet `care-cases/{case_id}/{archive_id}` und verifiziert jedes R2-Objekt, **bevor** ein transaktionaler SQL-Commit die aktive Versorgung und deren Historie entfernt.
 - `verify-care-case-archive` nutzt denselben Manifestvalidator und prüft SHA-256 der ZIP/GZip-Hauptdatei und aller Fotodateien.
-- `restore-care-case` akzeptiert nur verifizierte Archive, führt Foto- und Eigentümerprüfungen durch und stellt Stammdaten und Historie transaktional wieder her.
+- `restore-care-case` akzeptiert nur verifizierte Archive, führt Foto- und Eigentümerprüfungen durch und stellt Stammdaten und Historie transaktional wieder her. Bereits vorhandene Fotos dürfen beim Restore **nicht überschrieben** werden; bei einem Wiederanlauf werden identische Dateien per SHA-256 wiederverwendet.
 - `delete-care-case-archive` prüft die Datenschutz- und Aufbewahrungsvorgaben aus dem Archivindex (der aktive Vorgang existiert nach Archivierung nicht mehr), legt VOR jeder R2-Löschung einen Audit-Eintrag an, verifiziert Datei-Hashes und schließt die Löschung in einem SQL-Commit ab.
 - `app.js` entfernt die ursprüngliche Eigentümerbeschränkung beim Archivieren; diese Datei **erst zusammen mit dem gesamten freigegebenen Backend** veröffentlichen.
 
 ## R2-Jurisdiktion und Endpunkte (08.10.2026)
 - Die aktive Cloudflare-Worker-Bindung `ARCHIVE` verweist auf den Bucket `versorgungsassistent-archiv` mit `jurisdiction: eu`.
-- Die Cloudflare-Standard-Bucket-Liste (`default`) ist deshalb **kein** Nachweis für einen fehlenden EU-Bucket: diese API-Abfrage wurde ohne erforderlichen Header `cf-r2-jurisdiction: eu` ausgeführt.
+- **API-Einschränkung:** Die verbundene Cloudflare-Schnittstelle kann bei diesem API-Aufruf `cf-r2-jurisdiction: eu` nicht übergeben. Auch ein Versuch mit dem nicht unterstützten `headers`-Feld wurde daher ohne diesen Header ausgeführt. Ein `10006 bucket does not exist` aus diesem Standardaufruf belegt **nicht**, dass der EU-Bucket fehlt. Bucketstatus und EU-Jurisdiktion müssen über das Dashboard oder einen Header-fähigen Client bestätigt werden.
 - Der direkte S3-Zugriff in `verify-care-case-archive` und `delete-care-case-archive` muss `https://<R2_ACCOUNT_ID>.eu.r2.cloudflarestorage.com` verwenden. Diese Referenz ist auf dem Entwicklungsbranch korrigiert und durch einen Security-Regressionscheck abgesichert.
 - `archive-care-case` und `restore-care-case` arbeiten über den separat authentisierten Cloudflare-Gateway-Worker und dessen EU-R2-Bindung.
 - Die EU-Zugehörigkeit, das tatsächliche Lesen und Schreiben isolierter, rein synthetischer R2-Objekte und die S3-Zugangsdaten müssen im Ende-zu-Ende-Test bestätigt werden. Noch **keine** R2-Live-Probe erfolgreich absolviert.
 - Kein R2-Bucket in Standard-Jurisdiktion als Ersatz anlegen; das würde die vorgesehene regionale Datenspeicherung nicht gewährleisten.
+- Cloudflare-Abnahme im Dashboard: **R2 Object Storage → Buckets → `versorgungsassistent-archiv`** und **Jurisdiction: EU** prüfen; Worker-Bindung und Objektzugriffe separat testen.
+- Für isolierte E2E-Prüfungen ausschließlich synthetische Daten in einem separat EU-jurisdizierten Test-Bucket verwenden; keine produktiven Patienteninformationen oder Fotos kopieren.
+- Die konfigurierte Worker-Bindung `jurisdiction: eu` ersetzt keinen tatsächlichen R2-Lese-/Schreibtest.
 
 ## Sicherheitsbedingungen
 MFA AAL2, gültiger Benutzer, aktive Freigabeliste, nur Service-Role für DB-RPCs, keine REST-Freigabe von `app_private`. Originaleigentümer bleibt unverändert, tatsächlicher Bearbeiter wird protokolliert.
