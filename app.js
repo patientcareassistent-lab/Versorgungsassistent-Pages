@@ -3670,6 +3670,30 @@ import { versorgungsziele } from './versorgungsziele.js'
         }
       }
 
+      // On PG24 source PDFs many widgets are not individually classified as
+      // mandatory. Prefilled demographics alone are not a clinical assessment.
+      if($('carePg').value==='24'){
+        if(isAokCase()){
+          const demographicAndCalculated=/^aokProfilePdf:Text(?:1|2|3|4|5|6|24|25)$/
+          const documented=controls.some(el=>{
+            const key=String(el.dataset.profileKey||'')
+            if(!key.startsWith('aokProfilePdf:') || demographicAndCalculated.test(key)) return false
+            return el.type==='checkbox'?el.checked:!!String(el.value||'').trim()
+          })
+          const plusMAnswers=Number(values.aokPlusMAnswered)||0
+          if(!documented && plusMAnswers===0){
+            return {ok:false,missing:['fachliche Angaben zur Amputation, Stumpfsituation, Mobilität oder Versorgungsplanung im AOK-Profilerhebungsbogen']}
+          }
+          if(plusMAnswers>0 && plusMAnswers<12){
+            return {ok:false,missing:['PLUS-M: alle 12 Fragen beantworten, wenn mit der Erhebung begonnen wurde']}
+          }
+        }else if(!String(values['tech:therapyGoal']||'').trim()){
+          // The PG24 source catalogue explicitly identifies Versorgungsziel as required;
+          // technician profile uses the semantically equivalent therapy-goal field.
+          return {ok:false,missing:['Therapieziel / individuelles Versorgungsziel']}
+        }
+      }
+
       const required=controls.filter(x=>x.dataset.required==='true')
       const emptyControls=required.filter(x=>{
         if(x.type==='checkbox') return !x.checked
