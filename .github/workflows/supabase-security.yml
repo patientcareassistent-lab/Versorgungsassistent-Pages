@@ -1,0 +1,54 @@
+name: Supabase security validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'tests/security/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/supabase-security.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/**'
+      - 'tests/security/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/supabase-security.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-fund --no-audit
+
+      - name: Critical dependency audit
+        run: npm audit --omit=dev --audit-level=critical
+
+      - name: Validate archive security invariants
+        run: npm run test:security
+
+      - name: Ensure backend sources are excluded from Pages
+        run: |
+          grep -q "'supabase/**'" .github/workflows/pages.yml
+          grep -q "dist/supabase" .github/workflows/pages.yml

@@ -38,6 +38,9 @@ jobs:
           cp node_modules/@supabase/supabase-js/dist/umd/supabase.js vendor/supabase.js
           test -s vendor/supabase.js
 
+      - name: Validate Supabase archive security invariants
+        run: npm run test:security
+
       - name: Static security and syntax gate
         run: |
           set -euo pipefail

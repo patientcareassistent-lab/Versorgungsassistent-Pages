@@ -134,6 +134,9 @@ jobs:
 
           find vendor -type f -print0 | sort -z | xargs -0 sha256sum > vendor/SHA256SUMS
 
+      - name: Validate Supabase archive security invariants
+        run: npm run test:security
+
       - name: Setup pinned Emscripten toolchain
         uses: emscripten-core/setup-emsdk@6ab9eb1bda2574c4ddb79809fc9247783eaf9021
 
