@@ -182,6 +182,13 @@
                           <label class="order-field order-field-name">Nachname <span class="order-required">*</span>
                             <input data-case-field="patientLastName" autocomplete="off" placeholder="Nachname" />
                           </label>
+                          <label class="order-field">Geburtsdatum <span class="order-required">*</span>
+                            <input type="date" data-case-field="patientBirthDate" autocomplete="off" />
+                          </label>
+                          <label class="order-field">Versichertennummer <span class="order-required">*</span>
+                            <input data-case-field="insuredNo" autocomplete="off" placeholder="Versichertennummer" />
+                            <small>Wird bei Rezept-OCR übernommen bzw. dort aktualisiert.</small>
+                          </label>
                           <label class="order-field order-field-case">Vorgangsnummer <span class="order-optional">optional</span>
                             <input data-case-field="caseNumber" placeholder="SIC-Vorgangsnummer" />
                             <small>Nur eintragen, wenn bereits eine Vorgangsnummer aus SIC vorhanden ist.</small>
