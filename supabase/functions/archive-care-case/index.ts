@@ -205,33 +205,27 @@ Deno.serve(async (req:Request) => {
   if (authUser.error || !authUser.data.user) return reply(401, { error:"invalid_user_session" });
   const user = authUser.data.user;
 
-  const member = await admin.schema("app_private").from("app_members")
-    .select("user_id").eq("user_id", user.id).eq("active", true).maybeSingle();
-  if (member.error || !member.data) return reply(403, { error:"user_not_allowed" });
-
-  const existing = await admin.schema("app_private").from("care_case_archives")
-    .select("*").eq("care_case_id", careCaseId).maybeSingle();
-  if (existing.error) return reply(500, { error:"archive_index_read_failed", detail:existing.error.message });
-
-  const caseResult = await admin.from("care_cases").select("*").eq("id", careCaseId).maybeSingle();
-  if (caseResult.error) return reply(500, { error:"care_case_read_failed", detail:caseResult.error.message });
-
-  if (!caseResult.data) {
-    if (existing.data?.status === "READY" && existing.data?.verification_status === "VERIFIED") {
-      return reply(200, {
-        ok:true,
-        already_archived:true,
-        care_case_id:careCaseId,
-        object_key:existing.data.object_key,
+  const context=await admin.rpc("archive_context_for_service",{
+    p_actor_id:user.id,p_care_case_id:careCaseId,
+    p_require_admin:false,p_include_history:true
+  });
+  if(context.error){
+    if(context.error.code==="42501") return reply(403,{error:"user_not_allowed"});
+    return reply(500,{error:"archive_context_read_failed"});
+  }
+  const existing={data:context.data?.archive||null};
+  const caseResult={data:context.data?.care_case||null};
+  if(!caseResult.data){
+    if(existing.data?.status==="READY" && existing.data?.verification_status==="VERIFIED"){
+      return reply(200,{ok:true,already_archived:true,
+        care_case_id:careCaseId,object_key:existing.data.object_key,
         archive_sha256:existing.data.archive_sha256,
         archive_bytes:existing.data.archive_bytes,
-        cleanup_complete:!!existing.data.source_purged_at
-      });
+        cleanup_complete:!!existing.data.source_purged_at});
     }
-    return reply(404, { error:"care_case_not_found" });
+    return reply(404,{error:"care_case_not_found"});
   }
-
-  if (caseResult.data.owner_user_id !== user.id) return reply(403, { error:"only_owner_can_archive" });
+  if(existing.data?.status==="READY") return reply(409,{error:"archive_already_ready"});
 
   const payload = (caseResult.data.payload || {}) as Record<string,unknown>;
   const missing = completionProblems(caseResult.data as Record<string,unknown>, payload);
@@ -244,28 +238,26 @@ Deno.serve(async (req:Request) => {
     return reply(409, { error:error instanceof Error ? error.message : "invalid_photo_reference" });
   }
 
-  let objectKey = existing.data?.object_key || null;
-  let manifestHash = existing.data?.archive_sha256 || null;
-  let totalBytes = Number(existing.data?.archive_bytes || 0);
-  let photoCount = Number(existing.data?.photo_count || 0);
-  let revisionCount = Number(existing.data?.revision_count || 0);
+  const reserved=await admin.rpc("archive_mutation_for_service",{
+    p_actor_id:user.id,p_care_case_id:careCaseId,
+    p_action:"reserve",p_data:{}
+  });
+  if(reserved.error) return reply(409,{error:"archive_reservation_failed",code:reserved.error.code});
+  const archiveId=String(reserved.data?.archive_id||"");
+  const expectedUpdatedAt=String(reserved.data?.expected_updated_at||"");
+  if(!archiveId || !expectedUpdatedAt) return reply(500,{error:"archive_reservation_invalid"});
 
-  const canReuse = existing.data?.status === "READY" &&
-    existing.data?.verification_status === "VERIFIED" &&
-    existing.data?.object_key &&
-    existing.data?.archive_sha256;
-
-  if (!canReuse) {
-    const revisions = await admin.schema("app_private").from("care_case_revisions")
-      .select("*").eq("care_case_id", careCaseId).order("revision_no", { ascending:true });
-    if (revisions.error) return reply(500, { error:"revision_read_failed", detail:revisions.error.message });
-
-    const audit = await admin.schema("app_private").from("care_case_audit")
-      .select("*").eq("care_case_id", careCaseId).order("occurred_at", { ascending:true });
-    if (audit.error) return reply(500, { error:"audit_read_failed", detail:audit.error.message });
+  let objectKey:string|null=null;
+  let manifestHash:string|null=null;
+  let totalBytes=0;
+  let photoCount=0;
+  let revisionCount=0;
+  {
+    const revisions={data:context.data?.revisions||[]};
+    const audit={data:context.data?.audit||[]};
 
     const archivedAt = new Date().toISOString();
-    const base = "care-cases/" + user.id + "/" + careCaseId + "/" + archivedAt.replace(/[:.]/g, "-");
+    const base="care-cases/"+careCaseId+"/"+archiveId;
     const files:Array<Record<string,unknown>> = [];
     totalBytes = 0;
 
@@ -294,6 +286,7 @@ Deno.serve(async (req:Request) => {
 
     const manifest = {
       manifest_version:1,
+      archive_id:archiveId,
       archived_at:archivedAt,
       archived_by:user.id,
       care_case:caseResult.data,
@@ -315,47 +308,18 @@ Deno.serve(async (req:Request) => {
     photoCount = files.length;
     revisionCount = (revisions.data || []).length;
 
-    const indexed = await admin.schema("app_private").from("care_case_archives").upsert({
-      care_case_id:careCaseId,
-      archived_at:archivedAt,
-      archived_by:user.id,
-      owner_user_id:caseResult.data.owner_user_id,
-      storage_backend:"r2",
-      object_key:objectKey,
-      archive_sha256:manifestHash,
-      archive_bytes:totalBytes,
-      photo_count:photoCount,
-      revision_count:revisionCount,
-      status:"READY",
-      error_message:null,
-      manifest_version:1,
-      retention_until:caseResult.data.retention_until,
-      legal_hold:!!caseResult.data.legal_hold,
-      completed_at:caseResult.data.completed_at || archivedAt,
-      verification_status:"VERIFIED",
-      verified_at:new Date().toISOString(),
-      verified_by:user.id,
-      verification_error:null,
-      cleanup_error:null
-    }, { onConflict:"care_case_id" });
-    if (indexed.error) return reply(500, { error:"archive_index_write_failed", detail:indexed.error.message });
-  }
-
-  const deletedCase = await admin.from("care_cases").delete().eq("id", careCaseId);
-  if (deletedCase.error) {
-    await admin.schema("app_private").from("care_case_archives")
-      .update({ cleanup_error:deletedCase.error.message }).eq("care_case_id", careCaseId);
-    return reply(500, {
-      error:"care_case_cleanup_failed",
-      detail:deletedCase.error.message,
-      archived:true,
-      object_key:objectKey,
-      archive_sha256:manifestHash
+    const finalized=await admin.rpc("archive_mutation_for_service",{
+      p_actor_id:user.id,p_care_case_id:careCaseId,p_action:"complete",
+      p_data:{expected_updated_at:expectedUpdatedAt,object_key:objectKey,
+        archive_sha256:manifestHash,archive_bytes:totalBytes,
+        photo_count:photoCount,revision_count:revisionCount,
+        object_readback_verified:true}
+    });
+    if(finalized.error) return reply(409,{
+      error:"archive_commit_blocked",code:finalized.error.code,
+      detail:"Active case was preserved; reconcile uncommitted R2 objects."
     });
   }
-
-  const cleanupRevisions = await admin.schema("app_private").from("care_case_revisions").delete().eq("care_case_id", careCaseId);
-  const cleanupAudit = await admin.schema("app_private").from("care_case_audit").delete().eq("care_case_id", careCaseId);
 
   let storageError:string|null = null;
   if (photoRefs.length) {
@@ -363,33 +327,12 @@ Deno.serve(async (req:Request) => {
     if (removed.error) storageError = removed.error.message;
   }
 
-  const cleanupErrors = [
-    cleanupRevisions.error?.message,
-    cleanupAudit.error?.message,
-    storageError
-  ].filter(Boolean) as string[];
-
-  if (cleanupErrors.length) {
-    await admin.schema("app_private").from("care_case_archives")
-      .update({ cleanup_error:cleanupErrors.join(" | ") }).eq("care_case_id", careCaseId);
-    return reply(200, {
-      ok:true,
-      archived:true,
-      care_case_id:careCaseId,
-      object_key:objectKey,
-      archive_sha256:manifestHash,
-      archive_bytes:totalBytes,
-      photo_count:photoCount,
-      revision_count:revisionCount,
-      cleanup_complete:false,
-      cleanup_warning:cleanupErrors.join(" | ")
-    });
-  }
-
-  const purgedAt = new Date().toISOString();
-  await admin.schema("app_private").from("care_case_archives")
-    .update({ source_purged_at:purgedAt, cleanup_error:null }).eq("care_case_id", careCaseId);
-
+  const cleanup=await admin.rpc("archive_mutation_for_service",{
+    p_actor_id:user.id,p_care_case_id:careCaseId,p_action:"cleanup",
+    p_data:{cleanup_error:storageError}
+  });
+  if(cleanup.error) return reply(500,{error:"archive_cleanup_index_failed",archived:true});
+  const cleanupComplete=!storageError;
   return reply(200, {
     ok:true,
     archived:true,
@@ -399,7 +342,7 @@ Deno.serve(async (req:Request) => {
     archive_bytes:totalBytes,
     photo_count:photoCount,
     revision_count:revisionCount,
-    cleanup_complete:true,
-    source_purged_at:purgedAt
+    cleanup_complete:cleanupComplete,
+    ...(storageError?{cleanup_warning:storageError}:{})
   });
 });
