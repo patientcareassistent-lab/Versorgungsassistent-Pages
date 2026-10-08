@@ -1206,7 +1206,8 @@
         .sort((a,b)=>(a.Sortierung||100)-(b.Sortierung||100))
       const ruleFormIds=[...new Set(rules.map(r=>r.Formular_ID).filter(Boolean))]
       const exactForms=data.formulare.filter(f=>ruleFormIds.includes(f.Formular_ID))
-      const broad=data.formulare.filter(f=>(!kasse||f.Kasse===kasse)&&formMatchesPgValue(f.PG,pg)&&formMatchesHimi(f))
+      const pgForms=data.formulare.filter(f=>(!kasse||f.Kasse===kasse)&&formMatchesPgValue(f.PG,pg))
+      const broad=pgForms.filter(f=>pgForms.length===1 || formMatchesHimi(f))
       const byId=new Map()
       exactForms.forEach(f=>byId.set(f.Formular_ID,f))
       broad.forEach(f=>{if(!byId.has(f.Formular_ID))byId.set(f.Formular_ID,f)})
@@ -1223,6 +1224,7 @@
       $('careForm').innerHTML=html
       if([...$('careForm').options].some(o=>o.value===current)) $('careForm').value=current
       else if(rules.length===1 && rules[0].Formular_ID) $('careForm').value=rules[0].Formular_ID
+      else if(!rules.length && forms.length===1 && forms[0].Formular_ID) $('careForm').value=forms[0].Formular_ID
       else if(!rules.length && genericId) $('careForm').value=genericId
       else $('careForm').value=''
       values.formId=$('careForm').value||''

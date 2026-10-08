@@ -492,3 +492,49 @@ test('multi-PG contract forms remain discoverable for a selected product group',
     return rows[0]?.payload?.formId||''
   }), { timeout: 10000 }).toBe('FORM_MULTI')
 })
+
+
+test('single mandatory payer form is auto-selected even without structured Himi rules', async ({ page }) => {
+  await installSupabaseMock(page, {
+    mode: 'signed-in',
+    rpcOverrides: {
+      care_reference_bootstrap: {
+        kassen: [{ Kasse_Kanonisch: 'AOK Hessen' }],
+        produktgruppen: [{ PG: '04', Generisches_Blatt: 'PG04_Bad_Dusche', Reifegrad: 'TEST' }],
+        sourceCount: 1,
+        formCount: 1
+      },
+      himi_logic_for_pg: [],
+      forms_for_pg: [{
+        Formular_ID: 'FORM_005',
+        Kasse: 'AOK Hessen',
+        PG: '04',
+        Versorgungsart: 'Bade- und Duschhilfen',
+        Status: 'EXPLIZIT_PFLICHT',
+        Aktion_Versorgungsassistent: 'AOK-Hessen-Bogen erzwingen.'
+      }],
+      himi_form_rules_for_himi: [],
+      form_fields_for_pg: [{
+        Feldzeile_ID: 'GEN_04_goal',
+        Formular_ID: 'PG04_Bad_Dusche',
+        Formular_Typ: 'GENERISCH',
+        PG: '04',
+        Feldbezeichnung: 'Versorgungsziel',
+        Datentyp: 'Langtext',
+        Pflichtstatus: 'ja'
+      }]
+    }
+  })
+
+  await page.goto('/index.html')
+  await page.locator('#newSupplyButton').click()
+  await page.locator('#careKasse').selectOption({ label: 'AOK Hessen' })
+  await page.locator('#carePg').selectOption('04')
+  await expect(page.locator('#careHimi')).toContainText('Badehilfe')
+  await page.locator('#careHimi').selectOption({ label: 'Badehilfe' })
+
+  await expect(page.locator('#careForm')).toHaveValue('FORM_005')
+  await expect(page.locator('#ruleBox')).toContainText('EXPLIZIT_PFLICHT')
+  await expect(page.locator('#ruleBox')).toContainText('Voraufnahme')
+  await expect(page.locator('#fieldList')).toContainText('Versorgungsziel')
+})
