@@ -1284,7 +1284,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       })
       if(genericId && !forms.some(f=>f.Formular_ID===genericId)) html+='<option value="'+escapeHtml(genericId)+'">Generischer Erhebungsbogen · '+escapeHtml(selectedHimi())+'</option>'
       $('careForm').innerHTML=html
-      if([...$('careForm').options].some(o=>o.value===current)) $('careForm').value=current
+      if(current && [...$('careForm').options].some(o=>o.value===current)) $('careForm').value=current
       else if(rules.length===1 && rules[0].Formular_ID) $('careForm').value=rules[0].Formular_ID
       else if(!rules.length && forms.length===1 && forms[0].Formular_ID) $('careForm').value=forms[0].Formular_ID
       else if(!rules.length && genericId) $('careForm').value=genericId
