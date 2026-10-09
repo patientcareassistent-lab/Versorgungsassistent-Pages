@@ -1441,6 +1441,7 @@ import { versorgungsziele } from './versorgungsziele.js'
 
     const PROFILE_AI_MAX_RECORDING_MS=5*60*1000
     let profileAiRecorder=null
+    let profileAiRecordingTarget='profile'
     let profileAiStream=null
     let profileAiChunks=[]
     let profileAiRecordingTimer=null
@@ -1450,7 +1451,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     let profileAiSuggestionState=[]
 
     function profileAiSetStatus(text,state=''){
-      const el=$('profileAiStatus')
+      const el=profileAiRecordingTarget==='measure' ? $('measureTranscriptStatus') : $('profileAiStatus')
       if(!el) return
       el.textContent=text
       el.className='profile-ai-status'+(state?' '+state:'')
@@ -1733,10 +1734,11 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
     }
 
-    async function startProfileAiRecording(){
+    async function startProfileAiRecording(target='profile'){
       if(profileAiRecorder?.state==='recording') return
+      profileAiRecordingTarget=target
       if(!navigator.mediaDevices?.getUserMedia){profileAiSetStatus('Mikrofonzugriff wird von diesem Browser nicht unterstützt.');return}
-      if($('profileAiMode').value==='guided' && (!profileGuidedTarget||!document.contains(profileGuidedTarget.el))) selectProfileGuidedQuestion(false)
+      if(target!=='measure' && $('profileAiMode').value==='guided' && (!profileGuidedTarget||!document.contains(profileGuidedTarget.el))) selectProfileGuidedQuestion(false)
       try{
         profileAiStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})
         profileAiChunks=[]
@@ -1747,9 +1749,15 @@ import { versorgungsziele } from './versorgungsziele.js'
             const blob=new Blob(profileAiChunks,{type:profileAiRecorder.mimeType||'audio/webm'})
             profileAiSetStatus('Aufnahme beendet. Lokale KI-Transkription wird vorbereitet …')
             const text=await transcribeProfileAudio(blob)
-            $('profileAiTranscript').value=text
-            profileAiSetStatus(text?'Transkription abgeschlossen. Bitte Text prüfen.':'Keine Sprache erkannt.',text?'ready':'')
-            if(text) analyzeProfileAiTranscript()
+            if(target==='measure'){
+              if($('measureTranscript')) $('measureTranscript').value=text
+              profileAiSetStatus(text?'Maßansage lokal transkribiert. Kennungen und Werte bitte prüfen.':'Keine Maßansage erkannt.',text?'ready':'')
+              if(text) analyzeMeasureTranscript()
+            }else{
+              $('profileAiTranscript').value=text
+              profileAiSetStatus(text?'Transkription abgeschlossen. Bitte Text prüfen.':'Keine Sprache erkannt.',text?'ready':'')
+              if(text) analyzeProfileAiTranscript()
+            }
           }catch(err){
             console.error(err);profileAiSetStatus('Transkription fehlgeschlagen: '+(err?.message||'unbekannter Fehler'))
           }finally{
@@ -1757,7 +1765,9 @@ import { versorgungsziele } from './versorgungsziele.js'
             profileAiStream?.getTracks().forEach(t=>t.stop());profileAiStream=null
             profileAiRecorder=null
             profileAiChunks=[]
-            $('profileAiStart').disabled=false;$('profileAiStop').disabled=true
+            $(target==='measure'?'measureTranscriptRecord':'profileAiStart').disabled=false
+            $(target==='measure'?'measureTranscriptStop':'profileAiStop').disabled=true
+            profileAiRecordingTarget='profile'
           }
         }
         profileAiRecorder.start()
@@ -1768,7 +1778,8 @@ import { versorgungsziele } from './versorgungsziele.js'
             profileAiRecorder.stop()
           }
         },PROFILE_AI_MAX_RECORDING_MS)
-        $('profileAiStart').disabled=true;$('profileAiStop').disabled=false
+        $(target==='measure'?'measureTranscriptRecord':'profileAiStart').disabled=true
+        $(target==='measure'?'measureTranscriptStop':'profileAiStop').disabled=false
         profileAiSetStatus('Aufnahme läuft … Sprechen Sie normal und deutlich.','recording')
       }catch(err){profileAiSetStatus('Mikrofon konnte nicht gestartet werden: '+(err?.message||'Zugriff verweigert'))}
     }
@@ -2524,6 +2535,24 @@ import { versorgungsziele } from './versorgungsziele.js'
         :'Maßblatt und Hilfsmittel auswählen, bevor ein Transkript zugeordnet werden kann.'
       measureTranscriptProposals=[]
       if($('measureTranscriptSuggestions'))$('measureTranscriptSuggestions').replaceChildren()
+      const catalog=$('measureTranscriptCatalog')
+      if(catalog){
+        catalog.replaceChildren()
+        const added=new Set()
+        controls.forEach(el=>{
+          const id=el.dataset.measureFieldId
+          if(added.has(id))return
+          added.add(id)
+          const row=document.createElement('div')
+          row.className='measure-catalog-row'
+          const token=document.createElement('code');token.textContent=id
+          const label=document.createElement('span')
+          const context=el.dataset.measureContext||''
+          const name=el.dataset.measureOriginalName||el.dataset.measureLabel||''
+          label.textContent=context+' · '+name+(el.dataset.measureMapping==='position-unverified'?' · Textnähe ungeprüft':'')
+          row.append(token,label);catalog.appendChild(row)
+        })
+      }
     }
     function measureTranscriptEntries(raw){
       const chunks=String(raw||'').split(/[\n;]/).map(x=>x.trim()).filter(Boolean)
@@ -5230,7 +5259,9 @@ import { versorgungsziele } from './versorgungsziele.js'
       $('profileAiQuestion').innerHTML=guided?'<strong>Geführte Abfrage</strong><span>„Nächste offene Frage“ wählen.</span>':'<strong>Freies Gespräch</strong><span>Gespräch aufnehmen oder vorhandenes Transkript einfügen. Eindeutige Angaben werden anschließend als Vorschläge angezeigt.</span>'
     })
     $('profileAiNext').addEventListener('click',()=>selectProfileGuidedQuestion(true))
-    $('profileAiStart').addEventListener('click',startProfileAiRecording)
+    $('profileAiStart').addEventListener('click',()=>startProfileAiRecording('profile'))
+    $('measureTranscriptRecord')?.addEventListener('click',()=>startProfileAiRecording('measure'))
+    $('measureTranscriptStop')?.addEventListener('click',stopProfileAiRecording)
     $('profileAiStop').addEventListener('click',stopProfileAiRecording)
     $('profileAiAnalyze').addEventListener('click',analyzeProfileAiTranscript)
     $('profileAiApply').addEventListener('click',applyProfileAiSuggestions)
