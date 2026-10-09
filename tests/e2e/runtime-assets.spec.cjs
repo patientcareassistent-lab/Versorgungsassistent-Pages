@@ -238,3 +238,51 @@ test('PG24 bilateral original forms keep independent right and left fields after
   await page.emulateMedia({media:'print'})
   await expect(page.locator('.aok-profile-original-document .aok-pdf-page')).toHaveCount(8)
 })
+
+
+test('PG24 original PDFs retain conditional source instructions and optional gait assessment', async ({page})=>{
+  test.setTimeout(120000)
+  await page.goto('/index.html')
+  const conditions=await page.evaluate(async()=>{
+    const pdfjs=await import('./vendor/pdfjs/pdf.min.mjs')
+    pdfjs.GlobalWorkerOptions.workerSrc=new URL('./vendor/pdfjs/pdf.worker.min.mjs',location.href).href
+    async function contents(path,pageNumbers){
+      const pdf=await pdfjs.getDocument('./assets/aok-pg24/'+path).promise
+      const txt=[]
+      for(const n of pageNumbers){
+        const page=await pdf.getPage(n)
+        const obj=await page.getTextContent()
+        txt.push(obj.items.map(i=>i.str||'').join(' ').replace(/\s+/g,' '))
+      }
+      return {pages:pdf.numPages,text:txt.join(' ')}
+    }
+    const [profile,foot,ukb,knee,okb,hip]=await Promise.all([
+      contents('anlage-4-profilerhebungsbogen.pdf',[1,3,4]),
+      contents('anlage-5a-fuss.pdf',[1]),
+      contents('anlage-5b-ukb.pdf',[1,2]),
+      contents('anlage-5c-knieex.pdf',[1]),
+      contents('anlage-5d-okb.pdf',[1,2]),
+      contents('anlage-5e-hueftex.pdf',[1])
+    ])
+    return {
+      pages:[profile.pages,foot.pages,ukb.pages,knee.pages,okb.pages,hip.pages],
+      bilateral:/Bei doppelseitiger Amputation.*extra Formular.*zweite Seite/i.test(profile.text),
+      optionalGait:/Gangbildbeobachtung/i.test(profile.text)&&/optional/i.test(profile.text),
+      lymph:/Lymphmanagement/i.test(profile.text),
+      linerInstructions:[ukb.text,okb.text].map(s=>/Bei Linerversorgung bitte Art und Material des Liners angeben/i.test(s)),
+      measurementNames:[
+        /Maßblatt.*Fuß/i.test(foot.text),
+        /Maßblatt.*UKB/i.test(ukb.text),
+        /Maßblatt.*Knie/i.test(knee.text),
+        /Maßblatt.*OKB/i.test(okb.text),
+        /Maßblatt.*Hüft/i.test(hip.text)
+      ]
+    }
+  })
+  expect(conditions.pages).toEqual([4,1,2,2,2,2])
+  expect(conditions.bilateral).toBe(true)
+  expect(conditions.optionalGait).toBe(true)
+  expect(conditions.lymph).toBe(true)
+  expect(conditions.linerInstructions).toEqual([true,true])
+  expect(conditions.measurementNames).toEqual([true,true,true,true,true])
+})
