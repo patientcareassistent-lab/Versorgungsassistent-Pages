@@ -450,8 +450,9 @@
                     <h4>Maß-Transkript · kontrollierte Feldübernahme</h4>
                     <p>Jedes Eingabefeld besitzt eine eindeutige Kennung aus Maßblatt, PDF-Seite und Feldposition. Angaben werden nur bei eindeutiger Kennung als Vorschlag erkannt und erst nach Bestätigung übertragen.</p>
                     <label>Transkript / Maße mit Kennung <textarea id="measureTranscript" rows="3" placeholder="z. B. 5b-P1-F3: 32,5 cm; 5b-P1-F4: 31 cm"></textarea></label>
-                    <div class="measure-transcript-actions"><button id="measureTranscriptAnalyze" class="secondary" type="button">Felder zuordnen</button><button id="measureTranscriptApply" class="primary" type="button">Bestätigte Werte übernehmen</button></div>
+                    <div class="measure-transcript-actions"><button id="measureTranscriptRecord" class="secondary" type="button">● Maßansage aufnehmen</button><button id="measureTranscriptStop" class="secondary" type="button" disabled>■ Stoppen & lokal transkribieren</button><button id="measureTranscriptAnalyze" class="secondary" type="button">Felder zuordnen</button><button id="measureTranscriptApply" class="primary" type="button">Bestätigte Werte übernehmen</button></div>
                     <div id="measureTranscriptStatus" role="status" aria-live="polite"></div>
+                    <details><summary>Feldkennungen und Originalkontext anzeigen</summary><div id="measureTranscriptCatalog" class="measure-transcript-catalog"></div></details>
                     <div id="measureTranscriptSuggestions"></div>
                   </section>
                   <div class="step-section"><h4>Zusätzliche Mess-/Passformhinweise</h4><div class="mini-grid">
