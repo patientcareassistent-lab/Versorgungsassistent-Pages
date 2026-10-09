@@ -2062,15 +2062,20 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
     }
 
-    function renderAokPg24Profile(){
-      const host=$('fieldList')
-      host.className=''
-      $('fieldInfo').textContent='AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen. Feldbezeichnungen und Reihenfolge entsprechen dem Originalbogen.'
+    function updateAokPg24ProfileHint(){
       const hint=$('profileHint')
+      if(!hint) return
       const bilateral=values.side==='beidseitig'
       hint.className=bilateral?'status-card open':'status-card ready'
       hint.innerHTML='<strong>AOK-Vertragsbogen aktiv</strong>Ausschließlich der AOK-Profilerhebungsbogen wird angezeigt. Stammdaten werden nur dort vorbelegt, wo die Zuordnung eindeutig ist. PLUS-M auf Seite 2 wird zeilenweise exklusiv ausgewählt und automatisch bewertet; die Unterschriften der versicherten Person/Vertretung und des Hilfsmittelanbieters auf Seite 4 sind als Stift-, Touch- und Maus-Signaturfelder ausgeführt.'+
         (bilateral?'<p><strong>Beidseitige Amputation:</strong> Nach Anlage 4 (Seite 1, E3) ist für die zweite Seite ein separater Original-Profilerhebungsbogen erforderlich. Der Assistent erstellt diesen zweiten Bogen derzeit nicht automatisch. Beide Bögen müssen separat dokumentiert werden; ein einzelner Bogen ist keine vollständige Vertragsdokumentation.</p>':'')
+    }
+
+    function renderAokPg24Profile(){
+      const host=$('fieldList')
+      host.className=''
+      $('fieldInfo').textContent='AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen. Feldbezeichnungen und Reihenfolge entsprechen dem Originalbogen.'
+      updateAokPg24ProfileHint()
       const url='assets/aok-pg24/anlage-4-profilerhebungsbogen.pdf'
       host.innerHTML='<div class="profile-original-wrap"><div class="profile-original-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>Anlage 4 · Profilerhebungsbogen PG24</strong></div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Original öffnen ↗</a></div><div id="aokProfilePdfPages" class="aok-pdf-pages"><div class="aok-pdf-loading">AOK-Profilerhebungsbogen wird geladen …</div></div></div>'
       renderEditableProfilePdf(url,$('aokProfilePdfPages'))
@@ -4649,9 +4654,15 @@ import { versorgungsziele } from './versorgungsziele.js'
 
       const ph=$('profileHint')
       if(ph && !isRepairCase()){
-        ph.innerHTML=requiresProfile()
-          ?'<strong>Profilerhebung erforderlich</strong>'+(isAokCase()?'Die AOK-/Vertragslogik wird verwendet; vorhandene Pflichtfelder müssen vollständig sein.':'Der hinterlegte PG-Erhebungsbogen muss bearbeitet werden.')
-          :'<strong>Für diesen Versorgungspfad nicht erforderlich</strong>Der Schritt wird im Ablauf automatisch übersprungen.'
+        // Do not overwrite the mandatory bilateral/source-specific AOK warning
+        // on each wizard status change or during PDF form rendering.
+        if($('carePg').value==='24' && isAokCase() && selectedHimiId()){
+          updateAokPg24ProfileHint()
+        }else{
+          ph.innerHTML=requiresProfile()
+            ?'<strong>Profilerhebung erforderlich</strong>'+(isAokCase()?'Die AOK-/Vertragslogik wird verwendet; vorhandene Pflichtfelder müssen vollständig sein.':'Der hinterlegte PG-Erhebungsbogen muss bearbeitet werden.')
+            :'<strong>Für diesen Versorgungspfad nicht erforderlich</strong>Der Schritt wird im Ablauf automatisch übersprungen.'
+        }
       }
 
       queueAutosaveSupply()
