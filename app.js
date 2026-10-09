@@ -1962,12 +1962,13 @@ import { versorgungsziele } from './versorgungsziele.js'
       return match?'Text'+match[1]:String(fieldName||'').trim()
     }
 
-    async function renderEditableProfilePdf(url,host){
+    async function renderEditableProfilePdf(url,host,side=''){
       try{
         const pdfjs=await loadPdfJs()
         const pdf=await pdfjs.getDocument(url).promise
         const prefill=profilePdfPrefill()
         host.innerHTML=''
+        host.dataset.pdfReady='false'
         for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
           const page=await pdf.getPage(pageNo)
           const viewport=page.getViewport({scale:1.65})
@@ -2018,9 +2019,9 @@ import { versorgungsziele } from './versorgungsziele.js'
             const width=Math.abs(vr[2]-vr[0]),height=Math.abs(vr[3]-vr[1])
             const fieldName=ann.fieldName||ann.id||('feld'+index)
             const canonicalName=canonicalAokProfileTextName(fieldName)
-            const key='aokProfilePdf:'+canonicalName
+            const key=aokProfileKey(canonicalName,side)
             const nearbyLabel=inferAiLabel(left,top,width,height)||ann.alternativeText||''
-            if(pageNo===2 && renderAokPage2WalkingAidOption(pageBox,fieldName,left,top,width,height,viewport)){
+            if(pageNo===2 && renderAokPage2WalkingAidOption(pageBox,fieldName,left,top,width,height,viewport,side)){
               return
             }
             if(pageNo===4){
@@ -2030,7 +2031,7 @@ import { versorgungsziele } from './versorgungsziele.js'
               // printed insured signature has no editable PDF widget.
               if(officialSignatureLayout && canonicalName==='Text67' && width>viewport.width*.25){
                 appendAokSignaturePad(
-                  pageBox,'aokProfilePdf:insuredSignature',
+                  pageBox,aokProfileKey('insuredSignature',side),
                   'Unterschrift der Versicherten bzw. gesetzlichen Vertretung / Bevollmächtigten','insured',
                   left,top,width,height,viewport,true
                 )
@@ -2038,7 +2039,7 @@ import { versorgungsziele } from './versorgungsziele.js'
               }
               if(canonicalName==='Text69' && width>viewport.width*.25){
                 appendAokSignaturePad(
-                  pageBox,'aokProfilePdf:providerSignature',
+                  pageBox,aokProfileKey('providerSignature',side),
                   'Unterschrift / Stempel Hilfsmittelanbieter','provider',
                   left,top,width,height,viewport,true
                 )
@@ -2068,6 +2069,7 @@ import { versorgungsziele } from './versorgungsziele.js'
               }
             }
             el.dataset.profileKey=key
+            el.dataset.profileSide=side
             el.dataset.required='false'
             const sourceVerifiedLabel=verifiedLabels[pageNo]?.[canonicalName]
             const aiLabel=sourceVerifiedLabel||nearbyLabel||fieldName||'Profilerhebungsfeld'
@@ -2083,11 +2085,14 @@ import { versorgungsziele } from './versorgungsziele.js'
             })
             pageBox.appendChild(el)
           })
-          if(pageNo===2) renderPlusMPage2Overlays(pageBox)
-          if(pageNo===4) ensureAokPage4SignaturePads(pageBox,aiTextItems,viewport)
+          if(pageNo===2) renderPlusMPage2Overlays(pageBox,side)
+          if(pageNo===4) ensureAokPage4SignaturePads(pageBox,aiTextItems,viewport,side)
         }
+        host.dataset.pdfReady='true'
         updateWizardStatus()
       }catch(err){
+        host.dataset.pdfReady='error'
+        updateWizardStatus()
         host.innerHTML='<div class="aok-pdf-loading">Der Original-AOK-Profilerhebungsbogen konnte nicht als beschreibbare Ansicht geladen werden. <a target="_blank" rel="noopener" href="'+url+'">Original-PDF öffnen ↗</a></div>'
       }
     }
@@ -2107,8 +2112,24 @@ import { versorgungsziele } from './versorgungsziele.js'
       $('fieldInfo').textContent='AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen. Feldbezeichnungen und Reihenfolge entsprechen dem Originalbogen.'
       updateAokPg24ProfileHint()
       const url='assets/aok-pg24/anlage-4-profilerhebungsbogen.pdf'
-      host.innerHTML='<div class="profile-original-wrap"><div class="profile-original-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>Anlage 4 · Profilerhebungsbogen PG24</strong></div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Original öffnen ↗</a></div><div id="aokProfilePdfPages" class="aok-pdf-pages"><div class="aok-pdf-loading">AOK-Profilerhebungsbogen wird geladen …</div></div></div>'
-      renderEditableProfilePdf(url,$('aokProfilePdfPages'))
+      const bilateral=values.side==='beidseitig'
+      const sides=aokProfileSides()
+      host.innerHTML=sides.map((side,i)=>
+        '<section class="profile-original-wrap aok-profile-original-document" data-aok-profile-side="'+escapeHtml(side||'einseitig')+'">'+
+        '<div class="profile-original-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>Anlage 4 · Profilerhebungsbogen PG24'+(bilateral?' · '+(side==='rechts'?'Rechts':'Links'):'')+'</strong>'+
+        (bilateral?'<small> · Originalbogen '+(i+1)+' von 2, getrennt gespeichert</small>':'')+
+        '</div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Original öffnen ↗</a></div>'+
+        '<div '+(!bilateral?'id="aokProfilePdfPages" ':'')+'class="aok-pdf-pages" data-aok-pdf-side="'+escapeHtml(side||'einseitig')+'"><div class="aok-pdf-loading">AOK-Profilerhebungsbogen wird geladen …</div></div></section>'
+      ).join('')
+      // Keep both original documents in the DOM for an eight-page print;
+      // render serially to avoid concurrent PDF canvases exhausting memory.
+      void (async()=>{
+        for(const side of sides){
+          const box=host.querySelector('[data-aok-pdf-side="'+(side||'einseitig')+'"]')
+          if(!box || !host.isConnected) return
+          await renderEditableProfilePdf(url,box,side)
+        }
+      })()
     }
 
     function bindTechProfileControl(el,key,prefill='',readonly=false){
