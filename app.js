@@ -1058,6 +1058,10 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
       const key=keyPrefix+f.Massfeld_ID
       control.dataset.measureKey=key
+      control.dataset.measureFieldId='M-'+String(f.Massfeld_ID||'').replace(/[^A-Za-z0-9_-]/g,'_')
+      control.dataset.measureLabel=String(f.Feldbezeichnung||'Maßfeld')
+      control.dataset.measureContext=[f.Abschnitt,f.Einheit_Optionen].filter(Boolean).join(' · ')
+      control.setAttribute('aria-label',control.dataset.measureFieldId+' · '+control.dataset.measureLabel)
       control.dataset.required=String(f.Pflichtstatus).toLowerCase()==='ja'?'true':'false'
       if(values[key]!==undefined) control.value=values[key]
       const save=()=>{values[key]=control.value;showWizardError('');updateWizardStatus()}
@@ -1099,29 +1103,37 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(key==='versorgungGoalText') control.dataset.goalText='true'
     }
 
+    function syncLegacyGoalIntoPlanning(){
+      // Previous versions captured the goal in profile fields. Preserve those
+      // values and use the post-measure planGoal as the single editing point.
+      const keys=['versorgungGoalText','tech:therapyGoal',...Object.keys(values).filter(k=>/^GEN_23_/.test(k)&&/goal/i.test(k))]
+      if(!String(values.planGoal||'').trim()){
+        const existing=keys.map(k=>String(values[k]||'').trim()).find(Boolean)
+        if(existing) values.planGoal=existing
+      }
+      for(const k of keys) if(values[k]!==undefined && String(values.planGoal||'').trim()) values[k]=values.planGoal
+      syncCaseFieldControls('planGoal',values.planGoal||'')
+    }
     function renderGoalSuggestions(){
       const host=$('versorgungGoalSuggestions')
       if(!host) return
       const pg=String($('carePg')?.value||'')
-      // PG23 uses its source-defined Versorgungsziel field. The generic PG24
-      // Techniker form has tech:therapyGoal. AOK original has no safe field
-      // mapping yet, so retain a supplemental free-text goal there.
-      const enabled=pg==='24'&&isAokCase()&&!!selectedHimiId()
+      const enabled=['23','24'].includes(pg)&&!!selectedHimiId()
       host.classList.toggle('hidden',!enabled)
-      if(!enabled){host.replaceChildren();return}
-      const key='versorgungGoalText'
+      host.replaceChildren()
+      if(!enabled) return
+      syncLegacyGoalIntoPlanning()
+      const goalControl=document.querySelector('[data-case-field="planGoal"]')
+      if(!goalControl) return
       const section=document.createElement('section')
       section.className='field'
       const title=document.createElement('strong')
-      title.textContent='Ergänzendes individuelles Versorgungsziel (AOK-Originalbogen unverändert)'
-      const text=document.createElement('textarea')
-      text.rows=4
-      text.value=String(values[key]||'')
-      text.placeholder='Individuelles Ziel ergänzen …'
-      text.addEventListener('input',()=>{values[key]=text.value;queueAutosaveSupply();updateWizardStatus()})
-      section.append(title,text)
-      attachGoalPicker(section,text,key)
-      host.replaceChildren(section)
+      title.textContent='Versorgungsziele nach Maßaufnahme vorschlagen'
+      const note=document.createElement('small')
+      note.textContent='Vorschläge werden erst in der Versorgungsplanung nach dem Maßblatt angeboten. Individuellen Zieltext fachlich prüfen; AOK-Originalformular bleibt unverändert.'
+      section.append(title,note)
+      attachGoalPicker(section,goalControl,'planGoal')
+      host.appendChild(section)
     }
 
     function renderMeasureFields(){
@@ -1165,6 +1177,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         label.append(title,createDynamicControl(f,'measure:'))
         host.appendChild(label)
       })
+      renderMeasureTranscriptCatalog()
     }
 
     function populateSelectors(){
@@ -1428,6 +1441,7 @@ import { versorgungsziele } from './versorgungsziele.js'
 
     const PROFILE_AI_MAX_RECORDING_MS=5*60*1000
     let profileAiRecorder=null
+    let profileAiRecordingTarget='profile'
     let profileAiStream=null
     let profileAiChunks=[]
     let profileAiRecordingTimer=null
@@ -1437,7 +1451,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     let profileAiSuggestionState=[]
 
     function profileAiSetStatus(text,state=''){
-      const el=$('profileAiStatus')
+      const el=profileAiRecordingTarget==='measure' ? $('measureTranscriptStatus') : $('profileAiStatus')
       if(!el) return
       el.textContent=text
       el.className='profile-ai-status'+(state?' '+state:'')
@@ -1720,10 +1734,11 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
     }
 
-    async function startProfileAiRecording(){
+    async function startProfileAiRecording(target='profile'){
       if(profileAiRecorder?.state==='recording') return
+      profileAiRecordingTarget=target
       if(!navigator.mediaDevices?.getUserMedia){profileAiSetStatus('Mikrofonzugriff wird von diesem Browser nicht unterstützt.');return}
-      if($('profileAiMode').value==='guided' && (!profileGuidedTarget||!document.contains(profileGuidedTarget.el))) selectProfileGuidedQuestion(false)
+      if(target!=='measure' && $('profileAiMode').value==='guided' && (!profileGuidedTarget||!document.contains(profileGuidedTarget.el))) selectProfileGuidedQuestion(false)
       try{
         profileAiStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})
         profileAiChunks=[]
@@ -1734,9 +1749,15 @@ import { versorgungsziele } from './versorgungsziele.js'
             const blob=new Blob(profileAiChunks,{type:profileAiRecorder.mimeType||'audio/webm'})
             profileAiSetStatus('Aufnahme beendet. Lokale KI-Transkription wird vorbereitet …')
             const text=await transcribeProfileAudio(blob)
-            $('profileAiTranscript').value=text
-            profileAiSetStatus(text?'Transkription abgeschlossen. Bitte Text prüfen.':'Keine Sprache erkannt.',text?'ready':'')
-            if(text) analyzeProfileAiTranscript()
+            if(target==='measure'){
+              if($('measureTranscript')) $('measureTranscript').value=text
+              profileAiSetStatus(text?'Maßansage lokal transkribiert. Kennungen und Werte bitte prüfen.':'Keine Maßansage erkannt.',text?'ready':'')
+              if(text) analyzeMeasureTranscript()
+            }else{
+              $('profileAiTranscript').value=text
+              profileAiSetStatus(text?'Transkription abgeschlossen. Bitte Text prüfen.':'Keine Sprache erkannt.',text?'ready':'')
+              if(text) analyzeProfileAiTranscript()
+            }
           }catch(err){
             console.error(err);profileAiSetStatus('Transkription fehlgeschlagen: '+(err?.message||'unbekannter Fehler'))
           }finally{
@@ -1744,7 +1765,9 @@ import { versorgungsziele } from './versorgungsziele.js'
             profileAiStream?.getTracks().forEach(t=>t.stop());profileAiStream=null
             profileAiRecorder=null
             profileAiChunks=[]
-            $('profileAiStart').disabled=false;$('profileAiStop').disabled=true
+            $(target==='measure'?'measureTranscriptRecord':'profileAiStart').disabled=false
+            $(target==='measure'?'measureTranscriptStop':'profileAiStop').disabled=true
+            profileAiRecordingTarget='profile'
           }
         }
         profileAiRecorder.start()
@@ -1755,7 +1778,8 @@ import { versorgungsziele } from './versorgungsziele.js'
             profileAiRecorder.stop()
           }
         },PROFILE_AI_MAX_RECORDING_MS)
-        $('profileAiStart').disabled=true;$('profileAiStop').disabled=false
+        $(target==='measure'?'measureTranscriptRecord':'profileAiStart').disabled=true
+        $(target==='measure'?'measureTranscriptStop':'profileAiStop').disabled=false
         profileAiSetStatus('Aufnahme läuft … Sprechen Sie normal und deutlich.','recording')
       }catch(err){profileAiSetStatus('Mikrofon konnte nicht gestartet werden: '+(err?.message||'Zugriff verweigert'))}
     }
@@ -2338,8 +2362,10 @@ import { versorgungsziele } from './versorgungsziele.js'
       host.appendChild(mobilitySection)
 
       g=techProfileSection(host,'Therapieziel / Bewertung',2)
-      const therapyGoal=techProfileField(g,'Beschreibung des Therapieziels unter Berücksichtigung der momentanen und realistisch zu erwartenden Fähigkeiten','tech:therapyGoal','textarea')
-      attachGoalPicker(therapyGoal.parentElement,therapyGoal,'tech:therapyGoal')
+      const therapyNote=document.createElement('p')
+      therapyNote.className='source-note'
+      therapyNote.textContent='Individuelles Therapieziel wird nach der Maßaufnahme im Schritt Versorgungsplanung dokumentiert und mit dem Technikerbogen verknüpft.'
+      g.appendChild(therapyNote)
       techProfileField(g,'Ermittelter Mobilitätsgrad','tech:mobilityGrade','select',['0 – Nichtgehfähiger','1 – Innenbereichsgeher','2 – Eingeschränkter Außenbereichsgeher','3 – Uneingeschränkter Außenbereichsgeher','4 – Uneingeschränkter Außenbereichsgeher mit besonders hohen Ansprüchen'])
       techProfileField(g,'Beschreibung der weiteren Fähigkeiten','tech:furtherAbilities','textarea')
       techProfileField(g,'Mit dem Therapieziel verbundene weitere Maßnahmen','tech:furtherMeasures','textarea')
@@ -2373,29 +2399,64 @@ import { versorgungsziele } from './versorgungsziele.js'
       return pdfJsLoader
     }
 
-    function aokMeasureValueKey(asset,pageNo,ann,index){
+    function aokMeasureValueKey(asset,pageNo,ann,index,duplicate=false){
       const name=ann.fieldName||ann.id||('feld'+index)
-      return 'aokMeasure:'+asset.file+':p'+pageNo+':'+name
+      const legacy='aokMeasure:'+asset.file+':p'+pageNo+':'+name
+      // A repeated AcroForm name is not an individual field identity.
+      return duplicate?legacy+':widget'+(index+1):legacy
+    }
+
+    function aokMeasureAnnexCode(asset){
+      const m=String(asset?.file||'').match(/^anlage-(5[a-e])-/i)
+      return m?m[1].toLowerCase():'aok-pg24'
+    }
+
+    function pdfMeasureContext(ann,viewport,textItems,left,top,width,height){
+      if(String(ann.alternativeText||'').trim()) return {label:String(ann.alternativeText).trim(),basis:'pdf-tooltip'}
+      const cy=top+height/2
+      const nearby=textItems.filter(t=>t.text && Math.abs(t.y-cy)<22 && t.x<left+width && left-(t.x+t.w)<230)
+        .sort((a,b)=>Math.abs((left-(a.x+a.w)))+Math.abs(a.y-cy)*2-(Math.abs(left-(b.x+b.w))+Math.abs(b.y-cy)*2))
+      const above=textItems.filter(t=>t.text && t.y<top+4 && top-t.y<38 && Math.abs(t.x-left)<210)
+        .sort((a,b)=>(top-a.y)-(top-b.y))
+      const label=(nearby[0]||above[0])?.text||''
+      return {label:label.slice(0,150),basis:label?'position-unverified':'unmapped'}
     }
 
     async function renderEditableAokPdf(url,asset,host){
       try{
         const pdfjs=await loadPdfJs()
         const pdf=await pdfjs.getDocument(url).promise
+        if(!host.isConnected)return
         host.innerHTML=''
+        host.dataset.pdfReady='false'
+        const annex=aokMeasureAnnexCode(asset)
+        let total=0
         for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
+          if(!host.isConnected)return
           const page=await pdf.getPage(pageNo)
           const viewport=page.getViewport({scale:1.65})
           const pageBox=document.createElement('div');pageBox.className='aok-pdf-page'
           const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height)
           pageBox.appendChild(canvas);host.appendChild(pageBox)
           await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise
-          const anns=await page.getAnnotations({intent:'display'})
-          anns.filter(a=>a.subtype==='Widget').forEach((ann,index)=>{
+          if(!host.isConnected)return
+          const [annotations,content]=await Promise.all([page.getAnnotations({intent:'display'}),page.getTextContent()])
+          const items=(content.items||[]).map(item=>{
+            const t=pdfjs.Util.transform(viewport.transform,item.transform)
+            return {text:String(item.str||'').trim(),x:t[4],y:t[5],w:(Number(item.width)||0)*viewport.scale}
+          })
+          const widgets=annotations.filter(a=>a.subtype==='Widget')
+          const nameCounts=new Map()
+          widgets.forEach(ann=>{const n=String(ann.fieldName||ann.id||'');nameCounts.set(n,(nameCounts.get(n)||0)+1)})
+          widgets.forEach((ann,index)=>{
             const vr=viewport.convertToViewportRectangle(ann.rect)
             const left=Math.min(vr[0],vr[2]),top=Math.min(vr[1],vr[3])
             const width=Math.abs(vr[2]-vr[0]),height=Math.abs(vr[3]-vr[1])
-            const key=aokMeasureValueKey(asset,pageNo,ann,index)
+            const fieldName=String(ann.fieldName||ann.id||('feld'+index))
+            const duplicated=(nameCounts.get(fieldName)||0)>1
+            const key=aokMeasureValueKey(asset,pageNo,ann,index,duplicated)
+            const fieldId=annex.toUpperCase()+'-P'+pageNo+'-F'+(index+1)
+            const context=pdfMeasureContext(ann,viewport,items,left,top,width,height)
             let el
             if(ann.fieldType==='Btn'){
               el=document.createElement('input');el.type='checkbox';el.className='aok-pdf-input aok-pdf-check'
@@ -2404,17 +2465,36 @@ import { versorgungsziele } from './versorgungsziele.js'
               el.addEventListener('change',()=>{values[key]=el.checked;queueAutosaveSupply();updateWizardStatus()})
             }else{
               el=ann.multiLine?document.createElement('textarea'):document.createElement('input')
-              if(el.tagName==='TEXTAREA') el.rows=1
+              if(el.tagName==='TEXTAREA')el.rows=1
               else el.type='text'
               el.className='aok-pdf-input'
               const stored=values[key]
               el.value=stored!==undefined&&stored!==null?stored:(ann.fieldValue||'')
-              if(stored===undefined && el.value) values[key]=el.value
+              if(stored===undefined&&el.value)values[key]=el.value
               const save=()=>{values[key]=el.value;queueAutosaveSupply();updateWizardStatus()}
               el.addEventListener('input',save);el.addEventListener('change',save)
             }
             el.dataset.measureKey=key
-            el.setAttribute('aria-label',ann.alternativeText||ann.fieldName||'Maßblattfeld')
+            el.dataset.measureFieldId=fieldId
+            el.dataset.measureOriginalName=fieldName
+            el.dataset.measureContext=asset.name+' · Seite '+pageNo+' · '+fieldName
+            el.dataset.measureLabel=context.label||fieldName
+            el.dataset.measureMapping=context.basis
+            el.dataset.measureValue=el.type==='checkbox'?'false':'true'
+            el.setAttribute('aria-label',fieldId+' · '+el.dataset.measureContext+(context.label?' · Kontextvorschlag: '+context.label+' (prüfen)':''))
+            el.title=fieldId+' · '+fieldName+(context.label?' · '+context.label+' (Zuordnung prüfen)':'')
+            // Existing original PDF/canvas remains unchanged; only the active
+            // overlay field receives an outline and a separate contextual readout.
+            el.addEventListener('focus',()=>{
+              host.querySelectorAll('.aok-pdf-input.measure-active-control').forEach(x=>x.classList.remove('measure-active-control'))
+              el.classList.add('measure-active-control')
+              const info=$('aokMeasureActiveField')
+              if(info)info.textContent=fieldId+' · '+fieldName+(context.label?' · Textnähe (unverifiziert): '+context.label:' · Fachbezeichnung noch zu prüfen')
+              // Only original-widget position has been verified. Do not
+              // place an anatomical marker without a confirmed source map.
+              const region=$('measureOrientationRegion')
+              if(region)region.textContent='Anatomische Verortung dieses PDF-Felds noch nicht quellengeprüft; Originalskizze nur zur Orientierung.'
+            })
             applyRuntimeStyle(el,'geometry',{
               left:(left/viewport.width*100)+'%',
               top:(top/viewport.height*100)+'%',
@@ -2423,11 +2503,129 @@ import { versorgungsziele } from './versorgungsziele.js'
               'font-size':Math.max(8,Math.min(14,height*.55))+'px'
             })
             pageBox.appendChild(el)
+            total++
           })
         }
+        if(!host.isConnected)return
+        host.dataset.pdfReady=total?'true':'no-form-widgets'
+        const info=$('aokMeasureActiveField')
+        if(info)info.textContent=total+' beschreibbare Originalfelder · Kennung '+annex.toUpperCase()+'-P[Seite]-F[Position]. Beschriftungen aus Textnähe sind nicht fachlich bestätigt.'
+        renderMeasureTranscriptCatalog()
+        updateWizardStatus()
       }catch(err){
-        host.innerHTML='<div class="aok-pdf-loading">Das Originalmaßblatt konnte nicht als beschreibbare Ansicht geladen werden. <a target="_blank" rel="noopener" href="'+url+'">Original-PDF öffnen ↗</a></div><iframe class="aok-measure-frame" title="'+escapeHtml(asset.name)+'" src="'+url+'#view=FitH"></iframe>'
+        if(!host.isConnected)return
+        host.dataset.pdfReady='error'
+        host.innerHTML='<div class="aok-pdf-loading">Das Originalmaßblatt konnte nicht als beschreibbare Ansicht geladen werden. <a target="_blank" rel="noopener" href="'+url+'">Original-PDF öffnen ↗</a></div>'
+        renderMeasureTranscriptCatalog()
       }
+    }
+
+    let measureTranscriptProposals=[]
+    function measureEditableControls(){
+      return [...$('measureFieldList').querySelectorAll('[data-measure-field-id][data-measure-key]')]
+        .filter(el=>el.matches('input,textarea,select') && !el.disabled && !el.readOnly)
+    }
+    function renderMeasureTranscriptCatalog(){
+      const status=$('measureTranscriptStatus')
+      if(!status)return
+      const controls=measureEditableControls()
+      const ids=new Set(controls.map(el=>el.dataset.measureFieldId))
+      status.textContent=ids.size
+        ?ids.size+' eindeutig gekennzeichnete Eingabefelder vorhanden. Zum Diktieren die Kennung vor den Messwert sprechen oder eingeben (z. B. 5B-P1-F3: 32,5 cm). Ein Kontexttext ohne Kennung wird nicht automatisch zugeordnet.'
+        :'Maßblatt und Hilfsmittel auswählen, bevor ein Transkript zugeordnet werden kann.'
+      measureTranscriptProposals=[]
+      if($('measureTranscriptSuggestions'))$('measureTranscriptSuggestions').replaceChildren()
+      const catalog=$('measureTranscriptCatalog')
+      if(catalog){
+        catalog.replaceChildren()
+        const added=new Set()
+        controls.forEach(el=>{
+          const id=el.dataset.measureFieldId
+          if(added.has(id))return
+          added.add(id)
+          const row=document.createElement('div')
+          row.className='measure-catalog-row'
+          const token=document.createElement('code');token.textContent=id
+          const label=document.createElement('span')
+          const context=el.dataset.measureContext||''
+          const name=el.dataset.measureOriginalName||el.dataset.measureLabel||''
+          label.textContent=context+' · '+name+(el.dataset.measureMapping==='position-unverified'?' · Textnähe ungeprüft':'')
+          row.append(token,label);catalog.appendChild(row)
+        })
+      }
+    }
+    function measureTranscriptEntries(raw){
+      const chunks=String(raw||'').split(/[\n;]/).map(x=>x.trim()).filter(Boolean)
+      const matches=[],errors=[]
+      const controls=measureEditableControls()
+      const byId=new Map()
+      controls.forEach(el=>{
+        const id=String(el.dataset.measureFieldId||'').toUpperCase()
+        if(!byId.has(id)) byId.set(id,[])
+        byId.get(id).push(el)
+      })
+      const seen=new Set()
+      for(const chunk of chunks){
+        const m=chunk.match(/^([A-Za-z0-9_.:-]+)\s*(?:=|:)\s*(.+)$/)
+        if(!m){errors.push('Keine eindeutige Feldkennung: '+chunk.slice(0,80));continue}
+        const id=m[1].toUpperCase()
+        const targets=byId.get(id)||[]
+        if(targets.length!==1){errors.push(id+': '+(targets.length?'Kennung mehrfach vorhanden':'Feld in diesem Maßblatt nicht gefunden'));continue}
+        if(seen.has(id)){errors.push(id+': mehrfach im Transkript, bitte eindeutig angeben');continue}
+        seen.add(id)
+        const el=targets[0],rawValue=m[2].trim()
+        let value=rawValue
+        if(el.type==='checkbox'){
+          if(/^(ja|angekreuzt|x|1|wahr)$/i.test(rawValue))value=true
+          else if(/^(nein|nicht angekreuzt|0|falsch)$/i.test(rawValue))value=false
+          else{errors.push(id+': Checkbox erwartet Ja oder Nein');continue}
+        }else if(el.tagName==='SELECT'){
+          const option=[...el.options].find(o=>o.value.toLowerCase()===rawValue.toLowerCase())
+          if(!option){errors.push(id+': Wert ist keine zulässige Auswahl');continue}
+          value=option.value
+        }
+        matches.push({id,el,value,label:el.dataset.measureLabel||el.dataset.measureOriginalName||id,context:el.dataset.measureContext||''})
+      }
+      return {matches,errors}
+    }
+    function analyzeMeasureTranscript(){
+      const output=$('measureTranscriptSuggestions'),status=$('measureTranscriptStatus')
+      if(!output||!status)return
+      const {matches,errors}=measureTranscriptEntries($('measureTranscript')?.value)
+      measureTranscriptProposals=matches
+      output.replaceChildren()
+      matches.forEach((m,index)=>{
+        const label=document.createElement('label');label.className='profile-ai-suggestion'
+        const check=document.createElement('input');check.type='checkbox';check.checked=true;check.dataset.measureProposal=String(index)
+        const title=document.createElement('strong');title.textContent=m.id+' · '+m.label
+        const val=document.createElement('span');val.textContent=String(m.value)
+        label.append(check,title,val);output.appendChild(label)
+      })
+      if(errors.length){
+        const warning=document.createElement('div');warning.className='status-card open'
+        warning.textContent='Nicht zugeordnet: '+errors.join(' | ')
+        output.appendChild(warning)
+      }
+      status.textContent=matches.length+' Feldvorschläge vorbereitet, '+errors.length+' nicht zugeordnet. Nur angehakte Vorschläge werden übernommen; bitte Fachinhalt und Maßeinheit kontrollieren.'
+    }
+    function applyMeasureTranscript(){
+      const output=$('measureTranscriptSuggestions'),status=$('measureTranscriptStatus')
+      if(!output||!status)return
+      let applied=0
+      for(let i=0;i<measureTranscriptProposals.length;i++){
+        if(!output.querySelector('[data-measure-proposal="'+i+'"]')?.checked)continue
+        const proposal=measureTranscriptProposals[i]
+        const el=measureEditableControls().find(x=>x===proposal.el && String(x.dataset.measureFieldId||'').toUpperCase()===proposal.id)
+        if(!el)continue
+        if(el.type==='checkbox')el.checked=proposal.value
+        else el.value=proposal.value
+        el.dispatchEvent(new Event(el.type==='checkbox'?'change':'input',{bubbles:true}))
+        applied++
+      }
+      measureTranscriptProposals=[]
+      output.replaceChildren()
+      status.textContent=applied+' bestätigte Feldwerte in das beschreibbare Maßblatt übernommen. Auf korrekte Zuordnung und Maßeinheiten prüfen.'
+      queueAutosaveSupply()
     }
 
     function pg24SourceMeasureSchema(){
@@ -2479,6 +2677,9 @@ import { versorgungsziele } from './versorgungsziele.js'
         el.addEventListener('input',save);el.addEventListener('change',save)
       }
       el.dataset.measureKey=key
+      el.dataset.measureFieldId=schema.code+'-'+String(id).replace(/[^A-Za-z0-9_-]/g,'_')
+      el.dataset.measureContext=schema.title+' · '+(schema.version||'')
+      el.setAttribute('aria-label',el.dataset.measureFieldId+' · '+label)
       el.dataset.measureId=String(id)
       el.dataset.measureLabel=label
       if(isMeasure){
@@ -3106,6 +3307,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       renderMeasureOrientation(schema)
       renderSourceMeasureSummary()
       renderSourceMeasureHistory(schema)
+      renderMeasureTranscriptCatalog()
       return true
     }
 
@@ -3127,9 +3329,21 @@ import { versorgungsziele } from './versorgungsziele.js'
       const schema=document.querySelector('[data-case-field="measureSchema"]');if(schema) schema.value=asset.name
       const url='assets/aok-pg24/'+asset.file
       $('measureLogicNote').className='status-card ready'
-      $('measureLogicNote').innerHTML='<strong>'+escapeHtml(asset.name)+'</strong>Original-AOK-Maßblatt für '+escapeHtml(supplyType()||'die ausgewählte Versorgung')+'. Das Layout bleibt unverändert; die PDF-Formularfelder können direkt beschrieben werden.'
+      $('measureLogicNote').innerHTML='<strong>'+escapeHtml(asset.name)+'</strong>Beschreibbares AOK-Originalmaßblatt · Feldkennung, Originalname und PDF-Seite sind eindeutig. Kontext aus Textnähe nur nach Prüfung verwenden.'
+      const sourceSchema=pg24SourceMeasureSchema()
+      const hasAnatomy=sourceSchema&&['FMB02001','FMB02002','FMB02003'].includes(sourceSchema.code)
       host.className=''
-      host.innerHTML='<div class="aok-measure-frame-wrap"><div class="aok-measure-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>'+escapeHtml(asset.name)+'</strong></div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Originalmaßblatt öffnen ↗</a></div><div id="aokPdfMeasurePages" class="aok-pdf-pages"><div class="aok-pdf-loading">Originalmaßblatt wird geladen …</div></div></div>'
+      host.innerHTML='<div class="pg24-measure-workspace"><div class="aok-measure-frame-wrap"><div class="aok-measure-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>'+escapeHtml(asset.name)+'</strong></div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Originalmaßblatt öffnen ↗</a></div><div id="aokPdfMeasurePages" class="aok-pdf-pages"><div class="aok-pdf-loading">Originalmaßblatt wird geladen …</div></div></div>'+
+        '<aside class="measure-side"><section class="measure-orientation-card"><h3>Messposition / Visualisierung</h3><p class="measure-orientation-sub">Originalskizze ohne Pfeildarstellung – Fokus auf Maßfeld</p>'+
+        (hasAnatomy?'<div id="measureOrientationStage" class="measure-orientation-stage"></div><div class="measure-orientation-readout" aria-live="polite"><strong id="measureOrientationLabel">Maß auswählen</strong><span id="measureOrientationRegion">Anatomische Zuordnung anhand Feldkontext prüfen.</span><span id="measureOrientationValue" class="measure-orientation-value"></span></div><span id="measureOrientationType" class="hidden"></span><div id="measureOrientationSource" class="measure-orientation-source"></div>':'<p class="source-note">Die vollständige Originalzeichnung ist im beschreibbaren Maßblatt sichtbar. Das aktive Feld wird dort hervorgehoben; eine zusätzliche anatomische Detailvisualisierung ist für diese Anlage noch nicht zugeordnet.</p>')+
+        '<div class="measure-orientation-readout"><strong>Aktives Originalfeld</strong><span id="aokMeasureActiveField">Maßfeld im PDF anklicken, um Kennung, Seite und Quellkontext anzuzeigen.</span></div>'+
+        '</section></aside></div>'
+      if(hasAnatomy){
+        renderMeasureOrientation(sourceSchema)
+        // Hide position guides until a source-verified anatomical mapping exists.
+        $('measureOrientationMarker')?.classList.add('hidden')
+        $('measureOrientationGuide')?.classList.add('hidden')
+      }
       renderEditableAokPdf(url,asset,$('aokPdfMeasurePages'))
       return true
     }
@@ -3304,6 +3518,11 @@ import { versorgungsziele } from './versorgungsziele.js'
     function renderField(f){
       const id=f.Feldzeile_ID
       const type=String(f.Datentyp||'Text')
+      if($('carePg').value==='23' && /versorgungsziel/i.test(String(f.Feldbezeichnung||''))){
+        if(!String(values.planGoal||'').trim() && String(values[id]||'').trim()) values.planGoal=values[id]
+        if(String(values.planGoal||'').trim()) values[id]=values.planGoal
+        return // Goal belongs to planning after measurement, not initial profile
+      }
       const conditional=profileConditionalState(f)
       if(!conditional.visible){
         if(Object.prototype.hasOwnProperty.call(values,id)) delete values[id]
@@ -3547,7 +3766,6 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
       persistSimple(control)
       label.append(title,control)
-      if($('carePg').value==='23' && /versorgungsziel/i.test(String(f.Feldbezeichnung||'')) && control.tagName!=='SELECT') attachGoalPicker(label,control,id)
       $('fieldList').appendChild(label)
     }
 
@@ -3795,11 +4013,8 @@ import { versorgungsziele } from './versorgungsziele.js'
       // On PG24 source PDFs many widgets are not individually classified as
       // mandatory. Prefilled demographics alone are not a clinical assessment.
       if($('carePg').value==='24'){
-        if(!isAokCase() && !String(values['tech:therapyGoal']||'').trim()){
-          // The PG24 source catalogue explicitly identifies Versorgungsziel as required;
-          // technician profile uses the semantically equivalent therapy-goal field.
-          return {ok:false,missing:['Therapieziel / individuelles Versorgungsziel']}
-        }
+        // The therapy goal is now required in step 5 (Versorgungsplanung),
+        // after the clinical measure sheet; existing saved values migrate there.
       }
 
       const required=controls.filter(x=>x.dataset.required==='true')
@@ -4260,6 +4475,11 @@ import { versorgungsziele } from './versorgungsziele.js'
           if(next!==undefined){
             values[key]=next
             syncCaseFieldControls(key,next,el)
+          }
+          if(key==='planGoal'){
+            values.versorgungGoalText=String(next||'')
+            values['tech:therapyGoal']=String(next||'')
+            Object.keys(values).filter(k=>/^GEN_23_/.test(k)&&/goal/i.test(k)).forEach(k=>{values[k]=String(next||'')})
           }
           if(key==='caseKind') syncCaseKind()
           if(key==='supplyType'){syncSituationFields();renderMeasureFields();updateCareFields()}
@@ -5039,11 +5259,15 @@ import { versorgungsziele } from './versorgungsziele.js'
       $('profileAiQuestion').innerHTML=guided?'<strong>Geführte Abfrage</strong><span>„Nächste offene Frage“ wählen.</span>':'<strong>Freies Gespräch</strong><span>Gespräch aufnehmen oder vorhandenes Transkript einfügen. Eindeutige Angaben werden anschließend als Vorschläge angezeigt.</span>'
     })
     $('profileAiNext').addEventListener('click',()=>selectProfileGuidedQuestion(true))
-    $('profileAiStart').addEventListener('click',startProfileAiRecording)
+    $('profileAiStart').addEventListener('click',()=>startProfileAiRecording('profile'))
+    $('measureTranscriptRecord')?.addEventListener('click',()=>startProfileAiRecording('measure'))
+    $('measureTranscriptStop')?.addEventListener('click',stopProfileAiRecording)
     $('profileAiStop').addEventListener('click',stopProfileAiRecording)
     $('profileAiAnalyze').addEventListener('click',analyzeProfileAiTranscript)
     $('profileAiApply').addEventListener('click',applyProfileAiSuggestions)
     $('profileAiClear').addEventListener('click',resetProfileAiUi)
+    $('measureTranscriptAnalyze')?.addEventListener('click',analyzeMeasureTranscript)
+    $('measureTranscriptApply')?.addEventListener('click',applyMeasureTranscript)
     $('supplySearch').addEventListener('input',renderSupplyOverview)
     $('supplyStatusFilter').addEventListener('change',renderSupplyOverview)
     $('supplyPgFilter').addEventListener('change',renderSupplyOverview)

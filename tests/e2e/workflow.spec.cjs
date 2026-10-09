@@ -510,6 +510,14 @@ test('multi-PG contract forms remain discoverable for a selected product group',
         Feldbezeichnung: 'Versorgungsziel',
         Datentyp: 'Langtext',
         Pflichtstatus: 'ja'
+      },{
+        Feldzeile_ID: 'GEN_23_name',
+        Formular_ID: 'PG23_Orthesen',
+        PG: '23',
+        Formular_Typ: 'GENERISCH',
+        Feldbezeichnung: 'Name',
+        Datentyp: 'Text',
+        Pflichtstatus: 'ja'
       }]
     }
   })
@@ -530,9 +538,10 @@ test('multi-PG contract forms remain discoverable for a selected product group',
   await page.locator('#rxNeededText').fill('Individuelle Orthesenversorgung.')
   await page.locator('#wizardNext').click()
   await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
-  await page.locator('#fieldList').getByText('Versorgungsziel').locator('xpath=..').locator('textarea').fill('Individuelle Orthesenversorgung')
+  await expect(page.locator('#fieldList')).not.toContainText('Versorgungsziel')
   await page.locator('#wizardNext').click()
   await expect(page.locator('.wizard-panel[data-panel="4"]')).toBeVisible()
+  await page.locator('[data-case-field="planGoal"]').fill('Individuelle Orthesenversorgung')
 
   await expect(page.locator('#careForm')).toContainText('mehrere Reha-/OT-Bereiche')
   await page.locator('#careForm').selectOption('FORM_MULTI')
@@ -587,7 +596,8 @@ test('single mandatory payer form is auto-selected even without structured Himi 
   await expect(page.locator('#careForm')).toHaveValue('FORM_005')
   await expect(page.locator('#ruleBox')).toContainText('EXPLIZIT_PFLICHT')
   await expect(page.locator('#ruleBox')).toContainText('Voraufnahme')
-  await expect(page.locator('#fieldList')).toContainText('Versorgungsziel')
+  await expect(page.locator('#fieldList')).not.toContainText('Versorgungsziel')
+  await expect(page.locator('#versorgungGoalSuggestions')).toContainText('Versorgungsziele nach Maßaufnahme')
 })
 
 

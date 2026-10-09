@@ -1,12 +1,15 @@
 const { test, expect } = require('@playwright/test')
 const { installSupabaseMock } = require('./mock-supabase.cjs')
 
-test('PG23 source-defined goal accepts suggestions and edited free text', async ({ page }) => {
-  await installSupabaseMock(page, {mode:'signed-in', rpcOverrides:{
+test('PG23 goal suggestions are offered only in post-measure planning', async ({ page }) => {
+  await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{
     care_reference_bootstrap:{kassen:[{Kasse_Kanonisch:'Testkasse'}],produktgruppen:[{PG:'23',Generisches_Blatt:'Orthesen',Reifegrad:'TEST'}],sourceCount:1,formCount:1},
-    himi_logic_for_pg:[{Himi_ID:'PG23_UE',PG:'23',Bezeichnung:'Orthese untere Extremität',Generisches_Formular_ID:'PG23_Orthesen',Profil_erforderlich:true,Mass_erforderlich:false,Erprobung_erforderlich:false,Verlauf_erforderlich:false,Aktiv:true}],
+    himi_logic_for_pg:[{Himi_ID:'PG23_UE',PG:'23',Bezeichnung:'Orthese untere Extremität',Generisches_Formular_ID:'PG23_Orthesen',Profil_erforderlich:true,Mass_erforderlich:false,Aktiv:true}],
     forms_for_pg:[],himi_form_rules_for_himi:[],
-    form_fields_for_pg:[{Feldzeile_ID:'GEN_23_goal',Formular_ID:'PG23_Orthesen',PG:'23',Formular_Typ:'GENERISCH',Feldbezeichnung:'Versorgungsziel',Datentyp:'Langtext',Pflichtstatus:'ja'}]
+    form_fields_for_pg:[
+      {Feldzeile_ID:'GEN_23_goal',Formular_ID:'PG23_Orthesen',PG:'23',Formular_Typ:'GENERISCH',Feldbezeichnung:'Versorgungsziel',Datentyp:'Langtext',Pflichtstatus:'ja'},
+      {Feldzeile_ID:'GEN_23_name',Formular_ID:'PG23_Orthesen',PG:'23',Formular_Typ:'GENERISCH',Feldbezeichnung:'Name',Datentyp:'Text',Pflichtstatus:'ja'}
+    ]
   }})
   await page.goto('/index.html')
   await page.locator('#newSupplyOverviewButton').click()
@@ -20,22 +23,23 @@ test('PG23 source-defined goal accepts suggestions and edited free text', async 
   await page.locator('#careSupplyType').selectOption('Post-OP')
   await page.locator('#careSide').selectOption('rechts')
   await page.locator('#wizardNext').click()
-  await expect(page.locator('.wizard-panel[data-panel="1"]')).toBeVisible()
   await page.locator('#rxPresent').selectOption('Nein')
   await page.locator('#rxNeededText').fill('Orthopädietechnische Versorgung entsprechend Befund')
   await page.locator('#wizardNext').click()
   await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
-  const goal=page.locator('#fieldList label').filter({hasText:'Versorgungsziel'})
-  const picker=goal.locator('select[aria-label="Versorgungszielvorschlag"]')
+  await expect(page.locator('#fieldList')).not.toContainText('Versorgungsziel')
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('.wizard-panel[data-panel="4"]')).toBeVisible()
+  const picker=page.locator('#versorgungGoalSuggestions select[aria-label="Versorgungszielvorschlag"]')
   await expect(picker.locator('option')).not.toHaveCount(1)
   await picker.selectOption('23-11')
-  await expect(goal.locator('textarea')).toHaveValue(/Erhalt oder Verbesserung/)
-  await goal.locator('textarea').fill('Individuelles Ziel: selbständig zur Küche gehen')
-  await expect(goal.locator('textarea')).toHaveValue('Individuelles Ziel: selbständig zur Küche gehen')
-  await expect(page.locator('#versorgungGoalSuggestions')).toBeHidden()
+  const goal=page.locator('[data-case-field="planGoal"]')
+  await expect(goal).toHaveValue(/Erhalt oder Verbesserung/)
+  await goal.fill('Individuelles Ziel nach der Messung')
+  await expect(goal).toHaveValue('Individuelles Ziel nach der Messung')
 })
 
-test('PG24 Techniker therapy goal keeps the editable original input', async ({page}) => {
+test('PG24 technician therapy goal is edited only after the measure step', async ({page}) => {
   await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{
     care_reference_bootstrap:{kassen:[{Kasse_Kanonisch:'Privat'}],produktgruppen:[{PG:'24',Generisches_Blatt:'Beinprothesen',Reifegrad:'TEST'}],sourceCount:1,formCount:1},
     himi_logic_for_pg:[{Himi_ID:'PG24_UKB',PG:'24',Bezeichnung:'Unterschenkelprothese',Generisches_Formular_ID:'PG24',Profil_erforderlich:true,Mass_erforderlich:false,Aktiv:true}]
@@ -52,23 +56,19 @@ test('PG24 Techniker therapy goal keeps the editable original input', async ({pa
   await page.locator('#careSupplyType').selectOption('Post-OP')
   await page.locator('#careSide').selectOption('rechts')
   await page.locator('#wizardNext').click()
-  await expect(page.locator('.wizard-panel[data-panel="1"]')).toBeVisible()
   await page.locator('#rxPresent').selectOption('Nein')
   await page.locator('#rxNeededText').fill('Orthopädietechnische Versorgung entsprechend Befund')
   await page.locator('#wizardNext').click()
   await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
-  // Demographic prefill does not count as a completed PG24 assessment.
+  await expect(page.locator('[data-tech-key="tech:therapyGoal"]')).toHaveCount(0)
+  await expect(page.locator('#fieldList')).toContainText('nach der Maßaufnahme')
   await page.locator('#wizardNext').click()
-  await expect(page.locator('#wizardError')).toContainText('Therapieziel / individuelles Versorgungsziel')
-  const original=page.locator('[data-tech-key="tech:therapyGoal"]')
-  await expect(original).toBeVisible()
-  const picker=original.locator('xpath=..').locator('select[aria-label="Versorgungszielvorschlag"]')
+  await expect(page.locator('.wizard-panel[data-panel="4"]')).toBeVisible()
+  await expect(page.locator('#versorgungGoalSuggestions')).toBeVisible()
+  const picker=page.locator('#versorgungGoalSuggestions select[aria-label="Versorgungszielvorschlag"]')
   await picker.selectOption('24-02')
-  await expect(original).toHaveValue(/Gangbild/)
-  await original.fill('Individuelles Therapieziel')
-  await expect(original).toHaveValue('Individuelles Therapieziel')
+  await expect(page.locator('[data-case-field="planGoal"]')).toHaveValue(/Gangbild/)
 })
-
 
 test('PG24 AOK BW displays the contract Annex 5b before internal UKB FMB', async ({page}) => {
   await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{
@@ -175,4 +175,47 @@ test('AOK BW PG24 warns when bilateral amputation requires a second original pro
   await page.locator('#wizardNext').click()
   await expect(page.locator('#wizardError')).toContainText('AOK-Anlage 4 (rechts)')
   await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
+})
+
+
+test('PG24 technician measure IDs only accept explicitly confirmed transcript values', async ({page})=>{
+  await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{
+    care_reference_bootstrap:{
+      kassen:[{Kasse_Kanonisch:'Privat'}],
+      produktgruppen:[{PG:'24',Generisches_Blatt:'Beinprothesen',Reifegrad:'PRODUKTIV'}],
+      sourceCount:1,formCount:1
+    },
+    himi_logic_for_pg:[{
+      Himi_ID:'PG24_UKB',PG:'24',Bezeichnung:'Unterschenkelprothese',
+      Generisches_Formular_ID:'PG24',Mass_erforderlich:true,Profil_erforderlich:true,Aktiv:true
+    }],
+    forms_for_pg:[],himi_form_rules_for_himi:[],form_fields_for_pg:[]
+  }})
+  await page.goto('/index.html')
+  await page.locator('#newSupplyOverviewButton').click()
+  await page.locator('#careKasse').selectOption({label:'Privat'})
+  await page.locator('#carePg').selectOption('24')
+  await page.locator('#careHimi').selectOption('PG24_UKB')
+  const input=page.locator('#measureFieldList [data-measure-value="true"][data-measure-field-id]').first()
+  await expect(input).toHaveCount(1)
+  const id=await input.getAttribute('data-measure-field-id')
+  expect(id).toMatch(/^FMB02003-/)
+  const result=await page.evaluate(id=>{
+    const input=document.querySelector('[data-measure-field-id="'+id+'"]')
+    const txt=document.querySelector('#measureTranscript')
+    txt.value=id+': 31'
+    document.querySelector('#measureTranscriptAnalyze').click()
+    const before=input.value
+    const proposals=document.querySelectorAll('#measureTranscriptSuggestions [data-measure-proposal]').length
+    document.querySelector('#measureTranscriptApply').click()
+    const after=input.value
+    txt.value='NICHT-VORHANDEN-P9-F99: 44'
+    document.querySelector('#measureTranscriptAnalyze').click()
+    const rejected=document.querySelector('#measureTranscriptSuggestions').textContent
+    return {before,proposals,after,rejected}
+  },id)
+  expect(result.before).not.toBe('31')
+  expect(result.proposals).toBe(1)
+  expect(result.after).toBe('31')
+  expect(result.rejected).toContain('nicht gefunden')
 })

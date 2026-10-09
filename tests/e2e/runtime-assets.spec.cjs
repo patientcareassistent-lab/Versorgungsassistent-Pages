@@ -286,3 +286,34 @@ test('PG24 original PDFs retain conditional source instructions and optional gai
   expect(conditions.linerInstructions).toEqual([true,true])
   expect(conditions.measurementNames).toEqual([true,true,true,true,true])
 })
+
+
+test('all five AOK PG24 measure annexes remain writable and expose distinct original PDF widgets', async ({page})=>{
+  test.setTimeout(120000)
+  await page.goto('/index.html')
+  const scanned=await page.evaluate(async()=>{
+    const pdfjs=await import('./vendor/pdfjs/pdf.min.mjs')
+    pdfjs.GlobalWorkerOptions.workerSrc=new URL('./vendor/pdfjs/pdf.worker.min.mjs',location.href).href
+    const files=['anlage-5a-fuss.pdf','anlage-5b-ukb.pdf','anlage-5c-knieex.pdf','anlage-5d-okb.pdf','anlage-5e-hueftex.pdf']
+    const results=[]
+    for(const file of files){
+      const doc=await pdfjs.getDocument('./assets/aok-pg24/'+file).promise
+      const pages=[]
+      for(let i=1;i<=doc.numPages;i++){
+        const pdfPage=await doc.getPage(i)
+        const annotations=await pdfPage.getAnnotations({intent:'display'})
+        const widgets=annotations.filter(a=>a.subtype==='Widget')
+        pages.push({page:i,widgets:widgets.length,unsupported:widgets.filter(w=>!['Tx','Btn'].includes(w.fieldType)).map(w=>w.fieldType)})
+      }
+      results.push({file,pages})
+    }
+    return results
+  })
+  expect(scanned).toHaveLength(5)
+  for(const annex of scanned){
+    expect(annex.pages.reduce((sum,p)=>sum+p.widgets,0),annex.file).toBeGreaterThan(0)
+    for(const page of annex.pages){
+      expect(page.unsupported,annex.file+' page '+page.page).toEqual([])
+    }
+  }
+})
