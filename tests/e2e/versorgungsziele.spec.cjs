@@ -167,9 +167,12 @@ test('AOK BW PG24 warns when bilateral amputation requires a second original pro
   await page.locator('#rxNeededText').fill('Beidseitige prothetische Versorgung')
   await page.locator('#wizardNext').click()
   await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
-  await expect(page.locator('#profileHint')).toContainText('zweite Seite')
-  await expect(page.locator('#profileHint')).toContainText('separater Original-Profilerhebungsbogen')
-  await expect(page.locator('#profileHint')).toContainText('nicht automatisch')
+  await expect(page.locator('#profileHint')).toContainText('zwei separate, vierseitige Originalbögen')
+  await expect(page.locator('[data-aok-profile-side="rechts"]')).toHaveCount(1)
+  await expect(page.locator('[data-aok-profile-side="links"]')).toHaveCount(1)
+  // During PR validation the official PDF is not bundled. No incomplete
+  // side may bypass the loading/completeness guard.
   await page.locator('#wizardNext').click()
-  await expect(page.locator('#wizardError')).toContainText('Original-Profilerhebungsbogen für die zweite Seite fehlt')
+  await expect(page.locator('#wizardError')).toContainText('AOK-Anlage 4 (rechts)')
+  await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
 })
