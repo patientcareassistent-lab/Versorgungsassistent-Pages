@@ -1,0 +1,37 @@
+name: Archive Edge TypeScript validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'supabase/functions/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/archive-edge-validate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deno-check:
+    name: archive-edge-typescript
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout without retained credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: Install Deno 2
+        uses: denoland/setup-deno@e95548e56dfa95d4e1a28d6f422fafe75c4c26fb
+        with:
+          deno-version: v2.x
+
+      - name: Type-check archive Edge Functions (no deployment)
+        run: |
+          set -euo pipefail
+          deno check --node-modules-dir=auto \
+            supabase/functions/archive-care-case/index.ts \
+            supabase/functions/verify-care-case-archive/index.ts \
+            supabase/functions/restore-care-case/index.ts \
+            supabase/functions/delete-care-case-archive/index.ts

@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { validateArchiveManifest } from "../_shared/archive-layout.mjs";
 import { S3Client, GetObjectCommand } from "npm:@aws-sdk/client-s3@3.1147.0";
 
 const H={
@@ -18,7 +19,7 @@ function originAllowed(req:Request){
   const origin=req.headers.get("origin")||"";
   return !origin||allowedOrigins().has(origin);
 }
-function corsHeaders(req:Request){
+function corsHeaders(req:Request):Record<string,string>{
   const origin=req.headers.get("origin")||"";
   if(!origin||!originAllowed(req)) return {};
   return {
@@ -37,7 +38,7 @@ function claims(token:string){
   }catch{return {}}
 }
 async function sha(bytes:Uint8Array){
-  const d=await crypto.subtle.digest("SHA-256",bytes);
+  const d=await crypto.subtle.digest("SHA-256", bytes as Uint8Array<ArrayBuffer>);
   return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("");
 }
 async function bodyBytes(body:any){
@@ -83,10 +84,6 @@ Deno.serve(async(req:Request)=>{
   const c=claims(token) as Record<string,unknown>;
   if(c.aal!=="aal2"||c.is_anonymous===true) return out(403,{error:"mfa_required"});
 
-  const member=await admin.schema("app_private").from("app_members")
-    .select("user_id").eq("user_id",user.id).eq("active",true).maybeSingle();
-  if(member.error||!member.data) return out(403,{error:"user_not_allowed"});
-
   let bodyText="";
   try{bodyText=await req.text()}catch{return out(400,{error:"invalid_body"})}
   if(bodyText.length>8192) return out(413,{error:"request_too_large"});
@@ -97,29 +94,32 @@ Deno.serve(async(req:Request)=>{
     return out(400,{error:"invalid_care_case_id"});
   }
 
-  const idx=await admin.schema("app_private").from("care_case_archives")
-    .select("*").eq("care_case_id",id).maybeSingle();
-  if(idx.error) return out(500,{error:"archive_index_read_failed"});
+  const ctx=await admin.rpc("archive_context_for_service",{
+    p_actor_id:user.id,p_care_case_id:id,p_require_admin:false,p_include_history:false
+  });
+  if(ctx.error){
+    if(ctx.error.code==="42501") return out(403,{error:"user_not_allowed"});
+    return out(500,{error:"archive_index_read_failed"});
+  }
+  const idx={data:ctx.data?.archive||null};
   if(!idx.data) return out(404,{error:"archive_not_found"});
-  if(idx.data.owner_user_id!==user.id) return out(403,{error:"only_owner_can_verify"});
   if(idx.data.status!=="READY") return out(409,{error:"archive_not_ready"});
   if(!idx.data.object_key||!idx.data.archive_sha256) return out(409,{error:"archive_index_incomplete"});
 
   const s3=new S3Client({
     region:"auto",
-    endpoint:`https://${account}.r2.cloudflarestorage.com`,
+    endpoint:`https://${account}.eu.r2.cloudflarestorage.com`,
     credentials:{accessKeyId:access,secretAccessKey:secret},
     forcePathStyle:true
   });
 
   const fail=async(code:string,detail:unknown,status=409)=>{
     const message=String(detail instanceof Error?detail.message:detail||code).slice(0,1000);
-    await admin.schema("app_private").from("care_case_archives").update({
-      verification_status:"FAILED",
-      verified_at:null,
-      verified_by:null,
-      verification_error:message
-    }).eq("archive_id",idx.data.archive_id);
+    const updated=await admin.rpc("archive_mutation_for_service",{
+      p_actor_id:user.id,p_care_case_id:id,p_action:"verify",
+      p_data:{result:"FAILED",verification_error:message}
+    });
+    if(updated.error) return out(500,{error:"archive_verification_state_failed"});
     return out(status,{ok:false,error:code});
   };
 
@@ -139,20 +139,14 @@ Deno.serve(async(req:Request)=>{
     try{manifest=JSON.parse(new TextDecoder().decode(raw))}
     catch{return await fail("archive_manifest_invalid","manifest JSON is invalid")}
 
-    if(manifest?.manifest_version!==idx.data.manifest_version) return await fail("manifest_version_mismatch","manifest version mismatch");
-    if(manifest?.archive_id!==idx.data.archive_id) return await fail("archive_id_mismatch","archive id mismatch");
-    if(manifest?.care_case?.id!==id) return await fail("care_case_id_mismatch","care case id mismatch");
-    if(manifest?.care_case?.owner_user_id!==idx.data.owner_user_id) return await fail("owner_mismatch","owner mismatch");
+    try{validateArchiveManifest(manifest,idx.data);}
+    catch(error){return await fail("archive_manifest_integrity_invalid",error);}
 
-    const files=Array.isArray(manifest?.files)?manifest.files:[];
-    if(files.length!==Number(idx.data.photo_count||0)) return await fail("photo_count_mismatch","photo count mismatch");
-    if(files.length>14) return await fail("too_many_archive_files","archive references too many files");
-
-    const base=`care-cases/${id}/${idx.data.archive_id}/files/`;
+    const files=manifest.files;
     for(const file of files){
       const key=typeof file?.target_key==="string"?file.target_key:"";
       const expected=typeof file?.sha256==="string"?file.sha256:"";
-      if(!key.startsWith(base)||!/^[0-9a-f]{64}$/.test(expected)){
+      if(!/^[0-9a-f]{64}$/.test(expected)){
         return await fail("invalid_file_manifest","file manifest entry invalid");
       }
       const object=await s3.send(new GetObjectCommand({Bucket:bucket,Key:key}));
@@ -161,12 +155,11 @@ Deno.serve(async(req:Request)=>{
       if(await sha(bytes)!==expected) return await fail("archive_file_checksum_mismatch","archived file checksum mismatch");
     }
 
-    await admin.schema("app_private").from("care_case_archives").update({
-      verification_status:"VERIFIED",
-      verified_at:new Date().toISOString(),
-      verified_by:user.id,
-      verification_error:null
-    }).eq("archive_id",idx.data.archive_id);
+    const updated=await admin.rpc("archive_mutation_for_service",{
+      p_actor_id:user.id,p_care_case_id:id,p_action:"verify",
+      p_data:{result:"VERIFIED"}
+    });
+    if(updated.error) return out(500,{error:"archive_verification_state_failed"});
 
     return out(200,{
       ok:true,

@@ -14,7 +14,7 @@ const index={
 const manifest={
   manifest_version:1,archive_id:archiveId,archived_by:staffId,
   care_case:{id:caseId,owner_user_id:ownerId},
-  files:[{target_key:layout.fileKey('repair','photo-01.jpg'),sha256:'a'.repeat(64)}]
+  files:[{target_key:layout.fileKey('repair','photo-01.jpg'),sha256:'a'.repeat(64),source_bucket:'repair-photos-private',source_path:ownerId+'/'+caseId+'/repair/photo-01.jpg',bytes:1024}]
 };
 test('canonical R2 layout is case/archive-based, never operator-based',()=>{
   assert.equal(layout.prefix,'care-cases/'+caseId+'/'+archiveId+'/');
@@ -35,6 +35,8 @@ test('rejects mismatched source case, archive ID and source owner',()=>{
 test('rejects file traversal, duplicate objects, invalid hashes and oversized list',()=>{
   assert.throws(()=>layout.fileKey('repair','../escape.jpg'),/invalid_archive_filename/);
   assert.throws(()=>layout.fileKey('docs','photo.jpg'),/invalid_archive_file_kind/);
+  assert.throws(()=>validateArchiveManifest({...manifest,files:[{...manifest.files[0],source_path:staffId+'/'+caseId+'/repair/photo.jpg'}]},index),/archive_source_path_invalid/);
+  assert.throws(()=>validateArchiveManifest({...manifest,files:[{...manifest.files[0],bytes:4*1024*1024}]},index),/archive_file_size_invalid/);
   assert.throws(()=>validateArchiveManifest({...manifest,files:[{...manifest.files[0],sha256:'foo'}]},index),/archive_file_hash_invalid/);
   assert.throws(()=>validateArchiveManifest({...manifest,files:[manifest.files[0],manifest.files[0]]},{...index,photo_count:2}),/archive_file_duplicate/);
   assert.throws(()=>validateArchiveManifest({...manifest,files:Array(15).fill(manifest.files[0])},{...index,photo_count:15}),/archive_file_count_mismatch/);
