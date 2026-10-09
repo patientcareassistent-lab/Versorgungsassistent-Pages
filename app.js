@@ -3712,7 +3712,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       // mandatory. Prefilled demographics alone are not a clinical assessment.
       if($('carePg').value==='24'){
         if(isAokCase()){
-          const demographicAndCalculated=/^aokProfilePdf:Text(?:1|2|3|4|5|6|24|25)$/
+          const demographicAndCalculated=/^aokProfilePdf:Text(?:1|2|3|4|5|6|24|25|67)$/
           const documented=controls.some(el=>{
             const key=String(el.dataset.profileKey||'')
             if(!key.startsWith('aokProfilePdf:') || demographicAndCalculated.test(key)) return false
