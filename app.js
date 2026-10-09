@@ -1950,6 +1950,24 @@ import { versorgungsziele } from './versorgungsziele.js'
           pageBox.appendChild(canvas);host.appendChild(pageBox)
           await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise
           const textContent=await page.getTextContent()
+          // Independently checked against original AOK BW PG24 Annex 4 (01.09.2026).
+          // For all other widgets, geometric inference remains a suggestion,
+          // never a verified semantic field mapping.
+          const verifiedLabels={
+            1:{
+              Text1:'Grund der Vorstellung',
+              Text2:'Vorname, Name, Geburtsdatum bzw. Adressaufkleber',
+              Text3:'Körpergröße (m)',
+              Text4:'Körpergewicht (kg)',
+              Text5:'Verordnende Arztpraxis (Name, Anschrift)',
+              Text6:'Fachpraxis'
+            },
+            2:{
+              Text24:'PLUS-M Rohwert',
+              Text25:'PLUS-M T-Score',
+              Text26:'Primär verwendete Gehhilfe'
+            }
+          }
           const aiTextItems=(textContent.items||[]).map(item=>{
             const tx=pdfjs.Util.transform(viewport.transform,item.transform)
             return {text:String(item.str||'').trim(),x:tx[4],y:tx[5],w:(Number(item.width)||0)*viewport.scale}
@@ -2014,8 +2032,10 @@ import { versorgungsziele } from './versorgungsziele.js'
             }
             el.dataset.profileKey=key
             el.dataset.required='false'
-            const aiLabel=nearbyLabel||fieldName||'Profilerhebungsfeld'
+            const sourceVerifiedLabel=verifiedLabels[pageNo]?.[fieldName]
+            const aiLabel=sourceVerifiedLabel||nearbyLabel||fieldName||'Profilerhebungsfeld'
             el.dataset.aiLabel=aiLabel
+            el.dataset.semanticMapping=sourceVerifiedLabel?'source-verified':'unverified-geometric-inference'
             el.setAttribute('aria-label',aiLabel)
             applyRuntimeStyle(el,'geometry',{
               left:(left/viewport.width*100)+'%',
@@ -2040,8 +2060,10 @@ import { versorgungsziele } from './versorgungsziele.js'
       host.className=''
       $('fieldInfo').textContent='AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen. Feldbezeichnungen und Reihenfolge entsprechen dem Originalbogen.'
       const hint=$('profileHint')
-      hint.className='status-card ready'
-      hint.innerHTML='<strong>AOK-Vertragsbogen aktiv</strong>Ausschließlich der AOK-Profilerhebungsbogen wird angezeigt. Stammdaten werden nur dort vorbelegt, wo die Zuordnung eindeutig ist. PLUS-M auf Seite 2 wird zeilenweise exklusiv ausgewählt und automatisch bewertet; die Unterschriften der versicherten Person/Vertretung und des Hilfsmittelanbieters auf Seite 4 sind als Stift-, Touch- und Maus-Signaturfelder ausgeführt.'
+      const bilateral=values.side==='beidseitig'
+      hint.className=bilateral?'status-card open':'status-card ready'
+      hint.innerHTML='<strong>AOK-Vertragsbogen aktiv</strong>Ausschließlich der AOK-Profilerhebungsbogen wird angezeigt. Stammdaten werden nur dort vorbelegt, wo die Zuordnung eindeutig ist. PLUS-M auf Seite 2 wird zeilenweise exklusiv ausgewählt und automatisch bewertet; die Unterschriften der versicherten Person/Vertretung und des Hilfsmittelanbieters auf Seite 4 sind als Stift-, Touch- und Maus-Signaturfelder ausgeführt.'+
+        (bilateral?'<p><strong>Beidseitige Amputation:</strong> Nach Anlage 4 (Seite 1, E3) ist für die zweite Seite ein separater Original-Profilerhebungsbogen erforderlich. Der Assistent erstellt diesen zweiten Bogen derzeit nicht automatisch. Beide Bögen müssen separat dokumentiert werden; ein einzelner Bogen ist keine vollständige Vertragsdokumentation.</p>':'')
       const url='assets/aok-pg24/anlage-4-profilerhebungsbogen.pdf'
       host.innerHTML='<div class="profile-original-wrap"><div class="profile-original-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>Anlage 4 · Profilerhebungsbogen PG24</strong></div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Original öffnen ↗</a></div><div id="aokProfilePdfPages" class="aok-pdf-pages"><div class="aok-pdf-loading">AOK-Profilerhebungsbogen wird geladen …</div></div></div>'
       renderEditableProfilePdf(url,$('aokProfilePdfPages'))
@@ -3099,7 +3121,10 @@ import { versorgungsziele } from './versorgungsziele.js'
       const fallbackContract=selected && fieldSource==='generic-fallback' && ['EXPLIZIT_PFLICHT','VERTRAGSFORMULAR','PFLICHT_AUF_ANFORDERUNG','VERTRAG_PRUEFEN'].includes(selected.Status)
       if(fallbackContract){
         $('ruleBox').classList.remove('hidden')
-        $('ruleBox').innerHTML='<div><strong>'+escapeHtml(selected.Status)+'</strong><p>'+escapeHtml(selected.Aktion_Versorgungsassistent)+'</p><small>Digitale Voraufnahme: Die angezeigten Felder stammen aus dem allgemeinen PG-/Hilfsmittelbogen, nicht aus dem exakten Kassenformular.</small></div><span class="pill warning">Voraufnahme</span>'
+        const contractCheck=pg==='23' && $('careKasse').value==='AOK Baden-Württemberg'
+          ? '<p><strong>Vertragsfassung vor der Abgabe prüfen:</strong> Bei AOK BW PG23 bestehen verschiedene Verträge und Anlagen (unter anderem Fachverband 2023 und Verbandsvertrag vom 01.07.2026). Vertragskennzeichen, Vertragspartner und Verordnungsdatum entscheiden über die zutreffende Anlage. Hier wird kein geprüfter AOK-Originalbogen ausgegeben.</p>'
+          : ''
+        $('ruleBox').innerHTML='<div><strong>'+escapeHtml(selected.Status)+'</strong><p>'+escapeHtml(selected.Aktion_Versorgungsassistent)+'</p><small>Digitale Voraufnahme: Die angezeigten Felder stammen aus dem allgemeinen PG-/Hilfsmittelbogen, nicht aus dem exakten Kassenformular.</small>'+contractCheck+'</div><span class="pill warning">Voraufnahme</span>'
       }
 
       $('fieldInfo').textContent=fields.length
