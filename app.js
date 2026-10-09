@@ -1794,30 +1794,43 @@ import { versorgungsziele } from './versorgungsziele.js'
       52:56.3,53:57.3,54:58.4,55:59.6,56:61.0,57:62.5,58:64.5,59:67.1,60:71.4
     }
 
-    function setAokPdfTextField(fieldName,value){
-      const key='aokProfilePdf:'+fieldName
+    // Preserve unilateral persisted keys; isolate bilateral originals by side.
+    function aokProfileKey(name,side=''){
+      return 'aokProfilePdf:'+(side?side+':':'')+name
+    }
+    function aokPlusMKey(row,side=''){
+      return 'aokPlusM:'+(side?side+':':'')+row
+    }
+    function aokPlusMSummaryKey(name,side=''){
+      return side?name+':'+side:name
+    }
+    function aokProfileSides(){
+      return values.side==='beidseitig'?['rechts','links']:['']
+    }
+    function setAokPdfTextField(fieldName,value,side=''){
+      const key=aokProfileKey(fieldName,side)
       values[key]=value
       const el=document.querySelector('[data-profile-key="'+CSS.escape(key)+'"]')
       if(el) el.value=value
     }
 
-    function updatePlusMScore(){
+    function updatePlusMScore(side=''){
       const answers=[]
       for(let row=1;row<=12;row++){
-        const v=Number(values['aokPlusM:'+row])
+        const v=Number(values[aokPlusMKey(row,side)])
         if(v>=1&&v<=5) answers.push(v)
       }
       const raw=answers.reduce((a,b)=>a+b,0)
-      setAokPdfTextField('Text24',answers.length?String(raw):'')
+      setAokPdfTextField('Text24',answers.length?String(raw):'',side)
       const t=answers.length===12?plusMTScore12[raw]:null
-      setAokPdfTextField('Text25',t!==undefined&&t!==null?Number(t).toFixed(1):'')
-      values.aokPlusMAnswered=answers.length
-      values.aokPlusMRaw=answers.length?raw:null
-      values.aokPlusMTScore=t??null
+      setAokPdfTextField('Text25',t!==undefined&&t!==null?Number(t).toFixed(1):'',side)
+      values[aokPlusMSummaryKey('aokPlusMAnswered',side)]=answers.length
+      values[aokPlusMSummaryKey('aokPlusMRaw',side)]=answers.length?raw:null
+      values[aokPlusMSummaryKey('aokPlusMTScore',side)]=t??null
       queueAutosaveSupply()
     }
 
-    function renderPlusMPage2Overlays(pageBox){
+    function renderPlusMPage2Overlays(pageBox,side=''){
       // Exact centers of the 60 printed PLUS-M option boxes in the unchanged AOK source page.
       const xPct=[50.57,58.96,67.35,75.47,83.22]
       const yPct=[41.48,44.74,48.00,51.26,54.15,56.61,59.49,63.13,66.87,70.13,73.39,76.97]
@@ -1827,36 +1840,36 @@ import { versorgungsziele } from './versorgungsziele.js'
         scores.forEach((score,colIndex)=>{
           const option=document.createElement('input')
           option.type='radio'
-          option.name='aok-plusm-row-'+row
+          option.name='aok-plusm-row-'+(side||'single')+'-'+row
           option.className='aok-plusm-option'
-          option.setAttribute('aria-label','PLUS-M Frage '+row+' · '+score+' Punkte')
+          option.setAttribute('aria-label','PLUS-M '+(side?side+' · ':'')+'Frage '+row+' · '+score+' Punkte')
           applyRuntimeStyle(option,'geometry',{
             left:(xPct[colIndex]-0.875)+'%',
             top:(y-0.64)+'%'
           })
           option.dataset.plusmRow=String(row)
           option.dataset.plusmScore=String(score)
-          option.checked=Number(values['aokPlusM:'+row])===score
+          option.checked=Number(values[aokPlusMKey(row,side)])===score
           option.addEventListener('change',()=>{
             if(!option.checked) return
-            values['aokPlusM:'+row]=score
-            updatePlusMScore()
+            values[aokPlusMKey(row,side)]=score
+            updatePlusMScore(side)
             updateWizardStatus()
           })
           pageBox.appendChild(option)
         })
       })
-      updatePlusMScore()
+      updatePlusMScore(side)
     }
 
-    function renderAokPage2WalkingAidOption(pageBox,fieldName,left,top,width,height,viewport){
+    function renderAokPage2WalkingAidOption(pageBox,fieldName,left,top,width,height,viewport,side=''){
       const map={'Check Box81':'rechts','Check Box82':'links','Check Box83':'beidseitig'}
       const value=map[fieldName]
       if(!value) return false
-      const key='aokProfilePdf:walkingAidSide'
+      const key=aokProfileKey('walkingAidSide',side)
       const option=document.createElement('input')
       option.type='radio'
-      option.name='aok-plusm-walking-aid-side'
+      option.name='aok-plusm-walking-aid-side-'+(side||'single')
       option.className='aok-plusm-side-option'
       option.value=value
       option.checked=values[key]===value
@@ -1903,7 +1916,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       pageBox.appendChild(pad)
     }
 
-    function ensureAokPage4SignaturePads(pageBox,textItems,viewport){
+    function ensureAokPage4SignaturePads(pageBox,textItems,viewport,side=''){
       const sorted=[...(textItems||[])].sort((a,b)=>Math.abs(a.y-b.y)>4?a.y-b.y:a.x-b.x)
       const lines=[]
       sorted.forEach(item=>{
@@ -1933,13 +1946,13 @@ import { versorgungsziele } from './versorgungsziele.js'
       addFromPrintedLabel(
         'insured',
         /Unterschrift.*Versichert|Unterschrift.*gesetzlichen\s+Vertreter|Unterschrift.*Bevollmächtigt/i,
-        'aokProfilePdf:insuredSignature',
+        aokProfileKey('insuredSignature',side),
         'Unterschrift der Versicherten bzw. gesetzlichen Vertretung / Bevollmächtigten'
       )
       addFromPrintedLabel(
         'provider',
         /Unterschrift.*Hilfsmittelanbieter|Unterschrift.*Stempel.*Hilfsmittelanbieter/i,
-        'aokProfilePdf:providerSignature',
+        aokProfileKey('providerSignature',side),
         'Unterschrift / Stempel Hilfsmittelanbieter'
       )
     }
