@@ -1968,16 +1968,19 @@ import { versorgungsziele } from './versorgungsziele.js'
       try{
         const pdfjs=await loadPdfJs()
         const pdf=await pdfjs.getDocument(url).promise
+        if(!host.isConnected) return
         const prefill=profilePdfPrefill()
         host.innerHTML=''
         host.dataset.pdfReady='false'
         for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
+          if(!host.isConnected) return
           const page=await pdf.getPage(pageNo)
           const viewport=page.getViewport({scale:1.65})
           const pageBox=document.createElement('div');pageBox.className='aok-pdf-page'
           const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height)
           pageBox.appendChild(canvas);host.appendChild(pageBox)
           await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise
+          if(!host.isConnected) return
           const textContent=await page.getTextContent()
           // Independently checked against original AOK BW PG24 Annex 4 (01.09.2026).
           // For all other widgets, geometric inference remains a suggestion,
@@ -2090,9 +2093,11 @@ import { versorgungsziele } from './versorgungsziele.js'
           if(pageNo===2) renderPlusMPage2Overlays(pageBox,side)
           if(pageNo===4) ensureAokPage4SignaturePads(pageBox,aiTextItems,viewport,side)
         }
+        if(!host.isConnected) return
         host.dataset.pdfReady='true'
         updateWizardStatus()
       }catch(err){
+        if(!host.isConnected) return
         host.dataset.pdfReady='error'
         updateWizardStatus()
         host.innerHTML='<div class="aok-pdf-loading">Der Original-AOK-Profilerhebungsbogen konnte nicht als beschreibbare Ansicht geladen werden. <a target="_blank" rel="noopener" href="'+url+'">Original-PDF öffnen ↗</a></div>'
@@ -2108,7 +2113,10 @@ import { versorgungsziele } from './versorgungsziele.js'
         (bilateral?'<p><strong>Beidseitige Amputation:</strong> Anlage 4 wird als zwei separate, vierseitige Originalbögen ausgegeben: zuerst rechts, danach links. Feldwerte, PLUS-M und Unterschriften werden pro Seite getrennt gespeichert. Der Profilschritt erfordert Angaben für beide Seiten.</p>':'')
     }
 
+    let aokProfileRenderGeneration=0
     function renderAokPg24Profile(){
+      // A case restore can launch more than one asynchronous PDF load.
+      const generation=++aokProfileRenderGeneration
       const host=$('fieldList')
       host.className=''
       $('fieldInfo').textContent='AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen. Feldbezeichnungen und Reihenfolge entsprechen dem Originalbogen.'
@@ -2127,8 +2135,9 @@ import { versorgungsziele } from './versorgungsziele.js'
       // render serially to avoid concurrent PDF canvases exhausting memory.
       void (async()=>{
         for(const side of sides){
+          if(generation!==aokProfileRenderGeneration || !host.isConnected) return
           const box=host.querySelector('[data-aok-pdf-side="'+(side||'einseitig')+'"]')
-          if(!box || !host.isConnected) return
+          if(!box || !box.isConnected) return
           await renderEditableProfilePdf(url,box,side)
         }
       })()
