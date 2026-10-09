@@ -113,3 +113,14 @@
 /* CSP-safe utility classes replacing former inline style attributes */
 .mt-8{margin-top:8px}.mt-12{margin-top:12px}.mt-14{margin-top:14px}.mt-16{margin-top:16px}.flex-1{flex:1}.minw-220{min-width:220px}
 .repair-result-label{display:grid;gap:6px;margin-top:12px;font-size:.78rem;font-weight:700}
+
+
+/* AOK PG24 bilateral: two original four-page PDF documents, never field copies. */
+.aok-profile-original-document+.aok-profile-original-document{margin-top:22px}
+.aok-profile-original-document .profile-original-toolbar small{color:#475467;font-size:.76rem}
+@media print{
+  .aok-profile-original-document+.aok-profile-original-document{break-before:page;page-break-before:always;margin-top:0}
+  .aok-profile-original-document .aok-pdf-page{break-after:page;page-break-after:always;box-shadow:none}
+  .aok-profile-original-document .profile-original-toolbar{break-after:avoid}
+  .aok-profile-original-document .aok-pdf-pages{padding:0;gap:0;background:#fff}
+}
