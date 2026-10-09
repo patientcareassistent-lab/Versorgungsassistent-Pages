@@ -2479,13 +2479,10 @@ import { versorgungsziele } from './versorgungsziele.js'
               el.classList.add('measure-active-control')
               const info=$('aokMeasureActiveField')
               if(info)info.textContent=fieldId+' · '+fieldName+(context.label?' · Textnähe (unverifiziert): '+context.label:' · Fachbezeichnung noch zu prüfen')
-              const schema=pg24SourceMeasureSchema()
-              if(schema && $('measureOrientationStage')){
-                el.dataset.measureId=fieldId
-                el.dataset.measureRegion='Originalfeld auf PDF-Seite '+pageNo+'; anatomischen Bezug prüfen'
-                el.dataset.measureSketch='main'
-                updateMeasureOrientation(schema,el)
-              }
+              // Only original-widget position has been verified. Do not
+              // place an anatomical marker without a confirmed source map.
+              const region=$('measureOrientationRegion')
+              if(region)region.textContent='Anatomische Verortung dieses PDF-Felds noch nicht quellengeprüft; Originalskizze nur zur Orientierung.'
             })
             applyRuntimeStyle(el,'geometry',{
               left:(left/viewport.width*100)+'%',
@@ -3312,7 +3309,12 @@ import { versorgungsziele } from './versorgungsziele.js'
         (hasAnatomy?'<div id="measureOrientationStage" class="measure-orientation-stage"></div><div class="measure-orientation-readout" aria-live="polite"><strong id="measureOrientationLabel">Maß auswählen</strong><span id="measureOrientationRegion">Anatomische Zuordnung anhand Feldkontext prüfen.</span><span id="measureOrientationValue" class="measure-orientation-value"></span></div><span id="measureOrientationType" class="hidden"></span><div id="measureOrientationSource" class="measure-orientation-source"></div>':'<p class="source-note">Die vollständige Originalzeichnung ist im beschreibbaren Maßblatt sichtbar. Das aktive Feld wird dort hervorgehoben; eine zusätzliche anatomische Detailvisualisierung ist für diese Anlage noch nicht zugeordnet.</p>')+
         '<div class="measure-orientation-readout"><strong>Aktives Originalfeld</strong><span id="aokMeasureActiveField">Maßfeld im PDF anklicken, um Kennung, Seite und Quellkontext anzuzeigen.</span></div>'+
         '</section></aside></div>'
-      if(hasAnatomy)renderMeasureOrientation(sourceSchema)
+      if(hasAnatomy){
+        renderMeasureOrientation(sourceSchema)
+        // Hide position guides until a source-verified anatomical mapping exists.
+        $('measureOrientationMarker')?.classList.add('hidden')
+        $('measureOrientationGuide')?.classList.add('hidden')
+      }
       renderEditableAokPdf(url,asset,$('aokPdfMeasurePages'))
       return true
     }
