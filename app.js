@@ -1099,29 +1099,37 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(key==='versorgungGoalText') control.dataset.goalText='true'
     }
 
+    function syncLegacyGoalIntoPlanning(){
+      // Previous versions captured the goal in profile fields. Preserve those
+      // values and use the post-measure planGoal as the single editing point.
+      const keys=['versorgungGoalText','tech:therapyGoal',...Object.keys(values).filter(k=>/^GEN_23_/.test(k)&&/goal/i.test(k))]
+      if(!String(values.planGoal||'').trim()){
+        const existing=keys.map(k=>String(values[k]||'').trim()).find(Boolean)
+        if(existing) values.planGoal=existing
+      }
+      for(const k of keys) if(values[k]!==undefined && String(values.planGoal||'').trim()) values[k]=values.planGoal
+      syncCaseFieldControls('planGoal',values.planGoal||'')
+    }
     function renderGoalSuggestions(){
       const host=$('versorgungGoalSuggestions')
       if(!host) return
       const pg=String($('carePg')?.value||'')
-      // PG23 uses its source-defined Versorgungsziel field. The generic PG24
-      // Techniker form has tech:therapyGoal. AOK original has no safe field
-      // mapping yet, so retain a supplemental free-text goal there.
-      const enabled=pg==='24'&&isAokCase()&&!!selectedHimiId()
+      const enabled=['23','24'].includes(pg)&&!!selectedHimiId()
       host.classList.toggle('hidden',!enabled)
-      if(!enabled){host.replaceChildren();return}
-      const key='versorgungGoalText'
+      host.replaceChildren()
+      if(!enabled) return
+      syncLegacyGoalIntoPlanning()
+      const goalControl=document.querySelector('[data-case-field="planGoal"]')
+      if(!goalControl) return
       const section=document.createElement('section')
       section.className='field'
       const title=document.createElement('strong')
-      title.textContent='Ergänzendes individuelles Versorgungsziel (AOK-Originalbogen unverändert)'
-      const text=document.createElement('textarea')
-      text.rows=4
-      text.value=String(values[key]||'')
-      text.placeholder='Individuelles Ziel ergänzen …'
-      text.addEventListener('input',()=>{values[key]=text.value;queueAutosaveSupply();updateWizardStatus()})
-      section.append(title,text)
-      attachGoalPicker(section,text,key)
-      host.replaceChildren(section)
+      title.textContent='Versorgungsziele nach Maßaufnahme vorschlagen'
+      const note=document.createElement('small')
+      note.textContent='Vorschläge werden erst in der Versorgungsplanung nach dem Maßblatt angeboten. Individuellen Zieltext fachlich prüfen; AOK-Originalformular bleibt unverändert.'
+      section.append(title,note)
+      attachGoalPicker(section,goalControl,'planGoal')
+      host.appendChild(section)
     }
 
     function renderMeasureFields(){
@@ -2338,8 +2346,10 @@ import { versorgungsziele } from './versorgungsziele.js'
       host.appendChild(mobilitySection)
 
       g=techProfileSection(host,'Therapieziel / Bewertung',2)
-      const therapyGoal=techProfileField(g,'Beschreibung des Therapieziels unter Berücksichtigung der momentanen und realistisch zu erwartenden Fähigkeiten','tech:therapyGoal','textarea')
-      attachGoalPicker(therapyGoal.parentElement,therapyGoal,'tech:therapyGoal')
+      const therapyNote=document.createElement('p')
+      therapyNote.className='source-note'
+      therapyNote.textContent='Individuelles Therapieziel wird nach der Maßaufnahme im Schritt Versorgungsplanung dokumentiert und mit dem Technikerbogen verknüpft.'
+      g.appendChild(therapyNote)
       techProfileField(g,'Ermittelter Mobilitätsgrad','tech:mobilityGrade','select',['0 – Nichtgehfähiger','1 – Innenbereichsgeher','2 – Eingeschränkter Außenbereichsgeher','3 – Uneingeschränkter Außenbereichsgeher','4 – Uneingeschränkter Außenbereichsgeher mit besonders hohen Ansprüchen'])
       techProfileField(g,'Beschreibung der weiteren Fähigkeiten','tech:furtherAbilities','textarea')
       techProfileField(g,'Mit dem Therapieziel verbundene weitere Maßnahmen','tech:furtherMeasures','textarea')
@@ -3304,6 +3314,11 @@ import { versorgungsziele } from './versorgungsziele.js'
     function renderField(f){
       const id=f.Feldzeile_ID
       const type=String(f.Datentyp||'Text')
+      if($('carePg').value==='23' && /versorgungsziel/i.test(String(f.Feldbezeichnung||''))){
+        if(!String(values.planGoal||'').trim() && String(values[id]||'').trim()) values.planGoal=values[id]
+        if(String(values.planGoal||'').trim()) values[id]=values.planGoal
+        return // Goal belongs to planning after measurement, not initial profile
+      }
       const conditional=profileConditionalState(f)
       if(!conditional.visible){
         if(Object.prototype.hasOwnProperty.call(values,id)) delete values[id]
@@ -3547,7 +3562,6 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
       persistSimple(control)
       label.append(title,control)
-      if($('carePg').value==='23' && /versorgungsziel/i.test(String(f.Feldbezeichnung||'')) && control.tagName!=='SELECT') attachGoalPicker(label,control,id)
       $('fieldList').appendChild(label)
     }
 
@@ -3795,11 +3809,8 @@ import { versorgungsziele } from './versorgungsziele.js'
       // On PG24 source PDFs many widgets are not individually classified as
       // mandatory. Prefilled demographics alone are not a clinical assessment.
       if($('carePg').value==='24'){
-        if(!isAokCase() && !String(values['tech:therapyGoal']||'').trim()){
-          // The PG24 source catalogue explicitly identifies Versorgungsziel as required;
-          // technician profile uses the semantically equivalent therapy-goal field.
-          return {ok:false,missing:['Therapieziel / individuelles Versorgungsziel']}
-        }
+        // The therapy goal is now required in step 5 (Versorgungsplanung),
+        // after the clinical measure sheet; existing saved values migrate there.
       }
 
       const required=controls.filter(x=>x.dataset.required==='true')
@@ -4260,6 +4271,11 @@ import { versorgungsziele } from './versorgungsziele.js'
           if(next!==undefined){
             values[key]=next
             syncCaseFieldControls(key,next,el)
+          }
+          if(key==='planGoal'){
+            values.versorgungGoalText=String(next||'')
+            values['tech:therapyGoal']=String(next||'')
+            Object.keys(values).filter(k=>/^GEN_23_/.test(k)&&/goal/i.test(k)).forEach(k=>{values[k]=String(next||'')})
           }
           if(key==='caseKind') syncCaseKind()
           if(key==='supplyType'){syncSituationFields();renderMeasureFields();updateCareFields()}
