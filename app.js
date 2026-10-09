@@ -1944,6 +1944,11 @@ import { versorgungsziele } from './versorgungsziele.js'
       )
     }
 
+    function canonicalAokProfileTextName(fieldName){
+      const match=String(fieldName||'').trim().match(/^(?:Textfeld|Text)\s*(\d+)$/i)
+      return match?'Text'+match[1]:String(fieldName||'').trim()
+    }
+
     async function renderEditableProfilePdf(url,host){
       try{
         const pdfjs=await loadPdfJs()
@@ -1990,23 +1995,35 @@ import { versorgungsziele } from './versorgungsziele.js'
             return parts.join(' ').replace(/\s+/g,' ').trim()
           }
           const anns=await page.getAnnotations({intent:'display'})
+          // Portal original has an interactive signature for both parties and
+          // two dates; the user-provided version only has provider date/signature.
+          const officialSignatureLayout=pageNo===4 && anns.some(a=>/^Textfeld\s*68$/i.test(String(a.fieldName||''))) &&
+            anns.some(a=>/^Textfeld\s*70$/i.test(String(a.fieldName||'')))
           anns.filter(a=>a.subtype==='Widget').forEach((ann,index)=>{
             const vr=viewport.convertToViewportRectangle(ann.rect)
             const left=Math.min(vr[0],vr[2]),top=Math.min(vr[1],vr[3])
             const width=Math.abs(vr[2]-vr[0]),height=Math.abs(vr[3]-vr[1])
             const fieldName=ann.fieldName||ann.id||('feld'+index)
-            const key='aokProfilePdf:'+fieldName
+            const canonicalName=canonicalAokProfileTextName(fieldName)
+            const key='aokProfilePdf:'+canonicalName
             const nearbyLabel=inferAiLabel(left,top,width,height)||ann.alternativeText||''
             if(pageNo===2 && renderAokPage2WalkingAidOption(pageBox,fieldName,left,top,width,height,viewport)){
               return
             }
             if(pageNo===4){
-              const normalizedFieldName=String(fieldName||'').replace(/\s+/g,' ').trim()
-              // Verified against the original 01.09.2026 Annex 4, page 4:
-              // Text67 is the date on the provider line, NOT the insured signature.
-              // Text69 is the provider signature. The insured signature is printed
-              // without its own AcroForm widget and is created from the printed label.
-              if(/^(?:Textfeld|Text)?\s*69$/i.test(normalizedFieldName)){
+              // AOK portal source: Textfeld 67 = insured signature, 68 = date;
+              // Textfeld 69 = provider signature, 70 = date.
+              // User-provided variant: Text67 = provider DATE, Text69 = signature;
+              // printed insured signature has no editable PDF widget.
+              if(officialSignatureLayout && canonicalName==='Text67' && width>viewport.width*.25){
+                appendAokSignaturePad(
+                  pageBox,'aokProfilePdf:insuredSignature',
+                  'Unterschrift der Versicherten bzw. gesetzlichen Vertretung / Bevollmächtigten','insured',
+                  left,top,width,height,viewport,true
+                )
+                return
+              }
+              if(canonicalName==='Text69' && width>viewport.width*.25){
                 appendAokSignaturePad(
                   pageBox,'aokProfilePdf:providerSignature',
                   'Unterschrift / Stempel Hilfsmittelanbieter','provider',
@@ -2025,13 +2042,13 @@ import { versorgungsziele } from './versorgungsziele.js'
               if(el.tagName==='TEXTAREA') el.rows=1
               else el.type='text'
               el.className='aok-pdf-input'
-              const initial=values[key]!==undefined?values[key]:(prefill[fieldName]||ann.fieldValue||'')
+              const initial=values[key]!==undefined?values[key]:(prefill[canonicalName]||ann.fieldValue||'')
               el.value=initial
               if(values[key]===undefined && initial) values[key]=initial
-              if(pageNo===2 && (fieldName==='Text24'||fieldName==='Text25')){
+              if(pageNo===2 && (canonicalName==='Text24'||canonicalName==='Text25')){
                 el.readOnly=true
                 el.classList.add('aok-plusm-calculated')
-                el.title=fieldName==='Text24'?'Automatisch berechneter PLUS-M Rohwert':'Automatisch ermittelter PLUS-M T-Score (12-Item v1.2)'
+                el.title=canonicalName==='Text24'?'Automatisch berechneter PLUS-M Rohwert':'Automatisch ermittelter PLUS-M T-Score (12-Item v1.2)'
               }else{
                 const save=()=>{values[key]=el.value;queueAutosaveSupply();updateWizardStatus()}
                 el.addEventListener('input',save);el.addEventListener('change',save)
@@ -2039,7 +2056,7 @@ import { versorgungsziele } from './versorgungsziele.js'
             }
             el.dataset.profileKey=key
             el.dataset.required='false'
-            const sourceVerifiedLabel=verifiedLabels[pageNo]?.[fieldName]
+            const sourceVerifiedLabel=verifiedLabels[pageNo]?.[canonicalName]
             const aiLabel=sourceVerifiedLabel||nearbyLabel||fieldName||'Profilerhebungsfeld'
             el.dataset.aiLabel=aiLabel
             el.dataset.semanticMapping=sourceVerifiedLabel?'source-verified':'unverified-geometric-inference'
