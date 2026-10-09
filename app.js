@@ -1602,6 +1602,8 @@ import { versorgungsziele } from './versorgungsziele.js'
     function extractProfileSuggestions(text){
       const raw=String(text||'').trim(),n=norm(raw),out=[]
       if(!raw) return out
+      // Free speech cannot reliably attribute findings to left versus right.
+      if($('carePg').value==='24' && isAokCase() && values.side==='beidseitig') return out
       let m
 
       m=raw.match(/(?:gewicht|wiegt|wiege)\\D{0,18}(\\d{2,3}(?:[,.]\\d+)?)\\s*(?:kg|kilo)/i)
@@ -2103,7 +2105,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       const bilateral=values.side==='beidseitig'
       hint.className=bilateral?'status-card open':'status-card ready'
       hint.innerHTML='<strong>AOK-Vertragsbogen aktiv</strong>Ausschließlich der AOK-Profilerhebungsbogen wird angezeigt. Stammdaten werden nur dort vorbelegt, wo die Zuordnung eindeutig ist. PLUS-M auf Seite 2 wird zeilenweise exklusiv ausgewählt und automatisch bewertet; die Unterschriften der versicherten Person/Vertretung und des Hilfsmittelanbieters auf Seite 4 sind als Stift-, Touch- und Maus-Signaturfelder ausgeführt.'+
-        (bilateral?'<p><strong>Beidseitige Amputation:</strong> Nach Anlage 4 (Seite 1, E3) ist für die zweite Seite ein separater Original-Profilerhebungsbogen erforderlich. Der Assistent erstellt diesen zweiten Bogen derzeit nicht automatisch. Beide Bögen müssen separat dokumentiert werden; ein einzelner Bogen ist keine vollständige Vertragsdokumentation.</p>':'')
+        (bilateral?'<p><strong>Beidseitige Amputation:</strong> Anlage 4 wird als zwei separate, vierseitige Originalbögen ausgegeben: zuerst rechts, danach links. Feldwerte, PLUS-M und Unterschriften werden pro Seite getrennt gespeichert. Der Profilschritt erfordert Angaben für beide Seiten.</p>':'')
     }
 
     function renderAokPg24Profile(){
@@ -3741,11 +3743,27 @@ import { versorgungsziele } from './versorgungsziele.js'
       const controls=[...host.querySelectorAll('input,select,textarea')]
       const signatures=[...host.querySelectorAll('[data-signature-key]')]
       const groups=[...host.querySelectorAll('[data-profile-group-key]')]
-      // AOK BW PG24 Annex 4 explicitly requires a separate source-original
-      // profile for the second side (page 1, E3). Do not allow a single
-      // completed PDF to count as complete bilateral documentation.
-      if($('carePg').value==='24' && isAokCase() && values.side==='beidseitig'){
-        return {ok:false,missing:['AOK Anlage 4: separater Original-Profilerhebungsbogen für die zweite Seite fehlt']}
+      if($('carePg').value==='24' && isAokCase()){
+        const missing=[]
+        for(const side of aokProfileSides()){
+          const scope=host.querySelector('[data-aok-pdf-side="'+(side||'einseitig')+'"]')
+          const label=side?' ('+side+')':''
+          if(!scope || scope.dataset.pdfReady!=='true'){
+            missing.push('AOK-Anlage 4'+label+': Originalbogen noch nicht vollständig geladen')
+            continue
+          }
+          const excluded=/^Text(?:1|2|3|4|5|6|24|25|67|68|70)$/
+          const documented=[...scope.querySelectorAll('[data-profile-key]')].some(el=>{
+            const key=String(el.dataset.profileKey||'')
+            const name=key.split(':').pop()
+            if(excluded.test(name)||el.readOnly||el.dataset.signatureRole) return false
+            return el.type==='checkbox'?el.checked:!!String(el.value||'').trim()
+          })
+          const plusM=Number(values[aokPlusMSummaryKey('aokPlusMAnswered',side)])||0
+          if(!documented && plusM===0) missing.push('AOK-Anlage 4'+label+': mindestens eine fachliche Angabe erforderlich')
+          if(plusM>0 && plusM<12) missing.push('AOK-Anlage 4'+label+': PLUS-M mit 12 Antworten abschließen')
+        }
+        if(missing.length) return {ok:false,missing}
       }
       if(!controls.length && !signatures.length && !groups.length) return {ok:false,missing:['passender Profilerhebungsbogen / Felddefinitionen']}
 
@@ -3767,21 +3785,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       // On PG24 source PDFs many widgets are not individually classified as
       // mandatory. Prefilled demographics alone are not a clinical assessment.
       if($('carePg').value==='24'){
-        if(isAokCase()){
-          const demographicAndCalculated=/^aokProfilePdf:Text(?:1|2|3|4|5|6|24|25|67|68|70)$/
-          const documented=controls.some(el=>{
-            const key=String(el.dataset.profileKey||'')
-            if(!key.startsWith('aokProfilePdf:') || demographicAndCalculated.test(key)) return false
-            return el.type==='checkbox'?el.checked:!!String(el.value||'').trim()
-          })
-          const plusMAnswers=Number(values.aokPlusMAnswered)||0
-          if(!documented && plusMAnswers===0){
-            return {ok:false,missing:['fachliche Angaben zur Amputation, Stumpfsituation, Mobilität oder Versorgungsplanung im AOK-Profilerhebungsbogen']}
-          }
-          if(plusMAnswers>0 && plusMAnswers<12){
-            return {ok:false,missing:['PLUS-M: alle 12 Fragen beantworten, wenn mit der Erhebung begonnen wurde']}
-          }
-        }else if(!String(values['tech:therapyGoal']||'').trim()){
+        if(!isAokCase() && !String(values['tech:therapyGoal']||'').trim()){
           // The PG24 source catalogue explicitly identifies Versorgungsziel as required;
           // technician profile uses the semantically equivalent therapy-goal field.
           return {ok:false,missing:['Therapieziel / individuelles Versorgungsziel']}
@@ -5006,7 +5010,16 @@ import { versorgungsziele } from './versorgungsziele.js'
     $('carePg').addEventListener('change',()=>{values.himiId='';values.formId='';populateHimiOptions();updateCare();showWizardError('');renderWizard()})
     $('careHimi').addEventListener('change',()=>{values.himiId=$('careHimi').value;values.formId='';syncPg24Level();syncSituationFields();updateCare();showWizardError('');renderWizard()})
     $('careForm').addEventListener('change',()=>{values.formId=$('careForm').value||'';updateCareFields();showWizardError('');renderWizard();queueAutosaveSupply()})
-    $('printButton').addEventListener('click',()=>window.print())
+    $('printButton').addEventListener('click',()=>{
+      if($('carePg').value==='24' && isAokCase() && values.side==='beidseitig'){
+        const documents=[...$('fieldList').querySelectorAll('[data-aok-pdf-side]')]
+        if(documents.length!==2 || documents.some(d=>d.dataset.pdfReady!=='true')){
+          showWizardError('Beide AOK-Originalbögen müssen vor dem Drucken vollständig geladen sein.')
+          return
+        }
+      }
+      window.print()
+    })
     $('archiveSupplyButton').addEventListener('click',archiveActiveSupply)
     $('clearButton').addEventListener('click',clearCurrentSupplyInputs)
     $('profileAiMode').addEventListener('change',()=>{
