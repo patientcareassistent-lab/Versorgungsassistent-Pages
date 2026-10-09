@@ -1491,7 +1491,7 @@ import { versorgungsziele } from './versorgungsziele.js'
 
     function profileControlLabel(el){
       if(!el) return 'Profilerhebungsfeld'
-      if(el.dataset.aiLabel && !/^Text\\d+$/.test(el.dataset.aiLabel)) return el.dataset.aiLabel
+      if(el.dataset.aiLabel && !/^Text\d+$/.test(el.dataset.aiLabel)) return (el.dataset.profileSide?el.dataset.profileSide+' · ':'')+el.dataset.aiLabel
       const tech=el.closest('.tech-profile-field')
       const techLabel=tech?.querySelector(':scope > span')?.textContent?.trim()
       if(techLabel) return techLabel
