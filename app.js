@@ -3677,6 +3677,12 @@ import { versorgungsziele } from './versorgungsziele.js'
       const controls=[...host.querySelectorAll('input,select,textarea')]
       const signatures=[...host.querySelectorAll('[data-signature-key]')]
       const groups=[...host.querySelectorAll('[data-profile-group-key]')]
+      // AOK BW PG24 Annex 4 explicitly requires a separate source-original
+      // profile for the second side (page 1, E3). Do not allow a single
+      // completed PDF to count as complete bilateral documentation.
+      if($('carePg').value==='24' && isAokCase() && values.side==='beidseitig'){
+        return {ok:false,missing:['AOK Anlage 4: separater Original-Profilerhebungsbogen für die zweite Seite fehlt']}
+      }
       if(!controls.length && !signatures.length && !groups.length) return {ok:false,missing:['passender Profilerhebungsbogen / Felddefinitionen']}
 
       // Region is a source-defined PG23 field, while the selected aid determines
