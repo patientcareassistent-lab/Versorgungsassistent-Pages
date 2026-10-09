@@ -136,3 +136,10 @@
 .aok-pdf-input.measure-active-control{outline:2px solid #00157A!important;background:rgba(230,237,255,.66)!important;z-index:8}
 .measure-orientation-readout{display:grid;gap:7px;padding:10px 4px;font-size:.77rem;line-height:1.4}
 .measure-orientation-readout strong{color:#00157A}
+
+
+.measure-transcript-catalog{display:grid;gap:5px;max-height:280px;overflow:auto;margin:8px 0}
+.measure-catalog-row{display:grid;grid-template-columns:minmax(115px,max-content) minmax(0,1fr);gap:10px;align-items:start;padding:6px;border-bottom:1px solid #dce3ee;font-size:.73rem}
+.measure-catalog-row code{color:#00157A;font-weight:700;overflow-wrap:anywhere}
+.measure-catalog-row span{color:#475467;overflow-wrap:anywhere}
+@media print{#measureTranscriptPanel{display:none!important}}
