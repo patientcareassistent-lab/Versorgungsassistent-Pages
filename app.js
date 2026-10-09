@@ -1058,6 +1058,10 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
       const key=keyPrefix+f.Massfeld_ID
       control.dataset.measureKey=key
+      control.dataset.measureFieldId='M-'+String(f.Massfeld_ID||'').replace(/[^A-Za-z0-9_-]/g,'_')
+      control.dataset.measureLabel=String(f.Feldbezeichnung||'Maßfeld')
+      control.dataset.measureContext=[f.Abschnitt,f.Einheit_Optionen].filter(Boolean).join(' · ')
+      control.setAttribute('aria-label',control.dataset.measureFieldId+' · '+control.dataset.measureLabel)
       control.dataset.required=String(f.Pflichtstatus).toLowerCase()==='ja'?'true':'false'
       if(values[key]!==undefined) control.value=values[key]
       const save=()=>{values[key]=control.value;showWizardError('');updateWizardStatus()}
@@ -2383,29 +2387,64 @@ import { versorgungsziele } from './versorgungsziele.js'
       return pdfJsLoader
     }
 
-    function aokMeasureValueKey(asset,pageNo,ann,index){
+    function aokMeasureValueKey(asset,pageNo,ann,index,duplicate=false){
       const name=ann.fieldName||ann.id||('feld'+index)
-      return 'aokMeasure:'+asset.file+':p'+pageNo+':'+name
+      const legacy='aokMeasure:'+asset.file+':p'+pageNo+':'+name
+      // A repeated AcroForm name is not an individual field identity.
+      return duplicate?legacy+':widget'+(index+1):legacy
+    }
+
+    function aokMeasureAnnexCode(asset){
+      const m=String(asset?.file||'').match(/^anlage-(5[a-e])-/i)
+      return m?m[1].toLowerCase():'aok-pg24'
+    }
+
+    function pdfMeasureContext(ann,viewport,textItems,left,top,width,height){
+      if(String(ann.alternativeText||'').trim()) return {label:String(ann.alternativeText).trim(),basis:'pdf-tooltip'}
+      const cy=top+height/2
+      const nearby=textItems.filter(t=>t.text && Math.abs(t.y-cy)<22 && t.x<left+width && left-(t.x+t.w)<230)
+        .sort((a,b)=>Math.abs((left-(a.x+a.w)))+Math.abs(a.y-cy)*2-(Math.abs(left-(b.x+b.w))+Math.abs(b.y-cy)*2))
+      const above=textItems.filter(t=>t.text && t.y<top+4 && top-t.y<38 && Math.abs(t.x-left)<210)
+        .sort((a,b)=>(top-a.y)-(top-b.y))
+      const label=(nearby[0]||above[0])?.text||''
+      return {label:label.slice(0,150),basis:label?'position-unverified':'unmapped'}
     }
 
     async function renderEditableAokPdf(url,asset,host){
       try{
         const pdfjs=await loadPdfJs()
         const pdf=await pdfjs.getDocument(url).promise
+        if(!host.isConnected)return
         host.innerHTML=''
+        host.dataset.pdfReady='false'
+        const annex=aokMeasureAnnexCode(asset)
+        let total=0
         for(let pageNo=1;pageNo<=pdf.numPages;pageNo++){
+          if(!host.isConnected)return
           const page=await pdf.getPage(pageNo)
           const viewport=page.getViewport({scale:1.65})
           const pageBox=document.createElement('div');pageBox.className='aok-pdf-page'
           const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height)
           pageBox.appendChild(canvas);host.appendChild(pageBox)
           await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise
-          const anns=await page.getAnnotations({intent:'display'})
-          anns.filter(a=>a.subtype==='Widget').forEach((ann,index)=>{
+          if(!host.isConnected)return
+          const [annotations,content]=await Promise.all([page.getAnnotations({intent:'display'}),page.getTextContent()])
+          const items=(content.items||[]).map(item=>{
+            const t=pdfjs.Util.transform(viewport.transform,item.transform)
+            return {text:String(item.str||'').trim(),x:t[4],y:t[5],w:(Number(item.width)||0)*viewport.scale}
+          })
+          const widgets=annotations.filter(a=>a.subtype==='Widget')
+          const nameCounts=new Map()
+          widgets.forEach(ann=>{const n=String(ann.fieldName||ann.id||'');nameCounts.set(n,(nameCounts.get(n)||0)+1)})
+          widgets.forEach((ann,index)=>{
             const vr=viewport.convertToViewportRectangle(ann.rect)
             const left=Math.min(vr[0],vr[2]),top=Math.min(vr[1],vr[3])
             const width=Math.abs(vr[2]-vr[0]),height=Math.abs(vr[3]-vr[1])
-            const key=aokMeasureValueKey(asset,pageNo,ann,index)
+            const fieldName=String(ann.fieldName||ann.id||('feld'+index))
+            const duplicated=(nameCounts.get(fieldName)||0)>1
+            const key=aokMeasureValueKey(asset,pageNo,ann,index,duplicated)
+            const fieldId=annex.toUpperCase()+'-P'+pageNo+'-F'+(index+1)
+            const context=pdfMeasureContext(ann,viewport,items,left,top,width,height)
             let el
             if(ann.fieldType==='Btn'){
               el=document.createElement('input');el.type='checkbox';el.className='aok-pdf-input aok-pdf-check'
@@ -2414,17 +2453,39 @@ import { versorgungsziele } from './versorgungsziele.js'
               el.addEventListener('change',()=>{values[key]=el.checked;queueAutosaveSupply();updateWizardStatus()})
             }else{
               el=ann.multiLine?document.createElement('textarea'):document.createElement('input')
-              if(el.tagName==='TEXTAREA') el.rows=1
+              if(el.tagName==='TEXTAREA')el.rows=1
               else el.type='text'
               el.className='aok-pdf-input'
               const stored=values[key]
               el.value=stored!==undefined&&stored!==null?stored:(ann.fieldValue||'')
-              if(stored===undefined && el.value) values[key]=el.value
+              if(stored===undefined&&el.value)values[key]=el.value
               const save=()=>{values[key]=el.value;queueAutosaveSupply();updateWizardStatus()}
               el.addEventListener('input',save);el.addEventListener('change',save)
             }
             el.dataset.measureKey=key
-            el.setAttribute('aria-label',ann.alternativeText||ann.fieldName||'Maßblattfeld')
+            el.dataset.measureFieldId=fieldId
+            el.dataset.measureOriginalName=fieldName
+            el.dataset.measureContext=asset.name+' · Seite '+pageNo+' · '+fieldName
+            el.dataset.measureLabel=context.label||fieldName
+            el.dataset.measureMapping=context.basis
+            el.dataset.measureValue=el.type==='checkbox'?'false':'true'
+            el.setAttribute('aria-label',fieldId+' · '+el.dataset.measureContext+(context.label?' · Kontextvorschlag: '+context.label+' (prüfen)':''))
+            el.title=fieldId+' · '+fieldName+(context.label?' · '+context.label+' (Zuordnung prüfen)':'')
+            // Existing original PDF/canvas remains unchanged; only the active
+            // overlay field receives an outline and a separate contextual readout.
+            el.addEventListener('focus',()=>{
+              host.querySelectorAll('.aok-pdf-input.measure-active-control').forEach(x=>x.classList.remove('measure-active-control'))
+              el.classList.add('measure-active-control')
+              const info=$('aokMeasureActiveField')
+              if(info)info.textContent=fieldId+' · '+fieldName+(context.label?' · Textnähe (unverifiziert): '+context.label:' · Fachbezeichnung noch zu prüfen')
+              const schema=pg24SourceMeasureSchema()
+              if(schema && $('measureOrientationStage')){
+                el.dataset.measureId=fieldId
+                el.dataset.measureRegion='Originalfeld auf PDF-Seite '+pageNo+'; anatomischen Bezug prüfen'
+                el.dataset.measureSketch='main'
+                updateMeasureOrientation(schema,el)
+              }
+            })
             applyRuntimeStyle(el,'geometry',{
               left:(left/viewport.width*100)+'%',
               top:(top/viewport.height*100)+'%',
@@ -2433,10 +2494,20 @@ import { versorgungsziele } from './versorgungsziele.js'
               'font-size':Math.max(8,Math.min(14,height*.55))+'px'
             })
             pageBox.appendChild(el)
+            total++
           })
         }
+        if(!host.isConnected)return
+        host.dataset.pdfReady=total?'true':'no-form-widgets'
+        const info=$('aokMeasureActiveField')
+        if(info)info.textContent=total+' beschreibbare Originalfelder · Kennung '+annex.toUpperCase()+'-P[Seite]-F[Position]. Beschriftungen aus Textnähe sind nicht fachlich bestätigt.'
+        renderMeasureTranscriptCatalog()
+        updateWizardStatus()
       }catch(err){
-        host.innerHTML='<div class="aok-pdf-loading">Das Originalmaßblatt konnte nicht als beschreibbare Ansicht geladen werden. <a target="_blank" rel="noopener" href="'+url+'">Original-PDF öffnen ↗</a></div><iframe class="aok-measure-frame" title="'+escapeHtml(asset.name)+'" src="'+url+'#view=FitH"></iframe>'
+        if(!host.isConnected)return
+        host.dataset.pdfReady='error'
+        host.innerHTML='<div class="aok-pdf-loading">Das Originalmaßblatt konnte nicht als beschreibbare Ansicht geladen werden. <a target="_blank" rel="noopener" href="'+url+'">Original-PDF öffnen ↗</a></div>'
+        renderMeasureTranscriptCatalog()
       }
     }
 
@@ -2489,6 +2560,9 @@ import { versorgungsziele } from './versorgungsziele.js'
         el.addEventListener('input',save);el.addEventListener('change',save)
       }
       el.dataset.measureKey=key
+      el.dataset.measureFieldId=schema.code+'-'+String(id).replace(/[^A-Za-z0-9_-]/g,'_')
+      el.dataset.measureContext=schema.title+' · '+(schema.version||'')
+      el.setAttribute('aria-label',el.dataset.measureFieldId+' · '+label)
       el.dataset.measureId=String(id)
       el.dataset.measureLabel=label
       if(isMeasure){
