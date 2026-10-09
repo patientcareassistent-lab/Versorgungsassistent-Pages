@@ -2615,7 +2615,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       for(let i=0;i<measureTranscriptProposals.length;i++){
         if(!output.querySelector('[data-measure-proposal="'+i+'"]')?.checked)continue
         const proposal=measureTranscriptProposals[i]
-        const el=measureEditableControls().find(x=>x===proposal.el && x.dataset.measureFieldId===proposal.id)
+        const el=measureEditableControls().find(x=>x===proposal.el && String(x.dataset.measureFieldId||'').toUpperCase()===proposal.id)
         if(!el)continue
         if(el.type==='checkbox')el.checked=proposal.value
         else el.value=proposal.value
