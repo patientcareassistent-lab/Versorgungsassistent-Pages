@@ -166,3 +166,71 @@ test('PG24 AOK source original renders distinct insured/provider signatures and 
   await expect(page.locator('#aokProfilePdfPages [data-profile-key="aokProfilePdf:Text70"]')).toHaveCount(1)
   await expect(page.locator('#aokProfilePdfPages [data-profile-key="aokProfilePdf:Text67"]')).toHaveCount(0)
 })
+
+
+test('PG24 bilateral original forms keep independent right and left fields after save and reload', async ({page})=>{
+  test.setTimeout(180000)
+  await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{
+    care_reference_bootstrap:{
+      kassen:[{Kasse_Kanonisch:'AOK Baden-Württemberg'}],
+      produktgruppen:[{PG:'24',Generisches_Blatt:'Beinprothesen',Reifegrad:'PRODUKTIV'}],
+      sourceCount:1,formCount:1
+    },
+    himi_logic_for_pg:[{
+      Himi_ID:'PG24_UKB',PG:'24',Bezeichnung:'Unterschenkelprothese',
+      Generisches_Formular_ID:'PG24',Profil_erforderlich:true,Mass_erforderlich:true,Aktiv:true
+    }],
+    forms_for_pg:[],himi_form_rules_for_himi:[],form_fields_for_pg:[]
+  }})
+  await page.goto('/index.html')
+  await page.locator('#newSupplyOverviewButton').click()
+  await page.locator('#careKasse').selectOption({label:'AOK Baden-Württemberg'})
+  await page.locator('#carePg').selectOption('24')
+  await page.locator('#careHimi').selectOption('PG24_UKB')
+  await page.locator('[data-case-field="patientFirstName"]').fill('Bilateral')
+  await page.locator('[data-case-field="patientLastName"]').fill('Originaltest')
+  await page.locator('[data-case-field="patientBirthDate"]').fill('1980-01-02')
+  await page.locator('input[name="caseKindChoice"][value="Neuversorgung"]').check()
+  await page.locator('#careSupplyType').selectOption('Definitiv')
+  await page.locator('#careSide').selectOption('beidseitig')
+  await page.locator('#wizardNext').click()
+  await page.locator('#rxPresent').selectOption('Nein')
+  await page.locator('#rxNeededText').fill('Beidseitige Prothesenversorgung')
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
+  const right=page.locator('[data-aok-pdf-side="rechts"]')
+  const left=page.locator('[data-aok-pdf-side="links"]')
+  await expect(right).toHaveAttribute('data-pdf-ready','true',{timeout:45000})
+  await expect(left).toHaveAttribute('data-pdf-ready','true',{timeout:45000})
+  await expect(page.locator('.aok-profile-original-document')).toHaveCount(2)
+  await expect(page.locator('.aok-profile-original-document .aok-pdf-page')).toHaveCount(8)
+  await expect(right.locator('[data-signature-role="insured"]')).toHaveCount(1)
+  await expect(right.locator('[data-signature-role="provider"]')).toHaveCount(1)
+  await expect(left.locator('[data-signature-role="insured"]')).toHaveCount(1)
+  await expect(left.locator('[data-signature-role="provider"]')).toHaveCount(1)
+  const rh=right.locator('[data-profile-key="aokProfilePdf:rechts:Text3"]')
+  const lh=left.locator('[data-profile-key="aokProfilePdf:links:Text3"]')
+  await rh.fill('1,74')
+  await lh.fill('1,68')
+  await expect(rh).toHaveValue('1,74')
+  await expect(lh).toHaveValue('1,68')
+  await right.locator('.aok-plusm-option[data-plusm-row="1"][data-plusm-score="5"]').check({force:true})
+  await left.locator('.aok-plusm-option[data-plusm-row="1"][data-plusm-score="2"]').check({force:true})
+  await expect.poll(async()=>page.evaluate(()=>{
+    const rows=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
+    const p=rows[0]?.payload||{}
+    return [p['aokProfilePdf:rechts:Text3'],p['aokProfilePdf:links:Text3'],p['aokPlusM:rechts:1'],p['aokPlusM:links:1']].join('|')
+  }),{timeout:20000}).toBe('1,74|1,68|5|2')
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('#wizardError')).toContainText('PLUS-M mit 12 Antworten abschließen')
+  await page.reload()
+  await page.locator('#supplyOverviewBody [data-supply-id]').first().click()
+  await expect(right).toHaveAttribute('data-pdf-ready','true',{timeout:45000})
+  await expect(left).toHaveAttribute('data-pdf-ready','true',{timeout:45000})
+  await expect(right.locator('[data-profile-key="aokProfilePdf:rechts:Text3"]')).toHaveValue('1,74')
+  await expect(left.locator('[data-profile-key="aokProfilePdf:links:Text3"]')).toHaveValue('1,68')
+  await expect(right.locator('.aok-plusm-option[data-plusm-row="1"][data-plusm-score="5"]')).toBeChecked()
+  await expect(left.locator('.aok-plusm-option[data-plusm-row="1"][data-plusm-score="2"]')).toBeChecked()
+  await page.emulateMedia({media:'print'})
+  await expect(page.locator('.aok-profile-original-document .aok-pdf-page')).toHaveCount(8)
+})
