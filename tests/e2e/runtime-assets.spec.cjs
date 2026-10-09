@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test')
+const { installSupabaseMock } = require('./mock-supabase.cjs')
 
 test('PDF.js renders a pinned AOK source form entirely same-origin', async ({ page }) => {
   test.setTimeout(120000)
@@ -98,21 +99,70 @@ test('AOK BW Annex 4 retains original PDF fields and bilateral source instructio
       page4.getAnnotations({intent:'display'})
     ])
     const map=Object.fromEntries(widgets.filter(x=>x.subtype==='Widget').map(x=>[x.fieldName,x.rect]))
+    const portal=Boolean(map['Textfeld 67'] && map['Textfeld 68'] && map['Textfeld 69'] && map['Textfeld 70'])
     return {
       pages:pdf.numPages,
       page1Text:(content.items||[]).map(x=>x.str||'').join(' ').replace(/\s+/g,' '),
-      page4Widgets:widgets.filter(x=>x.subtype==='Widget').map(x=>({name:x.fieldName,type:x.fieldType,rect:x.rect})),
-      providerDate:map.Text67,
-      providerSignature:map.Text69
+      page4WidgetNames:Object.keys(map),
+      variant:portal?'aok-portal':'provided-copy',
+      insuredSignature:portal?map['Textfeld 67']:null,
+      insuredDate:portal?map['Textfeld 68']:null,
+      providerDate:portal?map['Textfeld 70']:map.Text67,
+      providerSignature:portal?map['Textfeld 69']:map.Text69
     }
   })
-  console.log('AOK_PG24_OFFICIAL_ANNEX4_PAGE4_FIELDS',JSON.stringify(source.page4Widgets))
   expect(source.pages).toBe(4)
   expect(source.page1Text).toMatch(/Bei doppelseitiger Amputation.*extra Formular.*zweite Seite/)
-  expect(source.providerDate,'Actual page4 field names: '+JSON.stringify(source.page4Widgets.map(x=>x.name))).toHaveLength(4)
+  expect(source.providerDate,'Actual names: '+source.page4WidgetNames.join(',')).toHaveLength(4)
   expect(source.providerSignature).toHaveLength(4)
-  // The fields are on the same printed provider row. Text67 is to the left
-  // (date); Text69 is the signature area and must never be the insured signature.
   expect(source.providerDate[0]).toBeLessThan(source.providerSignature[0])
   expect(Math.abs(source.providerDate[1]-source.providerSignature[1])).toBeLessThan(2)
+  if(source.variant==='aok-portal'){
+    // The published AOK source has all four widgets on two separate rows.
+    expect(source.insuredSignature).toHaveLength(4)
+    expect(source.insuredDate).toHaveLength(4)
+    expect(source.insuredDate[0]).toBeLessThan(source.insuredSignature[0])
+    expect(Math.abs(source.insuredDate[1]-source.insuredSignature[1])).toBeLessThan(2)
+    expect(source.insuredSignature[1]).toBeGreaterThan(source.providerSignature[1])
+  }
+})
+
+test('PG24 AOK source original renders distinct insured/provider signatures and computed scores', async ({page})=>{
+  test.setTimeout(120000)
+  await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{
+    care_reference_bootstrap:{
+      kassen:[{Kasse_Kanonisch:'AOK Baden-Württemberg'}],
+      produktgruppen:[{PG:'24',Generisches_Blatt:'Beinprothesen',Reifegrad:'PRODUKTIV'}],
+      sourceCount:1,formCount:1
+    },
+    himi_logic_for_pg:[{
+      Himi_ID:'PG24_UKB',PG:'24',Bezeichnung:'Unterschenkelprothese',
+      Generisches_Formular_ID:'PG24',Profil_erforderlich:true,Mass_erforderlich:true,Aktiv:true
+    }],
+    forms_for_pg:[],himi_form_rules_for_himi:[],form_fields_for_pg:[]
+  }})
+  await page.goto('/index.html')
+  await page.locator('#newSupplyOverviewButton').click()
+  await page.locator('#careKasse').selectOption({label:'AOK Baden-Württemberg'})
+  await page.locator('#carePg').selectOption('24')
+  await page.locator('#careHimi').selectOption('PG24_UKB')
+  await page.locator('[data-case-field="patientFirstName"]').fill('Original')
+  await page.locator('[data-case-field="patientLastName"]').fill('Test')
+  await page.locator('[data-case-field="patientBirthDate"]').fill('1980-01-02')
+  await page.locator('input[name="caseKindChoice"][value="Neuversorgung"]').check()
+  await page.locator('#careSupplyType').selectOption('Definitiv')
+  await page.locator('#careSide').selectOption('rechts')
+  await page.locator('#wizardNext').click()
+  await page.locator('#rxPresent').selectOption('Nein')
+  await page.locator('#rxNeededText').fill('Unterschenkelprothese entsprechend Befund')
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
+  await expect(page.locator('#aokProfilePdfPages .aok-pdf-page')).toHaveCount(4)
+  await expect(page.locator('#aokProfilePdfPages [data-signature-role="insured"]')).toHaveCount(1)
+  await expect(page.locator('#aokProfilePdfPages [data-signature-role="provider"]')).toHaveCount(1)
+  // Official form uses 'Textfeld N', application must persist stable TextN IDs.
+  await expect(page.locator('#aokProfilePdfPages [data-profile-key="aokProfilePdf:Text24"]')).toHaveCount(1)
+  await expect(page.locator('#aokProfilePdfPages [data-profile-key="aokProfilePdf:Text25"]')).toHaveCount(1)
+  await expect(page.locator('#aokProfilePdfPages [data-profile-key="aokProfilePdf:Text70"]')).toHaveCount(1)
+  await expect(page.locator('#aokProfilePdfPages [data-profile-key="aokProfilePdf:Text67"]')).toHaveCount(0)
 })

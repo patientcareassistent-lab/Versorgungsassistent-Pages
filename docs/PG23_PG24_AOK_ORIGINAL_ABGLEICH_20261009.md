@@ -56,6 +56,21 @@ Auf Seite 4 ist die Unterschriftslinie für Versicherte bzw. Bevollmächtigte ni
 4. **PG24 Unterschrift:** Das bisherige Mapping von `Text67` auf die Unterschrift der versicherten Person war falsch und wurde gegen das gerenderte Quellformular korrigiert.
 5. **Originaltreue:** Zusätzliche interne Dokumentationsangaben müssen außerhalb der Vertragsoriginale liegen. Ungeprüfte Mapping-Heuristiken nicht als semantisch eindeutig kennzeichnen.
 
+## Ergänzung 09.10.2026 – PDF-Feldnamen der tatsächlich geladenen AOK-Portaldatei
+
+**Quellenkonflikt technisch eingegrenzt:** Das GitHub-Pages-Release lädt vom aktuellen AOK-BW-Vertragsportal für Anlage 4 eine 439.290-Byte-PDF-Datei. Die vom Nutzer bereitgestellte Ausgabe hat 1.234.561 Bytes. Beide enthalten vier Seiten und dieselbe gedruckte Bilateralitätsvorgabe, aber verschiedene AcroForm-Benennungen bzw. Signaturfelder.
+
+| Gedruckte Bedeutung (Anlage 4, S. 4) | Nutzer-PDF | AOK-Portal-PDF |
+| --- | --- | --- |
+| Unterschrift Versicherte/Bevollmächtigte | nur bedruckte Zeile, kein PDF-Widget | `Textfeld 67` (breites Feld, obere Zeile) |
+| Datum Versicherte | kein entsprechendes PDF-Widget | `Textfeld 68` (schmales Feld, obere Zeile) |
+| Unterschrift Hilfsmittelanbieter | `Text69` (breites Feld, untere Zeile) | `Textfeld 69` (breites Feld, untere Zeile) |
+| Datum Hilfsmittelanbieter | `Text67` (schmales Feld, untere Zeile) | `Textfeld 70` (schmales Feld, untere Zeile) |
+
+**Achtung:** Die Aussage `Text67 = Datum Hilfsmittelanbieter` gilt **nur für die bereitgestellte PDF**, nicht für die PDF aus dem offiziellen Portal. Ein pauschales globales Mapping von `Text67` auf Versicherte oder Datum wäre falsch. Die App unterscheidet deshalb die beiden Signaturlayouts anhand der tatsächlich vorhandenen Felder; Namen wie `Textfeld 24` werden für andere Textfelder zu `Text24` normalisiert.
+
+Die ursprüngliche Liste der neun Seiten-1/2-Semantiken wurde anhand der bereitgestellten Quelle geprüft. Die technische Normalisierung beweist noch **nicht**, dass jede dieser Bedeutungen in allen PDF-Varianten an derselben Stelle sitzt. Die Quelloriginale und deren Varianten müssen bei jeder Vertragsausgabe weiter kontrolliert werden. Offene Punkte: PDF-Checkboxgruppen und vollständige Originalfeldprüfung, PDF-/Druckausgabe und Bilateralität.
+
 ## Nächste P0-Abnahmepunkte
 - Sämtliche bislang ungeprüften Original-Widget-Bedeutungen (Seite + Widgetposition + ID + Kontext) quellengetreu erheben; fachlich bestätigen, dann erst OCR-/Sprachtranskriptionsziele freigeben.
 - Bilaterale PG24-Versorgung mit zwei unveränderten Originalbögen sicher speichern, ausgeben und wiederherstellen; Seiten getrennt kennzeichnen.
