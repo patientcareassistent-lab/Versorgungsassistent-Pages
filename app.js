@@ -1994,15 +1994,14 @@ import { versorgungsziele } from './versorgungsziele.js'
             }
             if(pageNo===4){
               const normalizedFieldName=String(fieldName||'').replace(/\s+/g,' ').trim()
-              const insuredField=/^(?:Textfeld|Text)?\s*67$/i.test(normalizedFieldName)
-              const providerField=/^(?:Textfeld|Text)?\s*69$/i.test(normalizedFieldName)
-              if(insuredField || providerField){
-                const isProvider=providerField
+              // Verified against the original 01.09.2026 Annex 4, page 4:
+              // Text67 is the date on the provider line, NOT the insured signature.
+              // Text69 is the provider signature. The insured signature is printed
+              // without its own AcroForm widget and is created from the printed label.
+              if(/^(?:Textfeld|Text)?\s*69$/i.test(normalizedFieldName)){
                 appendAokSignaturePad(
-                  pageBox,
-                  isProvider?'aokProfilePdf:providerSignature':'aokProfilePdf:insuredSignature',
-                  isProvider?'Unterschrift / Stempel Hilfsmittelanbieter':'Unterschrift der Versicherten bzw. gesetzlichen Vertretung / Bevollmächtigten',
-                  isProvider?'provider':'insured',
+                  pageBox,'aokProfilePdf:providerSignature',
+                  'Unterschrift / Stempel Hilfsmittelanbieter','provider',
                   left,top,width,height,viewport,true
                 )
                 return
