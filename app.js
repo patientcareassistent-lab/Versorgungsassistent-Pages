@@ -1177,6 +1177,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         label.append(title,createDynamicControl(f,'measure:'))
         host.appendChild(label)
       })
+      renderMeasureTranscriptCatalog()
     }
 
     function populateSelectors(){
@@ -2511,6 +2512,96 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
     }
 
+    let measureTranscriptProposals=[]
+    function measureEditableControls(){
+      return [...$('measureFieldList').querySelectorAll('[data-measure-field-id][data-measure-key]')]
+        .filter(el=>el.matches('input,textarea,select') && !el.disabled && !el.readOnly)
+    }
+    function renderMeasureTranscriptCatalog(){
+      const status=$('measureTranscriptStatus')
+      if(!status)return
+      const controls=measureEditableControls()
+      const ids=new Set(controls.map(el=>el.dataset.measureFieldId))
+      status.textContent=ids.size
+        ?ids.size+' eindeutig gekennzeichnete Eingabefelder vorhanden. Zum Diktieren die Kennung vor den Messwert sprechen oder eingeben (z. B. 5B-P1-F3: 32,5 cm). Ein Kontexttext ohne Kennung wird nicht automatisch zugeordnet.'
+        :'Maßblatt und Hilfsmittel auswählen, bevor ein Transkript zugeordnet werden kann.'
+      measureTranscriptProposals=[]
+      if($('measureTranscriptSuggestions'))$('measureTranscriptSuggestions').replaceChildren()
+    }
+    function measureTranscriptEntries(raw){
+      const chunks=String(raw||'').split(/[\n;]/).map(x=>x.trim()).filter(Boolean)
+      const matches=[],errors=[]
+      const controls=measureEditableControls()
+      const byId=new Map()
+      controls.forEach(el=>{
+        const id=String(el.dataset.measureFieldId||'').toUpperCase()
+        if(!byId.has(id)) byId.set(id,[])
+        byId.get(id).push(el)
+      })
+      const seen=new Set()
+      for(const chunk of chunks){
+        const m=chunk.match(/^([A-Za-z0-9_.:-]+)\s*(?:=|:)\s*(.+)$/)
+        if(!m){errors.push('Keine eindeutige Feldkennung: '+chunk.slice(0,80));continue}
+        const id=m[1].toUpperCase()
+        const targets=byId.get(id)||[]
+        if(targets.length!==1){errors.push(id+': '+(targets.length?'Kennung mehrfach vorhanden':'Feld in diesem Maßblatt nicht gefunden'));continue}
+        if(seen.has(id)){errors.push(id+': mehrfach im Transkript, bitte eindeutig angeben');continue}
+        seen.add(id)
+        const el=targets[0],rawValue=m[2].trim()
+        let value=rawValue
+        if(el.type==='checkbox'){
+          if(/^(ja|angekreuzt|x|1|wahr)$/i.test(rawValue))value=true
+          else if(/^(nein|nicht angekreuzt|0|falsch)$/i.test(rawValue))value=false
+          else{errors.push(id+': Checkbox erwartet Ja oder Nein');continue}
+        }else if(el.tagName==='SELECT'){
+          const option=[...el.options].find(o=>o.value.toLowerCase()===rawValue.toLowerCase())
+          if(!option){errors.push(id+': Wert ist keine zulässige Auswahl');continue}
+          value=option.value
+        }
+        matches.push({id,el,value,label:el.dataset.measureLabel||el.dataset.measureOriginalName||id,context:el.dataset.measureContext||''})
+      }
+      return {matches,errors}
+    }
+    function analyzeMeasureTranscript(){
+      const output=$('measureTranscriptSuggestions'),status=$('measureTranscriptStatus')
+      if(!output||!status)return
+      const {matches,errors}=measureTranscriptEntries($('measureTranscript')?.value)
+      measureTranscriptProposals=matches
+      output.replaceChildren()
+      matches.forEach((m,index)=>{
+        const label=document.createElement('label');label.className='profile-ai-suggestion'
+        const check=document.createElement('input');check.type='checkbox';check.checked=true;check.dataset.measureProposal=String(index)
+        const title=document.createElement('strong');title.textContent=m.id+' · '+m.label
+        const val=document.createElement('span');val.textContent=String(m.value)
+        label.append(check,title,val);output.appendChild(label)
+      })
+      if(errors.length){
+        const warning=document.createElement('div');warning.className='status-card open'
+        warning.textContent='Nicht zugeordnet: '+errors.join(' | ')
+        output.appendChild(warning)
+      }
+      status.textContent=matches.length+' Feldvorschläge vorbereitet, '+errors.length+' nicht zugeordnet. Nur angehakte Vorschläge werden übernommen; bitte Fachinhalt und Maßeinheit kontrollieren.'
+    }
+    function applyMeasureTranscript(){
+      const output=$('measureTranscriptSuggestions'),status=$('measureTranscriptStatus')
+      if(!output||!status)return
+      let applied=0
+      for(let i=0;i<measureTranscriptProposals.length;i++){
+        if(!output.querySelector('[data-measure-proposal="'+i+'"]')?.checked)continue
+        const proposal=measureTranscriptProposals[i]
+        const el=measureEditableControls().find(x=>x===proposal.el && x.dataset.measureFieldId===proposal.id)
+        if(!el)continue
+        if(el.type==='checkbox')el.checked=proposal.value
+        else el.value=proposal.value
+        el.dispatchEvent(new Event(el.type==='checkbox'?'change':'input',{bubbles:true}))
+        applied++
+      }
+      measureTranscriptProposals=[]
+      output.replaceChildren()
+      status.textContent=applied+' bestätigte Feldwerte in das beschreibbare Maßblatt übernommen. Auf korrekte Zuordnung und Maßeinheiten prüfen.'
+      queueAutosaveSupply()
+    }
+
     function pg24SourceMeasureSchema(){
       const level=values.ampLevel||''
       if(level==='Unterschenkel') return {
@@ -3190,6 +3281,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       renderMeasureOrientation(schema)
       renderSourceMeasureSummary()
       renderSourceMeasureHistory(schema)
+      renderMeasureTranscriptCatalog()
       return true
     }
 
@@ -5134,6 +5226,8 @@ import { versorgungsziele } from './versorgungsziele.js'
     $('profileAiAnalyze').addEventListener('click',analyzeProfileAiTranscript)
     $('profileAiApply').addEventListener('click',applyProfileAiSuggestions)
     $('profileAiClear').addEventListener('click',resetProfileAiUi)
+    $('measureTranscriptAnalyze')?.addEventListener('click',analyzeMeasureTranscript)
+    $('measureTranscriptApply')?.addEventListener('click',applyMeasureTranscript)
     $('supplySearch').addEventListener('input',renderSupplyOverview)
     $('supplyStatusFilter').addEventListener('change',renderSupplyOverview)
     $('supplyPgFilter').addEventListener('change',renderSupplyOverview)
