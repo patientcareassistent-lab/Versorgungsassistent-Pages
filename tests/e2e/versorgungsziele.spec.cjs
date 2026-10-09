@@ -176,3 +176,46 @@ test('AOK BW PG24 warns when bilateral amputation requires a second original pro
   await expect(page.locator('#wizardError')).toContainText('AOK-Anlage 4 (rechts)')
   await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
 })
+
+
+test('PG24 technician measure IDs only accept explicitly confirmed transcript values', async ({page})=>{
+  await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{
+    care_reference_bootstrap:{
+      kassen:[{Kasse_Kanonisch:'Privat'}],
+      produktgruppen:[{PG:'24',Generisches_Blatt:'Beinprothesen',Reifegrad:'PRODUKTIV'}],
+      sourceCount:1,formCount:1
+    },
+    himi_logic_for_pg:[{
+      Himi_ID:'PG24_UKB',PG:'24',Bezeichnung:'Unterschenkelprothese',
+      Generisches_Formular_ID:'PG24',Mass_erforderlich:true,Profil_erforderlich:true,Aktiv:true
+    }],
+    forms_for_pg:[],himi_form_rules_for_himi:[],form_fields_for_pg:[]
+  }})
+  await page.goto('/index.html')
+  await page.locator('#newSupplyOverviewButton').click()
+  await page.locator('#careKasse').selectOption({label:'Privat'})
+  await page.locator('#carePg').selectOption('24')
+  await page.locator('#careHimi').selectOption('PG24_UKB')
+  const input=page.locator('#measureFieldList [data-measure-value="true"][data-measure-field-id]').first()
+  await expect(input).toHaveCount(1)
+  const id=await input.getAttribute('data-measure-field-id')
+  expect(id).toMatch(/^FMB02003-/)
+  const result=await page.evaluate(id=>{
+    const input=document.querySelector('[data-measure-field-id="'+id+'"]')
+    const txt=document.querySelector('#measureTranscript')
+    txt.value=id+': 31'
+    document.querySelector('#measureTranscriptAnalyze').click()
+    const before=input.value
+    const proposals=document.querySelectorAll('#measureTranscriptSuggestions [data-measure-proposal]').length
+    document.querySelector('#measureTranscriptApply').click()
+    const after=input.value
+    txt.value='NICHT-VORHANDEN-P9-F99: 44'
+    document.querySelector('#measureTranscriptAnalyze').click()
+    const rejected=document.querySelector('#measureTranscriptSuggestions').textContent
+    return {before,proposals,after,rejected}
+  },id)
+  expect(result.before).not.toBe('31')
+  expect(result.proposals).toBe(1)
+  expect(result.after).toBe('31')
+  expect(result.rejected).toContain('nicht gefunden')
+})
