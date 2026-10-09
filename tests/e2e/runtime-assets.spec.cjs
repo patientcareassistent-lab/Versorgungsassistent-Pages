@@ -101,13 +101,15 @@ test('AOK BW Annex 4 retains original PDF fields and bilateral source instructio
     return {
       pages:pdf.numPages,
       page1Text:(content.items||[]).map(x=>x.str||'').join(' ').replace(/\s+/g,' '),
+      page4Widgets:widgets.filter(x=>x.subtype==='Widget').map(x=>({name:x.fieldName,type:x.fieldType,rect:x.rect})),
       providerDate:map.Text67,
       providerSignature:map.Text69
     }
   })
+  console.log('AOK_PG24_OFFICIAL_ANNEX4_PAGE4_FIELDS',JSON.stringify(source.page4Widgets))
   expect(source.pages).toBe(4)
   expect(source.page1Text).toMatch(/Bei doppelseitiger Amputation.*extra Formular.*zweite Seite/)
-  expect(source.providerDate).toHaveLength(4)
+  expect(source.providerDate,'Actual page4 field names: '+JSON.stringify(source.page4Widgets.map(x=>x.name))).toHaveLength(4)
   expect(source.providerSignature).toHaveLength(4)
   // The fields are on the same printed provider row. Text67 is to the left
   // (date); Text69 is the signature area and must never be the insured signature.
