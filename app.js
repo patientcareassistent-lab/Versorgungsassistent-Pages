@@ -1504,6 +1504,8 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(!host) return []
       const controls=[...host.querySelectorAll('[data-tech-key],[data-profile-key]')].filter(el=>{
         if(el.matches('[data-signature-key],.aok-plusm-option,.aok-plusm-side-option')) return false
+        // Unverified AOK PDF fields cannot be used as guided speech/OCR targets.
+        if(el.dataset.profileKey?.startsWith('aokProfilePdf:') && el.dataset.semanticMapping!=='source-verified') return false
         if(el.readOnly||el.disabled) return false
         if(el.type==='checkbox'||el.type==='radio') return false
         if(el.dataset.profileKey==='aokProfilePdf:Text24'||el.dataset.profileKey==='aokProfilePdf:Text25') return false
@@ -1581,7 +1583,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     function findProfileSemanticControl(keys,labels=[]){
       for(const key of keys||[]){
         const el=document.querySelector('[data-tech-key="'+CSS.escape(key)+'"],[data-profile-key="'+CSS.escape(key)+'"]')
-        if(el) return el
+        if(el && (!el.dataset.profileKey?.startsWith('aokProfilePdf:') || el.dataset.semanticMapping==='source-verified')) return el
       }
       const catalog=profileGuideCatalog()
       const wanted=(labels||[]).map(norm)
@@ -1606,7 +1608,13 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(m) addProfileSuggestion(out,findProfileSemanticControl(['tech:weight'],['gewicht','körpergewicht']),m[1].replace(',','.'),'explizite Gewichtsangabe')
 
       m=raw.match(/(?:größe|groesse|groß|gross|bin)\\D{0,18}(\\d{2,3})\\s*(?:cm|zentimeter)/i)
-      if(m) addProfileSuggestion(out,findProfileSemanticControl(['tech:height'],['größe','körpergröße']),m[1],'explizite Größenangabe')
+      if(m){
+        const target=findProfileSemanticControl(['tech:height'],['größe','körpergröße'])
+        const heightValue=target?.dataset.profileKey==='aokProfilePdf:Text3'
+          ? (Number(m[1])/100).toFixed(2).replace('.',',') // AOK original uses metres
+          : m[1] // Technikerbogen uses centimetres
+        addProfileSuggestion(out,target,heightValue,'explizite Größenangabe mit passender Maßeinheit')
+      }
 
       const ampContext=/amput|stumpf/i.test(raw)
       if(ampContext){
