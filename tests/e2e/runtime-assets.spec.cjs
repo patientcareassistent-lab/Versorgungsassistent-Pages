@@ -229,6 +229,10 @@ test('PG24 bilateral original forms keep independent right and left fields after
   await expect(left).toHaveAttribute('data-pdf-ready','true',{timeout:45000})
   await expect(right.locator('[data-profile-key="aokProfilePdf:rechts:Text3"]')).toHaveValue('1,74')
   await expect(left.locator('[data-profile-key="aokProfilePdf:links:Text3"]')).toHaveValue('1,68')
+  // A previous render must not append duplicate options into the restored
+  // document while the latest generation is finishing the second side.
+  await expect(right.locator('.aok-plusm-option[data-plusm-row="1"][data-plusm-score="5"]')).toHaveCount(1)
+  await expect(left.locator('.aok-plusm-option[data-plusm-row="1"][data-plusm-score="2"]')).toHaveCount(1)
   await expect(right.locator('.aok-plusm-option[data-plusm-row="1"][data-plusm-score="5"]')).toBeChecked()
   await expect(left.locator('.aok-plusm-option[data-plusm-row="1"][data-plusm-score="2"]')).toBeChecked()
   await page.emulateMedia({media:'print'})
