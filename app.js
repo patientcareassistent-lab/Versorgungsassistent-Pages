@@ -1504,6 +1504,8 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(!host) return []
       const controls=[...host.querySelectorAll('[data-tech-key],[data-profile-key]')].filter(el=>{
         if(el.matches('[data-signature-key],.aok-plusm-option,.aok-plusm-side-option')) return false
+        // Unverified AOK PDF fields cannot be used as guided speech/OCR targets.
+        if(el.dataset.profileKey?.startsWith('aokProfilePdf:') && el.dataset.semanticMapping!=='source-verified') return false
         if(el.readOnly||el.disabled) return false
         if(el.type==='checkbox'||el.type==='radio') return false
         if(el.dataset.profileKey==='aokProfilePdf:Text24'||el.dataset.profileKey==='aokProfilePdf:Text25') return false
@@ -1581,7 +1583,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     function findProfileSemanticControl(keys,labels=[]){
       for(const key of keys||[]){
         const el=document.querySelector('[data-tech-key="'+CSS.escape(key)+'"],[data-profile-key="'+CSS.escape(key)+'"]')
-        if(el) return el
+        if(el && (!el.dataset.profileKey?.startsWith('aokProfilePdf:') || el.dataset.semanticMapping==='source-verified')) return el
       }
       const catalog=profileGuideCatalog()
       const wanted=(labels||[]).map(norm)
@@ -1606,7 +1608,13 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(m) addProfileSuggestion(out,findProfileSemanticControl(['tech:weight'],['gewicht','körpergewicht']),m[1].replace(',','.'),'explizite Gewichtsangabe')
 
       m=raw.match(/(?:größe|groesse|groß|gross|bin)\\D{0,18}(\\d{2,3})\\s*(?:cm|zentimeter)/i)
-      if(m) addProfileSuggestion(out,findProfileSemanticControl(['tech:height'],['größe','körpergröße']),m[1],'explizite Größenangabe')
+      if(m){
+        const target=findProfileSemanticControl(['tech:height'],['größe','körpergröße'])
+        const heightValue=target?.dataset.profileKey==='aokProfilePdf:Text3'
+          ? (Number(m[1])/100).toFixed(2).replace('.',',') // AOK original uses metres
+          : m[1] // Technikerbogen uses centimetres
+        addProfileSuggestion(out,target,heightValue,'explizite Größenangabe mit passender Maßeinheit')
+      }
 
       const ampContext=/amput|stumpf/i.test(raw)
       if(ampContext){
@@ -1950,6 +1958,24 @@ import { versorgungsziele } from './versorgungsziele.js'
           pageBox.appendChild(canvas);host.appendChild(pageBox)
           await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise
           const textContent=await page.getTextContent()
+          // Independently checked against original AOK BW PG24 Annex 4 (01.09.2026).
+          // For all other widgets, geometric inference remains a suggestion,
+          // never a verified semantic field mapping.
+          const verifiedLabels={
+            1:{
+              Text1:'Grund der Vorstellung',
+              Text2:'Vorname, Name, Geburtsdatum bzw. Adressaufkleber',
+              Text3:'Körpergröße (m)',
+              Text4:'Körpergewicht (kg)',
+              Text5:'Verordnende Arztpraxis (Name, Anschrift)',
+              Text6:'Fachpraxis'
+            },
+            2:{
+              Text24:'PLUS-M Rohwert',
+              Text25:'PLUS-M T-Score',
+              Text26:'Primär verwendete Gehhilfe'
+            }
+          }
           const aiTextItems=(textContent.items||[]).map(item=>{
             const tx=pdfjs.Util.transform(viewport.transform,item.transform)
             return {text:String(item.str||'').trim(),x:tx[4],y:tx[5],w:(Number(item.width)||0)*viewport.scale}
@@ -1976,15 +2002,14 @@ import { versorgungsziele } from './versorgungsziele.js'
             }
             if(pageNo===4){
               const normalizedFieldName=String(fieldName||'').replace(/\s+/g,' ').trim()
-              const insuredField=/^(?:Textfeld|Text)?\s*67$/i.test(normalizedFieldName)
-              const providerField=/^(?:Textfeld|Text)?\s*69$/i.test(normalizedFieldName)
-              if(insuredField || providerField){
-                const isProvider=providerField
+              // Verified against the original 01.09.2026 Annex 4, page 4:
+              // Text67 is the date on the provider line, NOT the insured signature.
+              // Text69 is the provider signature. The insured signature is printed
+              // without its own AcroForm widget and is created from the printed label.
+              if(/^(?:Textfeld|Text)?\s*69$/i.test(normalizedFieldName)){
                 appendAokSignaturePad(
-                  pageBox,
-                  isProvider?'aokProfilePdf:providerSignature':'aokProfilePdf:insuredSignature',
-                  isProvider?'Unterschrift / Stempel Hilfsmittelanbieter':'Unterschrift der Versicherten bzw. gesetzlichen Vertretung / Bevollmächtigten',
-                  isProvider?'provider':'insured',
+                  pageBox,'aokProfilePdf:providerSignature',
+                  'Unterschrift / Stempel Hilfsmittelanbieter','provider',
                   left,top,width,height,viewport,true
                 )
                 return
@@ -2014,8 +2039,10 @@ import { versorgungsziele } from './versorgungsziele.js'
             }
             el.dataset.profileKey=key
             el.dataset.required='false'
-            const aiLabel=nearbyLabel||fieldName||'Profilerhebungsfeld'
+            const sourceVerifiedLabel=verifiedLabels[pageNo]?.[fieldName]
+            const aiLabel=sourceVerifiedLabel||nearbyLabel||fieldName||'Profilerhebungsfeld'
             el.dataset.aiLabel=aiLabel
+            el.dataset.semanticMapping=sourceVerifiedLabel?'source-verified':'unverified-geometric-inference'
             el.setAttribute('aria-label',aiLabel)
             applyRuntimeStyle(el,'geometry',{
               left:(left/viewport.width*100)+'%',
@@ -2035,13 +2062,20 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
     }
 
+    function updateAokPg24ProfileHint(){
+      const hint=$('profileHint')
+      if(!hint) return
+      const bilateral=values.side==='beidseitig'
+      hint.className=bilateral?'status-card open':'status-card ready'
+      hint.innerHTML='<strong>AOK-Vertragsbogen aktiv</strong>Ausschließlich der AOK-Profilerhebungsbogen wird angezeigt. Stammdaten werden nur dort vorbelegt, wo die Zuordnung eindeutig ist. PLUS-M auf Seite 2 wird zeilenweise exklusiv ausgewählt und automatisch bewertet; die Unterschriften der versicherten Person/Vertretung und des Hilfsmittelanbieters auf Seite 4 sind als Stift-, Touch- und Maus-Signaturfelder ausgeführt.'+
+        (bilateral?'<p><strong>Beidseitige Amputation:</strong> Nach Anlage 4 (Seite 1, E3) ist für die zweite Seite ein separater Original-Profilerhebungsbogen erforderlich. Der Assistent erstellt diesen zweiten Bogen derzeit nicht automatisch. Beide Bögen müssen separat dokumentiert werden; ein einzelner Bogen ist keine vollständige Vertragsdokumentation.</p>':'')
+    }
+
     function renderAokPg24Profile(){
       const host=$('fieldList')
       host.className=''
       $('fieldInfo').textContent='AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen. Feldbezeichnungen und Reihenfolge entsprechen dem Originalbogen.'
-      const hint=$('profileHint')
-      hint.className='status-card ready'
-      hint.innerHTML='<strong>AOK-Vertragsbogen aktiv</strong>Ausschließlich der AOK-Profilerhebungsbogen wird angezeigt. Stammdaten werden nur dort vorbelegt, wo die Zuordnung eindeutig ist. PLUS-M auf Seite 2 wird zeilenweise exklusiv ausgewählt und automatisch bewertet; die Unterschriften der versicherten Person/Vertretung und des Hilfsmittelanbieters auf Seite 4 sind als Stift-, Touch- und Maus-Signaturfelder ausgeführt.'
+      updateAokPg24ProfileHint()
       const url='assets/aok-pg24/anlage-4-profilerhebungsbogen.pdf'
       host.innerHTML='<div class="profile-original-wrap"><div class="profile-original-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>Anlage 4 · Profilerhebungsbogen PG24</strong></div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Original öffnen ↗</a></div><div id="aokProfilePdfPages" class="aok-pdf-pages"><div class="aok-pdf-loading">AOK-Profilerhebungsbogen wird geladen …</div></div></div>'
       renderEditableProfilePdf(url,$('aokProfilePdfPages'))
@@ -3099,7 +3133,10 @@ import { versorgungsziele } from './versorgungsziele.js'
       const fallbackContract=selected && fieldSource==='generic-fallback' && ['EXPLIZIT_PFLICHT','VERTRAGSFORMULAR','PFLICHT_AUF_ANFORDERUNG','VERTRAG_PRUEFEN'].includes(selected.Status)
       if(fallbackContract){
         $('ruleBox').classList.remove('hidden')
-        $('ruleBox').innerHTML='<div><strong>'+escapeHtml(selected.Status)+'</strong><p>'+escapeHtml(selected.Aktion_Versorgungsassistent)+'</p><small>Digitale Voraufnahme: Die angezeigten Felder stammen aus dem allgemeinen PG-/Hilfsmittelbogen, nicht aus dem exakten Kassenformular.</small></div><span class="pill warning">Voraufnahme</span>'
+        const contractCheck=pg==='23' && $('careKasse').value==='AOK Baden-Württemberg'
+          ? '<p><strong>Vertragsfassung vor der Abgabe prüfen:</strong> Bei AOK BW PG23 bestehen verschiedene Verträge und Anlagen (unter anderem Fachverband 2023 und Verbandsvertrag vom 01.07.2026). Vertragskennzeichen, Vertragspartner und Verordnungsdatum entscheiden über die zutreffende Anlage. Hier wird kein geprüfter AOK-Originalbogen ausgegeben.</p>'
+          : ''
+        $('ruleBox').innerHTML='<div><strong>'+escapeHtml(selected.Status)+'</strong><p>'+escapeHtml(selected.Aktion_Versorgungsassistent)+'</p><small>Digitale Voraufnahme: Die angezeigten Felder stammen aus dem allgemeinen PG-/Hilfsmittelbogen, nicht aus dem exakten Kassenformular.</small>'+contractCheck+'</div><span class="pill warning">Voraufnahme</span>'
       }
 
       $('fieldInfo').textContent=fields.length
@@ -3653,6 +3690,12 @@ import { versorgungsziele } from './versorgungsziele.js'
       const controls=[...host.querySelectorAll('input,select,textarea')]
       const signatures=[...host.querySelectorAll('[data-signature-key]')]
       const groups=[...host.querySelectorAll('[data-profile-group-key]')]
+      // AOK BW PG24 Annex 4 explicitly requires a separate source-original
+      // profile for the second side (page 1, E3). Do not allow a single
+      // completed PDF to count as complete bilateral documentation.
+      if($('carePg').value==='24' && isAokCase() && values.side==='beidseitig'){
+        return {ok:false,missing:['AOK Anlage 4: separater Original-Profilerhebungsbogen für die zweite Seite fehlt']}
+      }
       if(!controls.length && !signatures.length && !groups.length) return {ok:false,missing:['passender Profilerhebungsbogen / Felddefinitionen']}
 
       // Region is a source-defined PG23 field, while the selected aid determines
@@ -3674,7 +3717,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       // mandatory. Prefilled demographics alone are not a clinical assessment.
       if($('carePg').value==='24'){
         if(isAokCase()){
-          const demographicAndCalculated=/^aokProfilePdf:Text(?:1|2|3|4|5|6|24|25)$/
+          const demographicAndCalculated=/^aokProfilePdf:Text(?:1|2|3|4|5|6|24|25|67)$/
           const documented=controls.some(el=>{
             const key=String(el.dataset.profileKey||'')
             if(!key.startsWith('aokProfilePdf:') || demographicAndCalculated.test(key)) return false
@@ -4611,9 +4654,15 @@ import { versorgungsziele } from './versorgungsziele.js'
 
       const ph=$('profileHint')
       if(ph && !isRepairCase()){
-        ph.innerHTML=requiresProfile()
-          ?'<strong>Profilerhebung erforderlich</strong>'+(isAokCase()?'Die AOK-/Vertragslogik wird verwendet; vorhandene Pflichtfelder müssen vollständig sein.':'Der hinterlegte PG-Erhebungsbogen muss bearbeitet werden.')
-          :'<strong>Für diesen Versorgungspfad nicht erforderlich</strong>Der Schritt wird im Ablauf automatisch übersprungen.'
+        // Do not overwrite the mandatory bilateral/source-specific AOK warning
+        // on each wizard status change or during PDF form rendering.
+        if($('carePg').value==='24' && isAokCase() && selectedHimiId()){
+          updateAokPg24ProfileHint()
+        }else{
+          ph.innerHTML=requiresProfile()
+            ?'<strong>Profilerhebung erforderlich</strong>'+(isAokCase()?'Die AOK-/Vertragslogik wird verwendet; vorhandene Pflichtfelder müssen vollständig sein.':'Der hinterlegte PG-Erhebungsbogen muss bearbeitet werden.')
+            :'<strong>Für diesen Versorgungspfad nicht erforderlich</strong>Der Schritt wird im Ablauf automatisch übersprungen.'
+        }
       }
 
       queueAutosaveSupply()

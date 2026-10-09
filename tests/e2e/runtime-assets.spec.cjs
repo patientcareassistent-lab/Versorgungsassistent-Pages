@@ -82,3 +82,35 @@ test('local speech recording is bounded and cleared on session teardown', async 
   expect(source).toContain('profileAiStream?.getTracks().forEach')
   expect(source).toContain('window.WhisperCppRuntime?.reset?.()')
 })
+
+
+test('AOK BW Annex 4 retains original PDF fields and bilateral source instruction', async ({page}) => {
+  test.setTimeout(120000)
+  await page.goto('/index.html')
+  const source=await page.evaluate(async () => {
+    const pdfjs=await import('./vendor/pdfjs/pdf.min.mjs')
+    pdfjs.GlobalWorkerOptions.workerSrc=new URL('./vendor/pdfjs/pdf.worker.min.mjs',location.href).href
+    const pdf=await pdfjs.getDocument('./assets/aok-pg24/anlage-4-profilerhebungsbogen.pdf').promise
+    const page1=await pdf.getPage(1)
+    const page4=await pdf.getPage(4)
+    const [content,widgets]=await Promise.all([
+      page1.getTextContent(),
+      page4.getAnnotations({intent:'display'})
+    ])
+    const map=Object.fromEntries(widgets.filter(x=>x.subtype==='Widget').map(x=>[x.fieldName,x.rect]))
+    return {
+      pages:pdf.numPages,
+      page1Text:(content.items||[]).map(x=>x.str||'').join(' ').replace(/\s+/g,' '),
+      providerDate:map.Text67,
+      providerSignature:map.Text69
+    }
+  })
+  expect(source.pages).toBe(4)
+  expect(source.page1Text).toMatch(/Bei doppelseitiger Amputation.*extra Formular.*zweite Seite/)
+  expect(source.providerDate).toHaveLength(4)
+  expect(source.providerSignature).toHaveLength(4)
+  // The fields are on the same printed provider row. Text67 is to the left
+  // (date); Text69 is the signature area and must never be the insured signature.
+  expect(source.providerDate[0]).toBeLessThan(source.providerSignature[0])
+  expect(Math.abs(source.providerDate[1]-source.providerSignature[1])).toBeLessThan(2)
+})
