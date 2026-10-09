@@ -596,7 +596,8 @@ test('single mandatory payer form is auto-selected even without structured Himi 
   await expect(page.locator('#careForm')).toHaveValue('FORM_005')
   await expect(page.locator('#ruleBox')).toContainText('EXPLIZIT_PFLICHT')
   await expect(page.locator('#ruleBox')).toContainText('Voraufnahme')
-  await expect(page.locator('#fieldList')).toContainText('Versorgungsziel')
+  await expect(page.locator('#fieldList')).not.toContainText('Versorgungsziel')
+  await expect(page.locator('#versorgungGoalSuggestions')).toContainText('Versorgungsziele nach Maßaufnahme')
 })
 
 
