@@ -2110,6 +2110,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       const bilateral=values.side==='beidseitig'
       hint.className=bilateral?'status-card open':'status-card ready'
       hint.innerHTML='<strong>AOK-Vertragsbogen aktiv</strong>Ausschließlich der AOK-Profilerhebungsbogen wird angezeigt. Stammdaten werden nur dort vorbelegt, wo die Zuordnung eindeutig ist. PLUS-M auf Seite 2 wird zeilenweise exklusiv ausgewählt und automatisch bewertet; die Unterschriften der versicherten Person/Vertretung und des Hilfsmittelanbieters auf Seite 4 sind als Stift-, Touch- und Maus-Signaturfelder ausgeführt.'+
+        '<p class="source-note"><strong>Quellprüfung:</strong> Die Erhebung ist nach dem Hinweis auf Seite 4 freiwillig. Angaben mit „ja → spezifisch“ beziehungsweise „auffällig → spezifisch“ sind situationsabhängig zu erläutern. Die derzeitige technische Mindestprüfung ersetzt keine vollständig fachlich geprüfte Vertragsfeldmatrix.</p>'+
         (bilateral?'<p><strong>Beidseitige Amputation:</strong> Anlage 4 wird als zwei separate, vierseitige Originalbögen ausgegeben: zuerst rechts, danach links. Feldwerte, PLUS-M und Unterschriften werden pro Seite getrennt gespeichert. Der Profilschritt erfordert Angaben für beide Seiten.</p>':'')
     }
 
