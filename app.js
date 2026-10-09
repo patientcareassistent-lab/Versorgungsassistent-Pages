@@ -3303,9 +3303,16 @@ import { versorgungsziele } from './versorgungsziele.js'
       const schema=document.querySelector('[data-case-field="measureSchema"]');if(schema) schema.value=asset.name
       const url='assets/aok-pg24/'+asset.file
       $('measureLogicNote').className='status-card ready'
-      $('measureLogicNote').innerHTML='<strong>'+escapeHtml(asset.name)+'</strong>Original-AOK-Maßblatt für '+escapeHtml(supplyType()||'die ausgewählte Versorgung')+'. Das Layout bleibt unverändert; die PDF-Formularfelder können direkt beschrieben werden.'
+      $('measureLogicNote').innerHTML='<strong>'+escapeHtml(asset.name)+'</strong>Beschreibbares AOK-Originalmaßblatt · Feldkennung, Originalname und PDF-Seite sind eindeutig. Kontext aus Textnähe nur nach Prüfung verwenden.'
+      const sourceSchema=pg24SourceMeasureSchema()
+      const hasAnatomy=sourceSchema&&['FMB02001','FMB02002','FMB02003'].includes(sourceSchema.code)
       host.className=''
-      host.innerHTML='<div class="aok-measure-frame-wrap"><div class="aok-measure-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>'+escapeHtml(asset.name)+'</strong></div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Originalmaßblatt öffnen ↗</a></div><div id="aokPdfMeasurePages" class="aok-pdf-pages"><div class="aok-pdf-loading">Originalmaßblatt wird geladen …</div></div></div>'
+      host.innerHTML='<div class="pg24-measure-workspace"><div class="aok-measure-frame-wrap"><div class="aok-measure-toolbar"><div><span class="aok-source-badge">AOK Original</span> <strong>'+escapeHtml(asset.name)+'</strong></div><a class="secondary aok-measure-open" target="_blank" rel="noopener" href="'+url+'">Originalmaßblatt öffnen ↗</a></div><div id="aokPdfMeasurePages" class="aok-pdf-pages"><div class="aok-pdf-loading">Originalmaßblatt wird geladen …</div></div></div>'+
+        '<aside class="measure-side"><section class="measure-orientation-card"><h3>Messposition / Visualisierung</h3><p class="measure-orientation-sub">Originalskizze ohne Pfeildarstellung – Fokus auf Maßfeld</p>'+
+        (hasAnatomy?'<div id="measureOrientationStage" class="measure-orientation-stage"></div><div class="measure-orientation-readout" aria-live="polite"><strong id="measureOrientationLabel">Maß auswählen</strong><span id="measureOrientationRegion">Anatomische Zuordnung anhand Feldkontext prüfen.</span><span id="measureOrientationValue" class="measure-orientation-value"></span></div><span id="measureOrientationType" class="hidden"></span><div id="measureOrientationSource" class="measure-orientation-source"></div>':'<p class="source-note">Die vollständige Originalzeichnung ist im beschreibbaren Maßblatt sichtbar. Das aktive Feld wird dort hervorgehoben; eine zusätzliche anatomische Detailvisualisierung ist für diese Anlage noch nicht zugeordnet.</p>')+
+        '<div class="measure-orientation-readout"><strong>Aktives Originalfeld</strong><span id="aokMeasureActiveField">Maßfeld im PDF anklicken, um Kennung, Seite und Quellkontext anzuzeigen.</span></div>'+
+        '</section></aside></div>'
+      if(hasAnatomy)renderMeasureOrientation(sourceSchema)
       renderEditableAokPdf(url,asset,$('aokPdfMeasurePages'))
       return true
     }
