@@ -322,7 +322,6 @@
                       <div class="profile-ai-note"><strong>Datenschutz:</strong> Die Audioaufnahme wird in dieser Funktion nicht an die Fachdatenbank übertragen. Die Spracherkennung läuft nach dem Modelldownload im Browser. PLUS-M und Unterschriften werden nicht aus freiem Gespräch abgeleitet, sondern weiterhin explizit erhoben.</div>
                     </div>
                   </section>
-                  <div id="versorgungGoalSuggestions" class="field-list mt-14 hidden"></div>
                   <div id="fieldList" class="field-list mt-14"></div>
                   </div>
                   <div id="repairStepContent" class="hidden">
@@ -447,6 +446,14 @@
                   </div>
                   <div id="measureLogicNote" class="status-card open"><strong>Maßlogik</strong>Nach Auswahl von Produktgruppe und Hilfsmittel werden die passenden Maßfelder geladen.</div>
                   <div id="measureFieldList" class="field-list mt-14"></div>
+                  <section id="measureTranscriptPanel" class="measure-transcript-panel no-print">
+                    <h4>Maß-Transkript · kontrollierte Feldübernahme</h4>
+                    <p>Jedes Eingabefeld besitzt eine eindeutige Kennung aus Maßblatt, PDF-Seite und Feldposition. Angaben werden nur bei eindeutiger Kennung als Vorschlag erkannt und erst nach Bestätigung übertragen.</p>
+                    <label>Transkript / Maße mit Kennung <textarea id="measureTranscript" rows="3" placeholder="z. B. 5b-P1-F3: 32,5 cm; 5b-P1-F4: 31 cm"></textarea></label>
+                    <div class="measure-transcript-actions"><button id="measureTranscriptAnalyze" class="secondary" type="button">Felder zuordnen</button><button id="measureTranscriptApply" class="primary" type="button">Bestätigte Werte übernehmen</button></div>
+                    <div id="measureTranscriptStatus" role="status" aria-live="polite"></div>
+                    <div id="measureTranscriptSuggestions"></div>
+                  </section>
                   <div class="step-section"><h4>Zusätzliche Mess-/Passformhinweise</h4><div class="mini-grid">
                     <label>Freie Messnotiz<textarea data-case-field="measureValues" rows="4" placeholder="Zusätzliche Messwerte / Verlaufsmessungen"></textarea></label>
                     <label>Besonderheiten<textarea data-case-field="measureNotes" rows="4"></textarea></label>
@@ -458,13 +465,14 @@
                   <h2>5. Versorgungsplanung</h2><p class="lead">Erst die fachliche Planung, danach Vertrag und Preis. So bleibt die Versorgung und nicht die Gebührenposition der Ausgangspunkt.</p>
                   <div class="mini-grid">
                     <label>Formular / Regel<select id="careForm"><option value="">Generisches Blatt / automatisch</option></select></label>
-                    <label>Versorgungsziel<textarea data-case-field="planGoal" rows="3"></textarea></label>
+                    <label>Versorgungsziel (nach der Maßaufnahme)<textarea data-case-field="planGoal" rows="3"></textarea></label>
                     <label>Schaft-/Bettungskonzept<textarea data-case-field="planShaft" rows="4"></textarea></label>
                     <label>Geplante Komponenten / Passteile<textarea data-case-field="planParts" rows="4"></textarea></label>
                     <label>Haftung / Liner / Verschlusssystem<textarea data-case-field="planSuspension" rows="4"></textarea></label>
                     <label>Zusätze / Besonderheiten<textarea data-case-field="planExtras" rows="4"></textarea></label>
                     <label>Erprobungs-/Bild-/Videodokumentation erforderlich?<select data-case-field="requiresTrialEvidence"><option value="">Nein / nicht vorgesehen</option><option value="Ja">Ja</option></select></label>
                   </div>
+                  <div id="versorgungGoalSuggestions" class="field-list mt-14 hidden"></div>
                 </div></section>
 
                 <section class="wizard-panel" data-panel="5"><div class="card">
