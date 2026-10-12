@@ -2112,7 +2112,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(!hint) return
       const bilateral=values.side==='beidseitig'
       hint.className=bilateral?'status-card open':'status-card ready'
-      hint.innerHTML='<strong>AOK-Vertragsbogen aktiv</strong>Ausschließlich der AOK-Profilerhebungsbogen wird angezeigt. Stammdaten werden nur dort vorbelegt, wo die Zuordnung eindeutig ist. PLUS-M auf Seite 2 wird zeilenweise exklusiv ausgewählt und automatisch bewertet; die Unterschriften der versicherten Person/Vertretung und des Hilfsmittelanbieters auf Seite 4 sind als Stift-, Touch- und Maus-Signaturfelder ausgeführt.'+
+      hint.innerHTML='<strong>AOK-Vertragsbogen aktiv</strong>Ausschließlich die vertragliche AOK-BW-Anlage 4 wird als beschreibbarer Originalbogen angezeigt. Innerhalb des Vertragsbogens werden keine zusätzlichen internen Erhebungsfelder ergänzt. Stammdaten werden nur dort vorbelegt, wo die Zuordnung eindeutig ist. PLUS-M auf Seite 2 wird zeilenweise exklusiv ausgewählt und automatisch bewertet; die Unterschriften der versicherten Person/Vertretung und des Hilfsmittelanbieters auf Seite 4 sind als Stift-, Touch- und Maus-Signaturfelder ausgeführt.'+
         '<p class="source-note"><strong>Quellprüfung:</strong> Die Erhebung ist nach dem Hinweis auf Seite 4 freiwillig. Angaben mit „ja → spezifisch“ beziehungsweise „auffällig → spezifisch“ sind situationsabhängig zu erläutern. Die derzeitige technische Mindestprüfung ersetzt keine vollständig fachlich geprüfte Vertragsfeldmatrix.</p>'+
         (bilateral?'<p><strong>Beidseitige Amputation:</strong> Anlage 4 wird als zwei separate, vierseitige Originalbögen ausgegeben: zuerst rechts, danach links. Feldwerte, PLUS-M und Unterschriften werden pro Seite getrennt gespeichert. Der Profilschritt erfordert Angaben für beide Seiten.</p>':'')
     }
@@ -2212,11 +2212,17 @@ import { versorgungsziele } from './versorgungsziele.js'
       details.append(summary,list);host.appendChild(details)
     }
 
+    function updateTechnikerPg24ProfileHint(){
+      const hint=$('profileHint')
+      if(!hint) return
+      hint.className='status-card ready'
+      hint.innerHTML='<strong>Einheitliche PG24-Felder aktiv</strong>Für diesen Kostenträger wird kein AOK-BW-Vertragsbogen verwendet. Es werden die vorgesehenen Felder des allgemeinen PG24-Technikerbogens in einer einheitlichen digitalen Eingabemaske angezeigt; eine Original-Layoutvorgabe wird nicht nachgebildet.'
+    }
+
     function renderTechnikerPg24Profile(){
       const host=$('fieldList');host.innerHTML='';host.className='tech-profile'
-      $('fieldInfo').textContent='PG24 · FO_PG24_Anamnesebogen Techniker / allgemeiner Techniker-Profilerhebungsbogen. Stammdaten werden automatisch übernommen und müssen nicht doppelt erfasst werden.'
-      const hint=$('profileHint');hint.className='status-card ready'
-      hint.innerHTML='<strong>Allgemeiner PG24-Technikerbogen aktiv</strong>Für diesen Kostenträger wird kein AOK-BW-Vertragsbogen verwendet. Es werden nur die Felder dieses PG24-Erhebungsbogens angezeigt.'
+      $('fieldInfo').textContent='PG24 · allgemeine einheitliche Felder aus FO_PG24_Anamnesebogen Techniker. Kein Kassen-Original-Layout; Stammdaten werden automatisch übernommen und müssen nicht doppelt erfasst werden.'
+      updateTechnikerPg24ProfileHint()
 
       const sideMap={rechts:'Rechts',links:'Links',beidseitig:'Beidseitig'}
       const ampMap={'Vor-/Mittelfuß':'Teilfußamputation','Fuß/Fußwurzel/Rückfuß':'Fuß','Unterschenkel':'Unterschenkel','Knie-Exartikulation':'Knieexartikulation','Oberschenkel':'Oberschenkel','Hüft-Exartikulation / Hemipelvis':'Hüftexartikulation / Hemipelvektomie'}
@@ -2225,7 +2231,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       let g=techProfileSection(host,'Angaben zur Person',3)
       techProfileField(g,'Nachname','tech:lastName','text',[],values.patientLastName||'')
       techProfileField(g,'Vorname','tech:firstName','text',[],values.patientFirstName||'')
-      techProfileField(g,'Geburtsdatum','tech:dob','date')
+      techProfileField(g,'Geburtsdatum','tech:dob','date',[],values.patientBirthDate||'')
       techProfileField(g,'Straße','tech:street')
       techProfileField(g,'Ort','tech:city')
       techProfileField(g,'Telefon','tech:phone','tel')
@@ -3334,12 +3340,6 @@ import { versorgungsziele } from './versorgungsziele.js'
         return
       }
       const pg=$('carePg').value
-      if(pg && !loadedFormFieldPgs.has(String(pg))){
-        $('fieldInfo').textContent='Felddefinitionen werden für PG '+pg+' geladen …'
-        $('fieldList').innerHTML=''
-        void ensureFormFieldsForPg(pg)
-        return
-      }
       const himi=selectedHimi()
       const himiId=selectedHimiId()
       const meta=selectedHimiMeta()
@@ -3347,6 +3347,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       const selected=data.formulare.find(f=>f.Formular_ID===formId)
       $('fieldList').className='field-list'
       renderGoalSuggestions()
+
       if(pg && !himiId){
         $('ruleBox').classList.remove('hidden')
         $('ruleBox').innerHTML='<div><strong>Hilfsmittel noch nicht festgelegt</strong><p>Die Formularlogik wird erst nach Auswahl des konkreten Hilfsmittels innerhalb der Produktgruppe freigegeben.</p></div><span class="pill warning">PG '+escapeHtml(pg)+'</span>'
@@ -3354,10 +3355,21 @@ import { versorgungsziele } from './versorgungsziele.js'
         $('fieldList').innerHTML=''
         return
       }
+
+      // PG24 is intentionally independent of the generic form-field bootstrap:
+      // AOK Baden-Württemberg always receives the contract Annex 4 original,
+      // all other payers receive the common PG24 technician field set.
       if(pg==='24'){
         $('ruleBox').classList.add('hidden')
         if(isAokCase()) renderAokPg24Profile()
         else renderTechnikerPg24Profile()
+        return
+      }
+
+      if(pg && !loadedFormFieldPgs.has(String(pg))){
+        $('fieldInfo').textContent='Felddefinitionen werden für PG '+pg+' geladen …'
+        $('fieldList').innerHTML=''
+        void ensureFormFieldsForPg(pg)
         return
       }
       if(selected){
@@ -3850,7 +3862,10 @@ import { versorgungsziele } from './versorgungsziele.js'
       renderMeasureFields()
     }
 
-    function isAokCase(){ return $('careKasse').value==='AOK Baden-Württemberg' }
+    function isAokCase(){
+      const payer=norm($('careKasse')?.value||'')
+      return payer==='aok baden wurttemberg' || payer==='aok bw' || payer.startsWith('aok baden wurttemberg ')
+    }
     function supplyType(){ return values.supplyType||'' }
     function syncPg24Level(){
       if($('carePg').value!=='24') return
@@ -4924,8 +4939,9 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(ph && !isRepairCase()){
         // Do not overwrite the mandatory bilateral/source-specific AOK warning
         // on each wizard status change or during PDF form rendering.
-        if($('carePg').value==='24' && isAokCase() && selectedHimiId()){
-          updateAokPg24ProfileHint()
+        if($('carePg').value==='24' && selectedHimiId()){
+          if(isAokCase()) updateAokPg24ProfileHint()
+          else updateTechnikerPg24ProfileHint()
         }else{
           ph.innerHTML=requiresProfile()
             ?'<strong>Profilerhebung erforderlich</strong>'+(isAokCase()?'Die AOK-/Vertragslogik wird verwendet; vorhandene Pflichtfelder müssen vollständig sein.':'Der hinterlegte PG-Erhebungsbogen muss bearbeitet werden.')
