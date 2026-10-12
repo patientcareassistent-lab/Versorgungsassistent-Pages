@@ -625,3 +625,55 @@ test('an imported prescriber directory has no initial upload form', async ({ pag
   await expect(page.locator('#supplyOverviewView')).toBeVisible()
   await expect(page.locator('#prescriberInitialImportOverview')).toHaveCount(0)
 })
+
+
+test('PG24 routes AOK Baden-Württemberg to the contract Annex 4 and other payers to common fields', async ({ page }) => {
+  await installSupabaseMock(page, {
+    mode: 'signed-in',
+    rpcOverrides: {
+      care_reference_bootstrap: {
+        kassen: [
+          { Kasse_Kanonisch: 'AOK Baden-Württemberg' },
+          { Kasse_Kanonisch: 'Testkasse' }
+        ],
+        produktgruppen: [{ PG: '24', Generisches_Blatt: 'PG24 Beinprothesen', Reifegrad: 'TEST' }],
+        sourceCount: 1,
+        formCount: 1
+      },
+      himi_logic_for_pg: [{
+        Himi_ID: 'PG24_UKB',
+        PG: '24',
+        Bezeichnung: 'Unterschenkelprothese',
+        Generisches_Formular_ID: 'PG24_PROTHESEN',
+        Versorgungsarten: ['Post-OP','Interim','Definitiv','Folge','Wechsel'],
+        Profil_erforderlich: true,
+        Mass_erforderlich: true,
+        Erprobung_erforderlich: false,
+        Verlauf_erforderlich: true,
+        Aktiv: true
+      }],
+      forms_for_pg: [],
+      form_fields_for_pg: [],
+      himi_form_rules_for_himi: []
+    }
+  })
+
+  await page.goto('/index.html')
+  await page.locator('#newSupplyOverviewButton').click()
+  await page.locator('#careKasse').selectOption({ label: 'AOK Baden-Württemberg' })
+  await page.locator('#carePg').selectOption('24')
+  await page.locator('#careHimi').selectOption('PG24_UKB')
+
+  await expect(page.locator('#fieldInfo')).toContainText('AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen')
+  await expect(page.locator('#profileHint')).toContainText('AOK-Vertragsbogen aktiv')
+  await expect(page.locator('#fieldList')).toContainText('AOK Original')
+  await expect(page.locator('#fieldList')).toContainText('Anlage 4 · Profilerhebungsbogen PG24')
+  await expect(page.locator('#fieldList')).not.toContainText('Angaben zur Amputation')
+
+  await page.locator('#careKasse').selectOption({ label: 'Testkasse' })
+  await expect(page.locator('#fieldInfo')).toContainText('allgemeine einheitliche Felder')
+  await expect(page.locator('#profileHint')).toContainText('Einheitliche PG24-Felder aktiv')
+  await expect(page.locator('#fieldList')).toContainText('Angaben zur Person')
+  await expect(page.locator('#fieldList')).toContainText('Angaben zur Amputation')
+  await expect(page.locator('#fieldList')).not.toContainText('AOK Original')
+})
