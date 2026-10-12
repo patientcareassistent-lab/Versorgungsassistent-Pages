@@ -864,6 +864,11 @@ import { versorgungsziele } from './versorgungsziele.js'
         await endSessionForSecurity('Anmeldung erforderlich.')
         return
       }
+      const access=await supabase.rpc('mfa_enrollment_access')
+      if(access.error || access.data!==true){
+        await endSessionForSecurity('Zugriffsberechtigung konnte nicht bestätigt werden. Bitte erneut anmelden.')
+        return
+      }
       await openApp(session)
     }
 
