@@ -53,7 +53,7 @@ test('care case load failure keeps the application closed', async ({ page }) => 
   await expect(page.locator('#loginError')).toContainText('Versorgungsübersicht')
 })
 
-test('inactive or non-member password sessions cannot reach MFA enrollment', async ({ page }) => {
+test('inactive or non-member password sessions cannot open the app', async ({ page }) => {
   await installSupabaseMock(page, { mode: 'login', denyPreMfa: true })
   await page.goto('/index.html')
 
@@ -67,32 +67,19 @@ test('inactive or non-member password sessions cannot reach MFA enrollment', asy
   await expect(page.locator('#app')).toBeHidden()
 })
 
-test('password login remains gated by MFA before the app opens', async ({ page }) => {
+test('password login opens the app without MFA for approved members during temporary suspension', async ({ page }) => {
   await installSupabaseMock(page, { mode: 'login' })
   await page.goto('/index.html')
-
   await page.locator('#username').fill('e2e-user')
   await page.locator('#password').fill('test')
   await page.locator('#loginButton').click()
 
-  await expect(page.locator('#mfaPane')).toBeVisible()
-  await expect(page.locator('#app')).toBeHidden()
-  await expect(page.locator('#mfaText')).toContainText('Authenticator')
-
-  await page.locator('#otp').fill('123')
-  await page.locator('#verifyButton').click()
-  await expect(page.locator('#mfaError')).toContainText('Authenticator-Code')
-  await expect(page.locator('#app')).toBeHidden()
-
-  await page.locator('#otp').fill('123456')
-  await page.locator('#verifyButton').click()
+  await expect(page.locator('#mfaPane')).toBeHidden()
   await expect(page.locator('#app')).toBeVisible()
   await expect(page.locator('#supplyOverviewView')).toBeVisible()
   await expect(page.locator('#currentUser')).toContainText('e2e-user')
   await expect(page.locator('#password')).toHaveValue('')
   await expect(page.locator('#otp')).toHaveValue('')
-  await expect(page.locator('#secretDetails')).toBeHidden()
-  await expect(page.locator('#qr')).not.toHaveAttribute('src', /.+/)
 })
 
 
