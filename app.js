@@ -2212,11 +2212,17 @@ import { versorgungsziele } from './versorgungsziele.js'
       details.append(summary,list);host.appendChild(details)
     }
 
+    function updateTechnikerPg24ProfileHint(){
+      const hint=$('profileHint')
+      if(!hint) return
+      hint.className='status-card ready'
+      hint.innerHTML='<strong>Einheitliche PG24-Felder aktiv</strong>Für diesen Kostenträger wird kein AOK-BW-Vertragsbogen verwendet. Es werden die vorgesehenen Felder des allgemeinen PG24-Technikerbogens in einer einheitlichen digitalen Eingabemaske angezeigt; eine Original-Layoutvorgabe wird nicht nachgebildet.'
+    }
+
     function renderTechnikerPg24Profile(){
       const host=$('fieldList');host.innerHTML='';host.className='tech-profile'
       $('fieldInfo').textContent='PG24 · allgemeine einheitliche Felder aus FO_PG24_Anamnesebogen Techniker. Kein Kassen-Original-Layout; Stammdaten werden automatisch übernommen und müssen nicht doppelt erfasst werden.'
-      const hint=$('profileHint');hint.className='status-card ready'
-      hint.innerHTML='<strong>Einheitliche PG24-Felder aktiv</strong>Für diesen Kostenträger wird kein AOK-BW-Vertragsbogen verwendet. Es werden die vorgesehenen Felder des allgemeinen PG24-Technikerbogens in einer einheitlichen digitalen Eingabemaske angezeigt; eine Original-Layoutvorgabe wird nicht nachgebildet.'
+      updateTechnikerPg24ProfileHint()
 
       const sideMap={rechts:'Rechts',links:'Links',beidseitig:'Beidseitig'}
       const ampMap={'Vor-/Mittelfuß':'Teilfußamputation','Fuß/Fußwurzel/Rückfuß':'Fuß','Unterschenkel':'Unterschenkel','Knie-Exartikulation':'Knieexartikulation','Oberschenkel':'Oberschenkel','Hüft-Exartikulation / Hemipelvis':'Hüftexartikulation / Hemipelvektomie'}
@@ -4933,8 +4939,9 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(ph && !isRepairCase()){
         // Do not overwrite the mandatory bilateral/source-specific AOK warning
         // on each wizard status change or during PDF form rendering.
-        if($('carePg').value==='24' && isAokCase() && selectedHimiId()){
-          updateAokPg24ProfileHint()
+        if($('carePg').value==='24' && selectedHimiId()){
+          if(isAokCase()) updateAokPg24ProfileHint()
+          else updateTechnikerPg24ProfileHint()
         }else{
           ph.innerHTML=requiresProfile()
             ?'<strong>Profilerhebung erforderlich</strong>'+(isAokCase()?'Die AOK-/Vertragslogik wird verwendet; vorhandene Pflichtfelder müssen vollständig sein.':'Der hinterlegte PG-Erhebungsbogen muss bearbeitet werden.')
