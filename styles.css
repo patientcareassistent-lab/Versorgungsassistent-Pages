@@ -143,3 +143,49 @@
 .measure-catalog-row code{color:#00157A;font-weight:700;overflow-wrap:anywhere}
 .measure-catalog-row span{color:#475467;overflow-wrap:anywhere}
 @media print{#measureTranscriptPanel{display:none!important}}
+
+/* V0.9 work-focused navigation. Project utilities remain accessible in the header. */
+.shell{grid-template-columns:244px minmax(0,1fr)}
+.sidebar{padding:22px 14px 16px;background:#00104f}
+.side-brand{display:flex;flex-direction:column;align-items:flex-start;gap:12px;padding:0 6px 22px;margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,.16);white-space:normal}
+.side-logo{width:205px;max-width:100%;height:auto;border-radius:8px}
+.side-product{color:#d0dcff;font-size:.76rem;font-weight:700;letter-spacing:.025em}
+.side-nav-label{padding:1px 11px 10px;color:#9cafe6;font-size:.66rem;font-weight:750;letter-spacing:.12em}
+.sidebar nav{display:grid;gap:7px;margin-top:0}
+.sidebar nav button,.sidebar .logout{min-height:44px;width:100%;padding:11px 12px;border-radius:10px;font-size:.88rem;line-height:1.25;font-weight:580;transition:background .15s,color .15s}
+.sidebar nav button{color:#e4ebff}
+.sidebar nav button:hover,.sidebar nav button.active{background:#062a94;color:#fff}
+.sidebar nav button.nav-create{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);font-weight:730;color:#fff;margin-bottom:9px}
+.sidebar nav button.nav-create:hover,.sidebar nav button.nav-create.active{background:#082d9e}
+.nav-icon{width:19px;height:19px;flex:0 0 19px}
+.side-spacer{flex:1}
+.sidebar .logout{margin-top:16px;color:#e4ebff;border:1px solid rgba(255,255,255,.22);background:transparent}
+.sidebar .logout:hover{background:rgba(255,255,255,.11)}
+.sidebar nav button:focus-visible,.sidebar .logout:focus-visible,.utility-nav summary:focus-visible,.utility-nav button:focus-visible{outline:3px solid #b9caff;outline-offset:2px}
+.utility-nav{position:relative;z-index:15}
+.utility-nav summary{display:flex;align-items:center;gap:9px;list-style:none;cursor:pointer;border:1px solid #d5dbea;background:#fff;color:#20385e;font-size:.78rem;font-weight:700;padding:8px 11px;border-radius:9px;white-space:nowrap}
+.utility-nav summary::-webkit-details-marker{display:none}
+.utility-nav summary:hover{background:#f4f6fb}
+.utility-nav[open] summary{border-color:#91a9ea;background:#f0f4ff}
+.utility-nav-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:20;width:210px;padding:7px;background:#fff;border:1px solid #dfe4ef;border-radius:12px;box-shadow:0 16px 30px rgba(9,24,54,.16)}
+.utility-nav-menu button{display:block;width:100%;padding:10px 12px;text-align:left;border:0;border-radius:7px;background:transparent;color:#223253;font-weight:600;font-size:.8rem}
+.utility-nav-menu button:hover,.utility-nav-menu button.active{background:#eef2ff;color:#00157A}
+.header-actions{flex-wrap:wrap;justify-content:flex-end}
+#archiveView .page-grid{align-content:start}
+@media(max-width:800px){
+  .shell{grid-template-columns:74px minmax(0,1fr)}
+  .sidebar{padding:14px 7px}
+  .side-brand{align-items:center;padding:0 0 16px;margin-bottom:14px}
+  .side-logo{width:57px;padding:2px}
+  .side-product,.side-nav-label,.sidebar nav button span,.sidebar .logout span{display:none}
+  .sidebar nav button,.sidebar .logout{justify-content:center;padding:12px}
+  .sidebar nav button.nav-create{margin-bottom:5px}
+  .utility-nav summary{padding:7px 9px}
+  .topbar{min-height:70px}
+}
+@media(max-width:520px){
+  .header-actions{gap:6px}
+  .topbar h1{font-size:1.08rem}
+  .topbar p{font-size:.7rem}
+  .utility-nav summary{font-size:.7rem}
+}
