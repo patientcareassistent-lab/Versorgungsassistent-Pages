@@ -859,38 +859,17 @@ import { versorgungsziele } from './versorgungsziele.js'
 
     async function handleSession(session){
       currentSession=session
-      const aal=await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
-      if(aal.error){ showLogin(); showError('loginError',aal.error.message); return }
-      if(aal.data.currentLevel==='aal2'){ await openApp(session); return }
-
-      const preMfaAccess=await supabase.rpc('mfa_enrollment_access')
-      if(preMfaAccess.error || preMfaAccess.data!==true){
+      // MFA temporarily suspended; database membership authorization remains enforced.
+      if(!session?.user?.id){
+        await endSessionForSecurity('Anmeldung erforderlich.')
+        return
+      }
+      const access=await supabase.rpc('mfa_enrollment_access')
+      if(access.error || access.data!==true){
         await endSessionForSecurity('Zugriffsberechtigung konnte nicht bestätigt werden. Bitte erneut anmelden.')
         return
       }
-
-      const factors=await supabase.auth.mfa.listFactors()
-      if(factors.error){ showLogin(); showError('loginError',factors.error.message); return }
-      const verified=(factors.data.totp||[]).find(f=>f.status==='verified') || (factors.data.totp||[])[0]
-
-      $('auth').classList.remove('hidden'); $('app').classList.add('hidden')
-      $('loginPane').classList.add('hidden'); $('mfaPane').classList.remove('hidden')
-      showError('mfaError','')
-
-      if(verified){
-        factorId=verified.id
-        $('mfaText').textContent='Aktuellen Code aus Microsoft Authenticator eingeben.'
-        $('qr').classList.add('hidden'); $('secretDetails').classList.add('hidden')
-      }else{
-        const enrolled=await supabase.auth.mfa.enroll({factorType:'totp',friendlyName:'Versorgungsassistent'})
-        if(enrolled.error){ showError('mfaError',enrolled.error.message); return }
-        factorId=enrolled.data.id
-        $('qr').src=enrolled.data.totp.qr_code
-        $('qr').classList.remove('hidden')
-        $('secret').textContent=enrolled.data.totp.secret
-        $('secretDetails').classList.remove('hidden')
-        $('mfaText').textContent='QR-Code mit Microsoft Authenticator scannen und anschließend den aktuellen sechsstelligen Code eingeben.'
-      }
+      await openApp(session)
     }
 
     async function failClosedStartup(message){
@@ -912,8 +891,8 @@ import { versorgungsziele } from './versorgungsziele.js'
       const access=await supabase.rpc('current_access')
       if(access.error || !access.data?.[0]?.allowed){
         showLoading(false); $('auth').classList.remove('hidden'); $('app').classList.add('hidden')
-        $('loginPane').classList.add('hidden'); $('mfaPane').classList.remove('hidden')
-        showError('mfaError',access.error?.message || 'Dieser Benutzer ist nicht für den Versorgungsassistenten freigegeben.')
+        $('loginPane').classList.remove('hidden'); $('mfaPane').classList.add('hidden')
+        showError('loginError',access.error?.message || 'Dieser Benutzer ist nicht für den Versorgungsassistenten freigegeben.')
         return
       }
       lastAccessCheckAt=Date.now()
@@ -4970,7 +4949,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     }
 
     function activeSupplyIsReadOnly(){
-      // Team access is enforced by MFA and the server-side member allowlist,
+      // Team access is enforced by password authentication and the server-side member allowlist,
       // not by the care-case creator's user ID.
       return !!activeSupplyId && !currentSession?.user?.id
     }
