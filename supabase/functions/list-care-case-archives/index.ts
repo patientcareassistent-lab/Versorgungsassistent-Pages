@@ -25,7 +25,7 @@ Deno.serve(async(req:Request)=>{
   const token=auth.startsWith("Bearer ")?auth.slice(7):"";
   if(!token) return reply(401,{error:"missing_token"});
   const c=claims(token) as Record<string,unknown>;
-  if(c.aal!=="aal2"||c.is_anonymous===true) return reply(403,{error:"mfa_required"});
+  if(c.is_anonymous===true) return reply(403,{error:"anonymous_not_allowed"});
 
   const url=Deno.env.get("SUPABASE_URL")||"";
   const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
