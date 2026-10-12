@@ -21,16 +21,16 @@
       <div class="brand-lockup"><img class="brand-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" /><div><h1>Versorgungsassistent</h1><p>Teststand v0.9 · Anamnese</p></div></div>
       <div id="loginPane">
         <h2>Anmelden</h2>
-        <p class="muted">Zugriff nur für freigegebene Tester. Nach dem Passwort ist die Authenticator-MFA erforderlich.</p>
+        <p class="muted">Zugriff nur für freigegebene Mitarbeiter. Die MFA ist vorübergehend ausgesetzt.</p>
         <form id="loginForm" class="stack">
           <label>Benutzername<input id="username" autocomplete="username" placeholder="Benutzername" required /></label>
           <label>Passwort<input id="password" type="password" autocomplete="current-password" required /></label>
           <div id="loginError" class="alert error hidden"></div>
           <button id="loginButton" class="primary" type="submit">Anmelden</button>
         </form>
-        <div class="security-note"><span>🔐</span><span>Fachdatenzugriff wird serverseitig über RLS, Tester-Allowlist und MFA/AAL2 abgesichert.</span></div>
+        <div class="security-note"><span>🔐</span><span>Fachdatenzugriff wird serverseitig über RLS und Mitarbeiter-Allowlist abgesichert.</span></div>
       </div>
-      <div id="mfaPane" class="hidden">
+      <div id="mfaPane" class="hidden" style="display:none">
         <h2>Mehrfaktor-Anmeldung</h2>
         <p id="mfaText" class="muted">Aktuellen Code aus Microsoft Authenticator eingeben.</p>
         <img id="qr" class="qr hidden" alt="QR-Code für Authenticator" />
@@ -57,7 +57,7 @@
     <div class="main">
       <header class="topbar">
         <div><h1 id="pageTitle">Auftragsübersicht</h1><p>Fachliche Entscheidungsunterstützung · VN 2.1 · Stand 01.10.2026</p></div>
-        <div class="header-actions"><span class="pill success">🔐 MFA aktiv</span><span id="currentUser" class="user"></span></div>
+        <div class="header-actions"><span class="pill success">MFA vorübergehend ausgesetzt</span><span id="currentUser" class="user"></span></div>
       </header>
       <main class="content">
         <div id="appError" class="alert error hidden"></div>
