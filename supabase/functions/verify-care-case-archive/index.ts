@@ -81,7 +81,7 @@ Deno.serve(async(req:Request)=>{
   const user=verifiedUser.data.user;
 
   const c=claims(token) as Record<string,unknown>;
-  if(c.aal!=="aal2"||c.is_anonymous===true) return out(403,{error:"mfa_required"});
+  if(c.is_anonymous===true) return out(403,{error:"anonymous_not_allowed"});
 
   const member=await admin.schema("app_private").from("app_members")
     .select("user_id").eq("user_id",user.id).eq("active",true).maybeSingle();
