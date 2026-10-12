@@ -184,7 +184,7 @@ Deno.serve(async (req:Request) => {
   if (!token || !apiKey) return reply(401, { error:"missing_credentials" });
 
   const claims = jwtClaims(token) as Record<string,unknown>;
-  if (claims.aal !== "aal2" || claims.is_anonymous === true) return reply(403, { error:"mfa_required" });
+  if (claims.is_anonymous === true) return reply(403, { error:"anonymous_not_allowed" });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
