@@ -28,6 +28,49 @@ test('login surface and strict CSP render without inline styles', async ({ page 
   expect(cspErrors).toEqual([])
 })
 
+test('focused navigation shows work views and keeps project information available', async ({ page }) => {
+  await openSignedInApp(page)
+
+  const sidebar = page.locator('.sidebar')
+  await expect(sidebar.locator('nav button')).toHaveCount(3)
+  await expect(sidebar.locator('#newSupplyNavButton')).toBeVisible()
+  await expect(sidebar.locator('[data-view="supplyOverview"]')).toBeVisible()
+  await expect(sidebar.locator('[data-view="archive"]')).toBeVisible()
+  await expect(sidebar).not.toContainText('Wissensbasis')
+  await expect(sidebar).not.toContainText('Quellen')
+
+  await sidebar.locator('[data-view="archive"]').click()
+  await expect(page.locator('#archiveView')).toBeVisible()
+  await expect(page.locator('#supplyOverviewView')).toBeHidden()
+  await expect(page.locator('#archiveOverviewBody')).toBeVisible()
+  await expect(page.locator('#pageTitle')).toHaveText('Archiv')
+
+  await sidebar.locator('[data-view="supplyOverview"]').click()
+  await expect(page.locator('#supplyOverviewView')).toBeVisible()
+  await expect(page.locator('#archiveView')).toBeHidden()
+
+  await page.locator('#utilityNav summary').click()
+  await expect(page.locator('#utilityNav [data-view="overview"]')).toBeVisible()
+  await page.locator('#utilityNav [data-view="overview"]').click()
+  await expect(page.locator('#overviewView')).toBeVisible()
+  await expect(page.locator('#utilityNav')).not.toHaveAttribute('open', '')
+
+  await sidebar.locator('#newSupplyNavButton').click()
+  await expect(page.locator('#careView')).toBeVisible()
+  await expect(sidebar.locator('#newSupplyNavButton')).toHaveClass(/active/)
+  expect(await page.locator('[style]').count()).toBe(0)
+})
+
+test('sidebar remains operable on a narrow viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 640, height: 780 })
+  await openSignedInApp(page)
+  await expect(page.locator('.sidebar [data-view="archive"]')).toBeVisible()
+  await page.locator('.sidebar [data-view="archive"]').click()
+  await expect(page.locator('#archiveView')).toBeVisible()
+  await page.locator('.sidebar [data-view="supplyOverview"]').click()
+  await expect(page.locator('#supplyOverviewView')).toBeVisible()
+})
+
 test('malformed usernames fail with a generic message', async ({ page }) => {
   await page.goto('/index.html')
   await page.locator('#username').fill('bad name')

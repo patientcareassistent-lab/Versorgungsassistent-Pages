@@ -69,8 +69,8 @@ import { versorgungsziele } from './versorgungsziele.js'
     const V09_ANAMNESIS_SCOPE=true
     const ACTIVE_PRODUCT_GROUPS=new Set(['23','24'])
     const isActiveProductGroup=(pg)=>ACTIVE_PRODUCT_GROUPS.has(String(pg||'').padStart(2,'0'))
-    const views = ['overview','care','supplyOverview','forms','contractQuestions','sources']
-    const titles = {overview:'Wissensbasis',care:'Versorgung',supplyOverview:'Auftragsübersicht',forms:'Formularregeln',contractQuestions:'Vertragsfragen',sources:'Quellen'}
+    const views = ['overview','care','supplyOverview','archive','forms','contractQuestions','sources']
+    const titles = {overview:'Projektübersicht',care:'Versorgung',supplyOverview:'Versorgungsübersicht',archive:'Archiv',forms:'Formularregeln',contractQuestions:'Vertragsfragen',sources:'Quellenregister'}
     const data = {kassen:[],produktgruppen:[],formulare:[],formularfelder:[],quellen:[],pg26:[],kalk:[],himilogik:[],massfelder:[],himiformularregeln:[],contractQuestions:[],contractKnowledge:[],approvedKnowledge:[]}
     const dataCounts = {sources:0,forms:0}
     const optionalDataLoaded = {pg26:false,contractQuestions:false,sources:false,forms:false}
@@ -924,7 +924,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         await failClosedStartup('Die Versorgungsübersicht konnte nicht sicher geladen werden. Die Anwendung wurde nicht geöffnet.')
         return
       }
-      await loadArchiveOverview()
+      // Load the archive only when the archive view is requested.
 
       $('currentUser').textContent=friendlyUser(session.user.email)
       $('auth').classList.add('hidden'); $('app').classList.remove('hidden')
@@ -3762,8 +3762,11 @@ import { versorgungsziele } from './versorgungsziele.js'
     async function setView(view){
       if(view==='supplyOverview') renderSupplyOverview()
       document.querySelectorAll('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===view))
+      $('newSupplyNavButton')?.classList.toggle('active',view==='care')
+      if($('utilityNav')) $('utilityNav').open=false
       views.forEach(v=>$(v+'View').classList.toggle('hidden',v!==view))
       $('pageTitle').textContent=titles[view]
+      if(view==='archive') await loadArchiveOverview()
       if(view==='pg26') await loadOptionalData('pg26')
       if(view==='contractQuestions') await loadOptionalData('contractQuestions')
       if(view==='sources') await loadOptionalData('sources')
@@ -4491,6 +4494,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       $('wizardBack').addEventListener('click',()=>goWizard(previousApplicableIndex(wizardIndex)))
       $('wizardNext').addEventListener('click',advanceWizard)
       $('newSupplyOverviewButton').addEventListener('click',startNewSupply)
+      $('newSupplyNavButton').addEventListener('click',startNewSupply)
       $('rxFile').addEventListener('change',handleRxFile)
       $('rxCameraFile').addEventListener('change',handleRxFile)
       $('repairPhotoFiles').addEventListener('change',e=>handleRepairPhotos(e.target.files))
