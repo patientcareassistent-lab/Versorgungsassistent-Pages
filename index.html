@@ -42,22 +42,36 @@
   </main>
 
   <div id="app" class="shell hidden">
-    <aside class="sidebar">
-      <div class="side-brand"><img class="side-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" /><span class="hidden">Versorgungsassistent</span></div>
-      <nav>
-        <button data-view="supplyOverview" class="active">▦ <span>Auftragsübersicht</span></button>
-        <button data-view="overview">◉ <span>Wissensbasis</span></button>
-        <button data-view="forms">▤ <span>Formularregeln</span></button>
-        <button data-view="contractQuestions">? <span>Vertragsfragen</span></button>
-        <button data-view="sources">▣ <span>Quellen</span></button>
+    <aside class="sidebar" aria-label="Hauptnavigation">
+      <div class="side-brand">
+        <img class="side-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" />
+        <span class="side-product">Versorgungsassistent</span>
+      </div>
+      <div class="side-nav-label">ARBEITSBEREICH</div>
+      <nav aria-label="Versorgungsverwaltung">
+        <button id="newSupplyNavButton" class="nav-create" type="button" aria-label="Neue Versorgung"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Neue Versorgung</span></button>
+        <button data-view="supplyOverview" class="active" type="button" aria-label="Versorgungsübersicht"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg><span>Versorgungen</span></button>
+        <button data-view="archive" type="button" aria-label="Archiv"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11h14V8M10 12h4"/></svg><span>Archiv</span></button>
       </nav>
-      <button id="logoutButton" class="logout">↪ <span>Abmelden</span></button>
+      <div class="side-spacer"></div>
+      <button id="logoutButton" class="logout" type="button" aria-label="Abmelden"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/></svg><span>Abmelden</span></button>
     </aside>
 
     <div class="main">
       <header class="topbar">
-        <div><h1 id="pageTitle">Auftragsübersicht</h1><p>Fachliche Entscheidungsunterstützung · VN 2.1 · Stand 01.10.2026</p></div>
-        <div class="header-actions"><span class="pill success">MFA vorübergehend ausgesetzt</span><span id="currentUser" class="user"></span></div>
+        <div><h1 id="pageTitle">Versorgungsübersicht</h1><p>Versorgungsassistent · Digitale Anamnese v0.9</p></div>
+        <div class="header-actions">
+          <details id="utilityNav" class="utility-nav">
+            <summary>Projektinfos <span aria-hidden="true">⌄</span></summary>
+            <div class="utility-nav-menu" aria-label="Weitere Projektansichten">
+              <button type="button" data-view="overview">Projektübersicht</button>
+              <button type="button" data-view="forms">Formularregeln</button>
+              <button type="button" data-view="contractQuestions">Vertragsfragen</button>
+              <button type="button" data-view="sources">Quellenregister</button>
+            </div>
+          </details>
+          <span class="pill">MFA pausiert</span><span id="currentUser" class="user"></span>
+        </div>
       </header>
       <main class="content">
         <div id="appError" class="alert error hidden"></div>
@@ -67,7 +81,7 @@
             <section class="card span2">
               <div class="supply-overview-head">
                 <div>
-                  <h2>Auftragsübersicht</h2>
+                  <h2>Offene Versorgungen</h2>
                   <p>Übersicht der laufenden beziehungsweise noch nicht abgeschlossenen Versorgungsaufträge.</p>
                 </div>
                 <button id="newSupplyOverviewButton" class="primary no-print" type="button">+ Neue Versorgung</button>
@@ -103,6 +117,11 @@
                 </table>
               </div>
             </section>
+          </div>
+        </section>
+        
+        <section id="archiveView" class="hidden">
+          <div class="page-grid">
             <section class="card span2 supply-list-card">
               <div class="supply-list-head">
                 <div class="section-title"><div><h3>Archivierte Versorgungen</h3><p>Extern im geschützten Cloudflare-R2-Archiv abgelegte Vorgänge. Wiederherstellung ist für eigene Vorgänge möglich.</p></div></div>
