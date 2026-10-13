@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-13",
+  "policy": {
+    "noPatientData": true,
+    "verifiedSourcesOnly": true,
+    "transcriptionVerifiedFieldsOnly": true,
+    "unknownPayerFallback": false
+  },
+  "forms": [
+    {
+      "id": "aok-bw-pg24-anlage-4",
+      "version": "2026-09-01",
+      "payer": "AOK Baden-Württemberg",
+      "pg": [
+        "24"
+      ],
+      "formType": "profile",
+      "contractId": "15 01 324",
+      "status": "pending-upload",
+      "source": {
+        "kind": "r2",
+        "objectKey": "contracts/aok-bw/pg24/2026-09-01/anlage-4-profilerhebungsbogen.pdf"
+      },
+      "sha256": null,
+      "fields": []
+    },
+    {
+      "id": "aok-bw-pg24-anlage-5b",
+      "version": "2026-09-01",
+      "payer": "AOK Baden-Württemberg",
+      "pg": [
+        "24"
+      ],
+      "formType": "measurement",
+      "contractId": "15 01 324",
+      "productAreas": [
+        "Unterschenkel"
+      ],
+      "status": "pending-upload",
+      "source": {
+        "kind": "r2",
+        "objectKey": "contracts/aok-bw/pg24/2026-09-01/anlage-5b-ukb.pdf"
+      },
+      "sha256": null,
+      "fields": []
+    },
+    {
+      "id": "aok-bw-pg23-anlage-3a-2023",
+      "version": "2023-09-15",
+      "payer": "AOK Baden-Württemberg",
+      "pg": [
+        "23"
+      ],
+      "formType": "profile",
+      "contractId": "15/16/19 01 723",
+      "status": "requires-contract-check",
+      "source": {
+        "kind": "r2",
+        "objectKey": "contracts/aok-bw/pg23/2023-09-15/anlage-3a.pdf"
+      },
+      "sha256": null,
+      "fields": []
+    }
+  ]
+}
