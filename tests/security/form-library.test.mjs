@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateCatalog, findForms, mapTranscriptToFields } from '../../form-library.js';
+import {readFile} from 'node:fs/promises';
+const source=await readFile(new URL('../../form-library.js',import.meta.url),'utf8');
+const {validateCatalog,findForms,mapTranscriptToFields}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
 const sha='a'.repeat(64);
 const aok={id:'profile-aok',version:'2026-09-01',payer:'AOK Baden-Württemberg',pg:['24'],formType:'profile',status:'verified',sha256:sha,source:{kind:'r2',objectKey:'contracts/aok/24/profile.pdf'},validFrom:'2026-09-01',fields:[{semanticKey:'patient.weight',pdfFieldId:'Text4',mappingStatus:'verified'},{semanticKey:'patient.dob',pdfFieldId:'Text5',mappingStatus:'heuristic'}]};
 const generic={...aok,id:'generic-profile',payer:'*',pg:['*'],fields:[]};
