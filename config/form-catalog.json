@@ -5,28 +5,33 @@
     "noPatientData": true,
     "verifiedSourcesOnly": true,
     "transcriptionVerifiedFieldsOnly": true,
-    "unknownPayerFallback": false
+    "unknownPayerFallback": false,
+    "defaultClosed": true
   },
   "forms": [
     {
-      "id": "aok-bw-pg24-anlage-4",
+      "id": "massblatt-aok-bw-pg24-anlage-5a",
       "version": "2026-09-01",
       "payer": "AOK Baden-Württemberg",
       "pg": [
         "24"
       ],
-      "formType": "profile",
+      "formType": "measurement",
       "contractId": "15 01 324",
-      "status": "pending-upload",
+      "productAreas": [
+        "Vor-/Mittelfuß",
+        "Fuß/Fußwurzel/Rückfuß"
+      ],
+      "status": "staged",
       "source": {
         "kind": "r2",
-        "objectKey": "contracts/aok-bw/pg24/2026-09-01/anlage-4-profilerhebungsbogen.pdf"
+        "objectKey": "massblaetter/aok-bw/pg24/2026-09-01/anlage-5a_massblatt_fuss--917e0ea9c801.pdf"
       },
-      "sha256": null,
+      "sha256": "917e0ea9c8015d523a534c5a977f56ed76f95a928b7a75a2034e9851815baa6d",
       "fields": []
     },
     {
-      "id": "aok-bw-pg24-anlage-5b",
+      "id": "massblatt-aok-bw-pg24-anlage-5b",
       "version": "2026-09-01",
       "payer": "AOK Baden-Württemberg",
       "pg": [
@@ -37,16 +42,130 @@
       "productAreas": [
         "Unterschenkel"
       ],
-      "status": "pending-upload",
+      "status": "staged",
       "source": {
         "kind": "r2",
-        "objectKey": "contracts/aok-bw/pg24/2026-09-01/anlage-5b-ukb.pdf"
+        "objectKey": "massblaetter/aok-bw/pg24/2026-09-01/anlage-5b_massblatt_ukb--e7b0405fb56d.pdf"
       },
-      "sha256": null,
+      "sha256": "e7b0405fb56d306202f57b6f4388e1c3fa6b5e0873c1c2f6d3384f75d55f17df",
       "fields": []
     },
     {
-      "id": "aok-bw-pg23-anlage-3a-2023",
+      "id": "massblatt-aok-bw-pg24-anlage-5c",
+      "version": "2026-09-01",
+      "payer": "AOK Baden-Württemberg",
+      "pg": [
+        "24"
+      ],
+      "formType": "measurement",
+      "contractId": "15 01 324",
+      "productAreas": [
+        "Knie-Exartikulation"
+      ],
+      "status": "staged",
+      "source": {
+        "kind": "r2",
+        "objectKey": "massblaetter/aok-bw/pg24/2026-09-01/anlage-5c_massblatt_knieex--b697170bbdad.pdf"
+      },
+      "sha256": "b697170bbdadc5089eee213e8ef6af638af6444c8ff182333a4eb5bb1ef1f9f4",
+      "fields": []
+    },
+    {
+      "id": "massblatt-aok-bw-pg24-anlage-5d",
+      "version": "2026-09-01",
+      "payer": "AOK Baden-Württemberg",
+      "pg": [
+        "24"
+      ],
+      "formType": "measurement",
+      "contractId": "15 01 324",
+      "productAreas": [
+        "Oberschenkel"
+      ],
+      "status": "staged",
+      "source": {
+        "kind": "r2",
+        "objectKey": "massblaetter/aok-bw/pg24/2026-09-01/anlage-5d_massblatt_okb--e9c0a09e9b27.pdf"
+      },
+      "sha256": "e9c0a09e9b2706f7bddcc846843195249b6b97b6a9833c5524634d78ab5f3b93",
+      "fields": []
+    },
+    {
+      "id": "massblatt-aok-bw-pg24-anlage-5e",
+      "version": "2026-09-01",
+      "payer": "AOK Baden-Württemberg",
+      "pg": [
+        "24"
+      ],
+      "formType": "measurement",
+      "contractId": "15 01 324",
+      "productAreas": [
+        "Hüft-Exartikulation / Hemipelvis"
+      ],
+      "status": "staged",
+      "source": {
+        "kind": "r2",
+        "objectKey": "massblaetter/aok-bw/pg24/2026-09-01/anlage-5e_massblatt_hueftex--d855a4f1f691.pdf"
+      },
+      "sha256": "d855a4f1f691b7ecff1843c397b788bae52dc5ed294088c71ee1fb08504a70ab",
+      "fields": []
+    },
+    {
+      "id": "massblatt-allgemein-pg23-ue",
+      "version": "stand-2026-10-01",
+      "payer": "*",
+      "pg": [
+        "23"
+      ],
+      "formType": "measurement",
+      "contractId": null,
+      "productAreas": [],
+      "status": "staged",
+      "source": {
+        "kind": "r2",
+        "objectKey": "massblaetter/allgemein/pg23/stand-2026-10-01/2_erhebungsbogen_fo_massblatt-orthesen-untere-extremitaet--3cd99c885ae5.pdf"
+      },
+      "sha256": "3cd99c885ae5b7f29bea24c438d521e21327181e4859cfc76bf53205af83600a",
+      "fields": []
+    },
+    {
+      "id": "massblatt-allgemein-pg23-pohlig",
+      "version": "stand-2026-10-01",
+      "payer": "*",
+      "pg": [
+        "23"
+      ],
+      "formType": "measurement",
+      "contractId": null,
+      "productAreas": [],
+      "status": "staged",
+      "source": {
+        "kind": "r2",
+        "objectKey": "massblaetter/allgemein/pg23/stand-2026-10-01/4_fo_pohlig_massblatt--8c370b10fe56.docx"
+      },
+      "sha256": "8c370b10fe56314d97cc0c1c70700e2bd548d0f9b76aa68f1ab988026f05627e",
+      "fields": []
+    },
+    {
+      "id": "aok-bw-pg24-anlage-4-profilerhebung",
+      "version": "2026-09-01",
+      "payer": "AOK Baden-Württemberg",
+      "pg": [
+        "24"
+      ],
+      "formType": "profile",
+      "contractId": "15 01 324",
+      "productAreas": [],
+      "status": "staged",
+      "source": {
+        "kind": "r2",
+        "objectKey": "formulare/aok-bw/pg24/2026-09-01/anlage-4_profilerhebungsbogen--becb2f40a35b.pdf"
+      },
+      "sha256": "becb2f40a35ba30804a78e41b3375a073325172844dc1270cf0b1e0bac5a4a09",
+      "fields": []
+    },
+    {
+      "id": "aok-bw-pg23-anlage-3a-profil-2023",
       "version": "2023-09-15",
       "payer": "AOK Baden-Württemberg",
       "pg": [
@@ -54,12 +173,13 @@
       ],
       "formType": "profile",
       "contractId": "15/16/19 01 723",
-      "status": "requires-contract-check",
+      "productAreas": [],
+      "status": "staged",
       "source": {
         "kind": "r2",
-        "objectKey": "contracts/aok-bw/pg23/2023-09-15/anlage-3a.pdf"
+        "objectKey": "formulare/aok-bw/pg23/2023-09-15/2_fo_pg23_aok-bogen-untere-extremitaet--a4a9d2c3a171.pdf"
       },
-      "sha256": null,
+      "sha256": "a4a9d2c3a1711571a173edcd8ca5beaa2c6f8eb83e5113e46dd566764ecf8b6b",
       "fields": []
     }
   ]
