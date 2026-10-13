@@ -62,7 +62,7 @@ export default {
     if(!match) return fail(404,'Unbekannte Route',common);
     const entry=catalog.records.find(r=>r.id===match[1] && r.version===match[2] && ENTRIES_AVAILABLE.has(r.status));
     if(!entry) return fail(404,'Vorlage nicht freigegeben',common);
-    if(!/^massblaetter\/[a-z0-9/._-]+\.(?:pdf|docx)$/.test(entry.objectKey) || entry.objectKey.includes('..') ||
+    if(!/^(?:massblaetter|formulare)\/[a-z0-9/._-]+\.(?:pdf|docx)$/.test(entry.objectKey) || entry.objectKey.includes('..') ||
        !/^[a-f0-9]{64}$/.test(entry.sha256)) return fail(422,'Ungültige Katalogzuordnung',common);
     const file=await env.FORMS_BUCKET.get(entry.objectKey);
     if(!file || file.size!==entry.sizeBytes) return fail(503,'Vorlage fehlt oder Prüfumfang abweichend',common);
