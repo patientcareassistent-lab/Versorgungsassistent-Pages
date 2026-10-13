@@ -1962,6 +1962,36 @@ import { versorgungsziele } from './versorgungsziele.js'
       )
     }
 
+    // R2 contains only blank document templates; live patient data is never sent here.
+    const FORM_GATEWAY='https://versorgungsassistent-formular-gateway.patientcare-assistent-archive.workers.dev'
+    const remoteOriginalUrls=new Map()
+    const AOK_PG24_MEASURE_IDS={
+      'anlage-5a-fuss.pdf':'massblatt-aok-bw-pg24-anlage-5a',
+      'anlage-5b-ukb.pdf':'massblatt-aok-bw-pg24-anlage-5b',
+      'anlage-5c-knieex.pdf':'massblatt-aok-bw-pg24-anlage-5c',
+      'anlage-5d-okb.pdf':'massblatt-aok-bw-pg24-anlage-5d',
+      'anlage-5e-hueftex.pdf':'massblatt-aok-bw-pg24-anlage-5e'
+    }
+    async function authenticatedOriginalPdfUrl(formId,version='2026-09-01'){
+      const token=currentSession?.access_token
+      if(!token || !/^[a-z0-9-]+$/.test(formId) || !/^[a-z0-9-]+$/.test(version)) return null
+      const cacheKey=formId+'@'+version
+      if(remoteOriginalUrls.has(cacheKey)) return remoteOriginalUrls.get(cacheKey)
+      const request=(async()=>{
+        try{
+          const response=await fetch(FORM_GATEWAY+'/v1/templates/'+formId+'/'+version,{
+            headers:{Authorization:'Bearer '+token},cache:'no-store'
+          })
+          if(!response.ok || !/^application\/pdf/i.test(response.headers.get('content-type')||'')) return null
+          const blob=await response.blob()
+          if(!blob.size || blob.size>12*1024*1024) return null
+          return URL.createObjectURL(blob)
+        }catch(_){return null}
+      })()
+      remoteOriginalUrls.set(cacheKey,request)
+      return request
+    }
+
     function canonicalAokProfileTextName(fieldName){
       const match=String(fieldName||'').trim().match(/^(?:Textfeld|Text)\s*(\d+)$/i)
       return match?'Text'+match[1]:String(fieldName||'').trim()
@@ -2138,11 +2168,14 @@ import { versorgungsziele } from './versorgungsziele.js'
       // Keep both original documents in the DOM for an eight-page print;
       // render serially to avoid concurrent PDF canvases exhausting memory.
       void (async()=>{
+        const authenticatedPdf=await authenticatedOriginalPdfUrl('aok-bw-pg24-anlage-4-profilerhebung')
+        if(generation!==aokProfileRenderGeneration || !host.isConnected) return
+        if(authenticatedPdf) host.querySelectorAll('.aok-measure-open').forEach(link=>{link.href=authenticatedPdf})
         for(const side of sides){
           if(generation!==aokProfileRenderGeneration || !host.isConnected) return
           const box=host.querySelector('[data-aok-pdf-side="'+(side||'einseitig')+'"]')
           if(!box || !box.isConnected) return
-          await renderEditableProfilePdf(url,box,side)
+          await renderEditableProfilePdf(authenticatedPdf||url,box,side)
         }
       })()
     }
@@ -3035,7 +3068,9 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(!orientationPdfCache.has(url)){
         orientationPdfCache.set(url,(async()=>{
           const pdfjs=await loadPdfJs()
-          const pdf=await pdfjs.getDocument(url).promise
+          const remoteId=AOK_PG24_MEASURE_IDS[String(url).split('/').pop()]
+          const resolvedUrl=remoteId?await authenticatedOriginalPdfUrl(remoteId):null
+          const pdf=await pdfjs.getDocument(resolvedUrl||url).promise
           const page=await pdf.getPage(1)
           const viewport=page.getViewport({scale:1.8})
           const canvas=document.createElement('canvas')
@@ -3329,7 +3364,19 @@ import { versorgungsziele } from './versorgungsziele.js'
         $('measureOrientationMarker')?.classList.add('hidden')
         $('measureOrientationGuide')?.classList.add('hidden')
       }
-      renderEditableAokPdf(url,asset,$('aokPdfMeasurePages'))
+      // Use authenticated R2 only after the original has passed upload verification.
+      // Otherwise retain the legacy source unchanged; never substitute a different contract form.
+      const measurePdfHost=$('aokPdfMeasurePages')
+      void (async()=>{
+        const id=AOK_PG24_MEASURE_IDS[asset.file]
+        const authenticatedPdf=id?await authenticatedOriginalPdfUrl(id):null
+        if(!measurePdfHost?.isConnected || measurePdfHost!==$('aokPdfMeasurePages')) return
+        if(authenticatedPdf){
+          const original=host.querySelector('.aok-measure-open')
+          if(original) original.href=authenticatedPdf
+        }
+        renderEditableAokPdf(authenticatedPdf||url,asset,measurePdfHost)
+      })()
       return true
     }
 
