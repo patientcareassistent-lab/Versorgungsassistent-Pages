@@ -13,7 +13,8 @@
   },
   "scripts": {
     "test:e2e": "playwright test",
-    "test:security": "node tests/security/archive-functions.cjs && node --test tests/security/archive-layout.test.mjs"
+    "test:security": "node tests/security/archive-functions.cjs && node --test tests/security/archive-layout.test.mjs && npm run test:forms",
+    "test:forms": "node --test tests/security/form-library.test.mjs tests/security/form-gateway.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.55.0"

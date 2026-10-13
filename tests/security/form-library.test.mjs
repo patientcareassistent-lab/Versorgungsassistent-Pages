@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const source=await readFile(new URL('../../form-library.js',import.meta.url),'utf8');
+const {validateCatalog,findForms,mapTranscriptToFields}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const sha='a'.repeat(64);
+const aok={id:'profile-aok',version:'2026-09-01',payer:'AOK Baden-Württemberg',pg:['24'],formType:'profile',status:'verified',sha256:sha,source:{kind:'r2',objectKey:'contracts/aok/24/profile.pdf'},validFrom:'2026-09-01',fields:[{semanticKey:'patient.weight',pdfFieldId:'Text4',mappingStatus:'verified'},{semanticKey:'patient.dob',pdfFieldId:'Text5',mappingStatus:'heuristic'}]};
+const generic={...aok,id:'generic-profile',payer:'*',pg:['*'],fields:[]};
+const catalog={schemaVersion:1,forms:[generic,aok,{...aok,id:'pending',status:'pending-upload'}]};
+test('payer and PG matching keeps specific form first',()=>{const forms=findForms(catalog,{payer:'AOK Baden-Württemberg',pg:'24',formType:'profile',when:'2026-10-13'});assert.equal(forms[0].id,'profile-aok');assert.equal(forms.length,2)});
+test('other PG uses applicable verified wildcard only',()=>{assert.deepEqual(findForms(catalog,{payer:'TK',pg:'23'}).map(x=>x.id),['generic-profile'])});
+test('unverified PDF stays disabled',()=>{assert.equal(findForms(catalog,{payer:'AOK Baden-Württemberg',pg:'24'}).some(x=>x.id==='pending'),false)});
+test('speech mapping rejects heuristic and unknown fields',()=>{assert.deepEqual(mapTranscriptToFields(aok,{'patient.weight':80,'patient.dob':'1990-01-01',other:1}),{accepted:{Text4:80},rejected:['patient.dob','other']})});
+test('invalid catalog status cannot be promoted without hash',()=>{assert.throws(()=>validateCatalog({schemaVersion:1,forms:[{...aok,sha256:null}]}))});
