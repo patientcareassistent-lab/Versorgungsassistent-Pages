@@ -1064,7 +1064,9 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(!field) return
       const oldText=String(oldValue??'')
       const nextText=String(newValue??'')
-      for(const code of ['FMB02001','FMB02002','FMB02003']){
+      const schema=$('carePg')?.value==='24'?pg24SourceMeasureSchema():null
+      if(!schema) return
+      for(const code of [schema.code]){
         const key='sourceMeasure:'+code+':header:'+field
         const existing=values[key]
         if(existing!==undefined && existing!==null && String(existing)!=='' && String(existing)!==oldText) continue
