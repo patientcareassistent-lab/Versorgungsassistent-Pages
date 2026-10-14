@@ -1033,18 +1033,18 @@ import { versorgungsziele } from './versorgungsziele.js'
       const last=values.patientLastName||''
       if(['vorname','rufname'].includes(name)) return first
       if(['nachname','familienname','name'].includes(name)) return last
-      if(['name, vorname','name / vorname','patientenname','name des versicherten','name der versicherten person'].includes(name))
+      if(['name vorname','patientenname','name des versicherten','name der versicherten person'].includes(name))
         return [last,first].filter(Boolean).join(', ')
       if(['geburtsdatum','geburtsdatum patient','geburtsdatum versicherte person'].includes(name)) return values.patientBirthDate||''
-      if(['versichertennummer','krankenversichertennummer','kv-nummer','kv.-nr.'].includes(name)) return values.insuredNo||''
-      if(['vorgangsnummer','auftragsnummer','sic-vorgangsnummer','vorgangs-nr.'].includes(name)) return values.caseNumber||''
-      if(['krankenkasse','kostentrager','kostentrager / krankenkasse'].includes(name)) return $('careKasse')?.value||''
+      if(['versichertennummer','krankenversichertennummer','kv nummer','kv nr'].includes(name)) return values.insuredNo||''
+      if(['vorgangsnummer','auftragsnummer','sic vorgangsnummer','vorgangs nr'].includes(name)) return values.caseNumber||''
+      if(['krankenkasse','kostentrager','kostentrager krankenkasse'].includes(name)) return $('careKasse')?.value||''
       if(['produktgruppe','pg'].includes(name)) return $('carePg')?.value||''
-      if(['hilfsmittel','hilfsmittel / produkt','hilfsmittelbezeichnung'].includes(name)) return selectedHimi()||''
+      if(['hilfsmittel','hilfsmittel produkt','hilfsmittelbezeichnung'].includes(name)) return selectedHimi()||''
       if(['versorgungsart','art der versorgung'].includes(name)) return values.supplyType||''
       if(['betroffene seite','amputationsseite','seite'].includes(name)) return values.side||''
       if(['amputationshohe','amputationsniveau'].includes(name)) return values.ampLevel||''
-      if(['verordnender arzt / praxis','verordnende arztpraxis','arztpraxis'].includes(name))
+      if(['verordnender arzt praxis','verordnende arztpraxis','arztpraxis'].includes(name))
         return [values.rxDoctor,values.rxPracticeAddress].filter(Boolean).join(' · ')
       if(['verordnungsdatum','datum der verordnung'].includes(name)) return values.rxDate||''
       if(['messdatum','datum der massnahme','datum der massaufnahme'].includes(name)) return values.measureDate||''
@@ -1080,7 +1080,11 @@ import { versorgungsziele } from './versorgungsziele.js'
       control.dataset.measureContext=[f.Abschnitt,f.Einheit_Optionen].filter(Boolean).join(' · ')
       control.setAttribute('aria-label',control.dataset.measureFieldId+' · '+control.dataset.measureLabel)
       control.dataset.required=String(f.Pflichtstatus).toLowerCase()==='ja'?'true':'false'
-      const prefill=orderPrefillForLabel(f.Feldbezeichnung)
+      let prefill=orderPrefillForLabel(f.Feldbezeichnung)
+      if(control.tagName==='SELECT' && prefill!==''){
+        const match=[...control.options].find(option=>norm(option.value)===norm(prefill))
+        prefill=match?.value||''
+      }
       if(values[key]===undefined && prefill!=='') values[key]=prefill
       if(values[key]!==undefined) control.value=values[key]
       const save=()=>{values[key]=control.value;showWizardError('');updateWizardStatus()}
@@ -3651,7 +3655,11 @@ import { versorgungsziele } from './versorgungsziele.js'
       const sourceStatus=String(f.Pflichtstatus||'').toLowerCase()
       const required=type==='Hinweis'?false:conditional.required
       const options=fieldOptionValues(f)
-      const autoValue=profileAutofillValue(f)
+      let autoValue=profileAutofillValue(f)
+      if(autoValue!=='' && ['Auswahl','Mehrfachauswahl'].includes(type) && options.length){
+        const match=options.find(option=>norm(option)===norm(autoValue))
+        autoValue=match||''
+      }
       if(autoValue!=='' && (values[id]===undefined || values[id]===null || values[id]==='')) values[id]=autoValue
       const metaParts=[f.Abschnitt,f.Einheit_Optionen,f.Bedingung_UI].filter(Boolean)
       if(autoValue!=='') metaParts.push('aus Stammdaten übernommen')
