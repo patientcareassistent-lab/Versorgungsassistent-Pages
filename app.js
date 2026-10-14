@@ -1826,7 +1826,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       // AOK Anlage 4 Text3 explicitly expects metres; internal FMB/technician
       // measurements are in centimetres. Do not fabricate measurements.
       const cm=recordedMeasurement('height')
-      const height=cm && /^\\d+(?:[.,]\\d+)?$/.test(cm) ? (Number(cm.replace(',','.'))/100).toFixed(2).replace('.',',') : ''
+      const height=cm && /^\d+(?:[.,]\d+)?$/.test(cm) ? (Number(cm.replace(',','.'))/100).toFixed(2).replace('.',',') : ''
       return {
         Text1: values.serviceReason||'',
         Text2: [fullName,dob].filter(Boolean).join(' · '),
