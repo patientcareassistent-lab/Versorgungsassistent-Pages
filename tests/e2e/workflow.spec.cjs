@@ -677,3 +677,68 @@ test('PG24 routes AOK Baden-Württemberg to the contract Annex 4 and other payer
   await expect(page.locator('#fieldList')).toContainText('Angaben zur Amputation')
   await expect(page.locator('#fieldList')).not.toContainText('AOK Original')
 })
+
+
+test('PG24 AOK BW uses the exact same FMB measurement workspace as other payers without layout changes', async ({ page }) => {
+  await installSupabaseMock(page, {
+    mode: 'signed-in',
+    rpcOverrides: {
+      care_reference_bootstrap: {
+        kassen: [{ Kasse_Kanonisch: 'AOK Baden-Württemberg' }, { Kasse_Kanonisch: 'Testkasse' }],
+        produktgruppen: [{ PG: '24', Generisches_Blatt: 'PG24 Beinprothesen', Reifegrad: 'TEST' }],
+        sourceCount: 1,
+        formCount: 1
+      },
+      himi_logic_for_pg: [{
+        Himi_ID: 'PG24_UKB',
+        PG: '24',
+        Bezeichnung: 'Unterschenkelprothese',
+        Generisches_Formular_ID: 'PG24_PROTHESEN',
+        Versorgungsarten: ['Post-OP', 'Interim', 'Definitiv', 'Folge', 'Wechsel'],
+        Profil_erforderlich: true,
+        Mass_erforderlich: true,
+        Erprobung_erforderlich: false,
+        Verlauf_erforderlich: true,
+        Aktiv: true
+      }],
+      forms_for_pg: [], form_fields_for_pg: [], himi_form_rules_for_himi: []
+    }
+  })
+
+  await page.goto('/index.html')
+  await page.locator('#newSupplyOverviewButton').click()
+  await page.locator('#careKasse').selectOption({ label: 'AOK Baden-Württemberg' })
+  await page.locator('#carePg').selectOption('24')
+  await page.locator('#careHimi').selectOption('PG24_UKB')
+
+  const measure=page.locator('#measureFieldList')
+  const checkLayout=async () => {
+    await expect(measure.locator('.pg24-measure-workspace .source-measure-sheet')).toHaveCount(1)
+    await expect(measure.locator('.source-measure-title h3')).toHaveText('Maßblatt Unterschenkelprothetik und Kosmetik')
+    await expect(measure.locator('.measure-side .measure-orientation-card')).toHaveCount(1)
+    await expect(measure.locator('.measure-side .measure-summary-card')).toHaveCount(1)
+    await expect(measure.locator('.measure-side .measure-history-card')).toHaveCount(1)
+    await expect(measure.locator('[data-measure-key^="sourceMeasure:FMB02003:"]').first()).toHaveCount(1)
+    await expect(measure.locator('#aokPdfMeasurePages')).toHaveCount(0)
+    return await measure.evaluate(el => ({
+      sections: [...el.querySelectorAll('.source-measure-section h4')].map(n => n.textContent),
+      controls: el.querySelectorAll('[data-measure-key]').length,
+      workspace: el.firstElementChild?.className,
+      columnTitles: [...el.querySelectorAll('.source-measure-title h3')].map(n => n.textContent)
+    }))
+  }
+
+  const aokLayout=await checkLayout()
+  expect(aokLayout.controls).toBeGreaterThan(25)
+  await expect(page.locator('#fieldInfo')).toContainText('AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen')
+
+  // Switching payer must only switch the profile: no alternate measurement layout.
+  await page.locator('#careKasse').selectOption({ label: 'Testkasse' })
+  const otherLayout=await checkLayout()
+  expect(otherLayout).toEqual(aokLayout)
+  await expect(page.locator('#fieldInfo')).toContainText('allgemeine einheitliche Felder')
+
+  await page.locator('#careKasse').selectOption({ label: 'AOK Baden-Württemberg' })
+  expect(await checkLayout()).toEqual(aokLayout)
+  await expect(page.locator('#fieldInfo')).toContainText('AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen')
+})
