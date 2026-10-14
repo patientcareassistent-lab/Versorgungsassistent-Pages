@@ -261,7 +261,7 @@ jobs:
               failures.append('app.js: runtime inline style mutation')
           if re.search(r'''@import\s+|url\(\s*["']?https?://''', css, re.I):
               failures.append('styles.css: remote stylesheet dependency')
-          if not re.search(r'<link\\s+id="appStyles"\\s+rel="stylesheet"\\s+href="\\./styles\\.css\\?v=[a-zA-Z0-9-]+"\\s*/>', html):
+          if not re.search(r'<link\s+id="appStyles"\s+rel="stylesheet"\s+href="\./styles\.css\?v=[a-zA-Z0-9-]+"\s*/>', html):
               failures.append('index.html: versioned external application stylesheet missing')
           if "script-src 'self' 'wasm-unsafe-eval'" not in html:
               failures.append('index.html: hardened script-src CSP missing')
