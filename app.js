@@ -1053,6 +1053,30 @@ import { versorgungsziele } from './versorgungsziele.js'
       return ''
     }
 
+    // Mirror edits to existing auto-filled FMB headers only when those values
+    // still match the previous order value; preserve deliberate sheet overrides.
+    function syncLinkedMeasureHeader(orderKey,oldValue,newValue){
+      const field={
+        patientFirstName:'first',patientLastName:'last',
+        caseNumber:'case',measureDate:'date',
+        'tech:weight':'weight','tech:height':'height'
+      }[orderKey]
+      if(!field) return
+      const oldText=String(oldValue??'')
+      const nextText=String(newValue??'')
+      for(const code of ['FMB02001','FMB02002','FMB02003']){
+        const key='sourceMeasure:'+code+':header:'+field
+        const existing=values[key]
+        if(existing!==undefined && existing!==null && String(existing)!=='' && String(existing)!==oldText) continue
+        values[key]=nextText
+        document.querySelectorAll('[data-measure-key="'+CSS.escape(key)+'"]').forEach(input=>{
+          if(input.tagName!=='INPUT' || input.type==='checkbox') return
+          if(input.value==='' || input.value===oldText) input.value=nextText
+        })
+      }
+      if($('measureSummaryList') && $('measureFieldList')?.querySelector('[data-measure-summary="true"]')) renderSourceMeasureSummary()
+    }
+
     function createDynamicControl(f,keyPrefix){
       let control
       const type=String(f.Datentyp||'Text')
@@ -2303,7 +2327,12 @@ import { versorgungsziele } from './versorgungsziele.js'
       }else{
         el.value=values[key]??''
         if(readonly){el.readOnly=true;el.classList.add('tech-profile-readonly')}
-        const save=()=>{values[key]=el.value;updateWizardStatus()}
+        const save=()=>{
+          const previous=values[key]
+          values[key]=el.value
+          if(key==='tech:weight'||key==='tech:height') syncLinkedMeasureHeader(key,previous,el.value)
+          updateWizardStatus()
+        }
         if(!readonly){el.addEventListener('input',save);el.addEventListener('change',save)}
       }
       el.dataset.techKey=key
@@ -4599,8 +4628,10 @@ import { versorgungsziele } from './versorgungsziele.js'
           if(el.type==='radio' && !el.checked) return
           const next=readCaseField(el)
           if(next!==undefined){
+            const previous=values[key]
             values[key]=next
             syncCaseFieldControls(key,next,el)
+            syncLinkedMeasureHeader(key,previous,next)
           }
           if(key==='planGoal'){
             values.versorgungGoalText=String(next||'')
