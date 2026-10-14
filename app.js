@@ -3693,7 +3693,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
       if(autoValue!=='' && (values[id]===undefined || values[id]===null || values[id]==='')) values[id]=autoValue
       const metaParts=[f.Abschnitt,f.Einheit_Optionen,f.Bedingung_UI].filter(Boolean)
-      if(autoValue!=='') metaParts.push('aus Stammdaten übernommen')
+      if(autoValue!=='' && String(values[id]??'')===String(autoValue)) metaParts.push('aus Stammdaten übernommen')
       if(sourceStatus==='bedingt' && !f.Bedingung_UI) metaParts.push('bedingt laut Quelle · Auslöser nicht eindeutig hinterlegt')
       if((type==='Auswahl'||type==='Mehrfachauswahl') && !options.length) metaParts.push('Auswahloptionen in der Quelle nicht einzeln hinterlegt · Freitext')
       if(type==='Hinweis') metaParts.push('Hinweis · keine Eingabe erforderlich')
