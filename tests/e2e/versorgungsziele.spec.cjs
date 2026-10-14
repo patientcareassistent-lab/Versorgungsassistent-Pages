@@ -70,7 +70,7 @@ test('PG24 technician therapy goal is edited only after the measure step', async
   await expect(page.locator('[data-case-field="planGoal"]')).toHaveValue(/Gangbild/)
 })
 
-test('PG24 AOK BW displays the contract Annex 5b before internal UKB FMB', async ({page}) => {
+test('PG24 AOK BW and other payers display the same existing UKB FMB measure sheet', async ({page}) => {
   await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{
     care_reference_bootstrap:{
       kassen:[{Kasse_Kanonisch:'AOK Baden-Württemberg'},{Kasse_Kanonisch:'Privat'}],
@@ -90,11 +90,15 @@ test('PG24 AOK BW displays the contract Annex 5b before internal UKB FMB', async
   await page.locator('input[name="caseKindChoice"][value="Neuversorgung"]').check()
   await page.locator('#careSupplyType').selectOption('Definitiv')
   await page.locator('#careKasse').selectOption({label:'AOK Baden-Württemberg'})
-  await expect(page.locator('#measureLogicNote')).toContainText('Anlage 5b')
-  await expect(page.locator('#measureFieldList .aok-measure-frame-wrap')).toHaveCount(1)
-  await expect(page.locator('#sourceMeasureBody')).toHaveCount(0)
+  await expect(page.locator('#measureLogicNote')).toContainText('Maßblatt Unterschenkelprothetik')
+  await expect(page.locator('#measureFieldList .pg24-measure-workspace .source-measure-sheet')).toHaveCount(1)
+  await expect(page.locator('#measureFieldList .measure-orientation-card')).toHaveCount(1)
+  await expect(page.locator('#measureFieldList .measure-history-card')).toHaveCount(1)
+  await expect(page.locator('#sourceMeasureBody')).toHaveCount(1)
+  await expect(page.locator('#aokPdfMeasurePages')).toHaveCount(0)
   await page.locator('#careKasse').selectOption({label:'Privat'})
   await expect(page.locator('#measureLogicNote')).toContainText('Maßblatt Unterschenkelprothetik')
+  await expect(page.locator('#measureFieldList .pg24-measure-workspace .source-measure-sheet')).toHaveCount(1)
   await expect(page.locator('#sourceMeasureBody')).toHaveCount(1)
 })
 
