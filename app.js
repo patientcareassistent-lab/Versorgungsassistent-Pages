@@ -463,6 +463,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     }
 
     async function restoreSupplyDraft(id){
+      showArchiveActionNotice('')
       let item=readSupplyDrafts().find(x=>x.id===id)
       if(!item) return
       const detail=await supabase
@@ -5147,24 +5148,52 @@ import { versorgungsziele } from './versorgungsziele.js'
         .map(step=>step.name)
     }
 
+    function showArchiveActionNotice(message=''){
+      const note=$('archiveActionNotice')
+      if(!note) return
+      note.textContent=message
+      note.classList.toggle('hidden',!message)
+    }
+
+    function archivePreflight(){
+      if(!supplyHasEditableContext()) return {
+        ok:false,reason:'Bitte zuerst eine bearbeitbare Versorgung öffnen.'
+      }
+      // The deployed archive endpoint still enforces owner-only access.
+      // Never call it for someone else's case until the staged team RPC is verified.
+      const owner=activeSupplyRecord()?.ownerUserId
+      if(owner && owner!==currentSession?.user?.id) return {
+        ok:false,reason:'Team-Archivierung ist serverseitig noch nicht freigegeben. Der Vorgang bleibt unverändert.'
+      }
+      const missing=archiveMissingSteps()
+      if(missing.length) return {
+        ok:false,reason:'Archivierung noch nicht möglich: '+missing.length+' erforderliche Arbeitsschritte sind offen: '+missing.join(' · ')
+      }
+      if(!owner) return {
+        ok:false,reason:'Der Vorgang muss vor der Archivierung zunächst erfolgreich gespeichert werden. Bitte die Auftragserfassung prüfen.'
+      }
+      // The server additionally requires "Abschluss offen" and wizard_index >= 9.
+      // Explain those requirements BEFORE the irreversible archive request.
+      if(wizardIndex<9 || currentSupplyStatus(values,wizardIndex)!=='Abschluss offen') return {
+        ok:false,reason:'Bitte den Versorgungsablauf bis zur Abgabe abschließen, bevor extern archiviert wird.'
+      }
+      return {ok:true,reason:''}
+    }
+
     function updateArchiveButtonState(){
       const button=$('archiveSupplyButton')
       if(!button) return
       button.classList.remove('hidden')
       button.removeAttribute('aria-hidden')
       button.removeAttribute('tabindex')
-      // Archive Edge Functions still enforce the original owner and are being
-      // migrated separately (P0 / issue #12). Do not expose a broken action
-      // to the team until the server also supports shared archive operations.
-      const archiveSupported=supplyHasEditableContext()
-        && activeSupplyRecord()?.ownerUserId===currentSession?.user?.id
-      const missing=archiveSupported?archiveMissingSteps():['Archiv-Backend für Teamzugriff ausstehend']
-      button.disabled=!archiveSupported || missing.length>0
-      button.title=!archiveSupported
-        ? 'Archivierung fremder Vorgänge wird serverseitig noch umgestellt.'
-        : missing.length
-          ? 'Archivierung nach vollständiger v0.9-Dokumentation: '+missing.slice(0,3).join(' · ')
-          : 'Vollständig dokumentierten Vorgang geschützt archivieren.'
+      // Do not disable the action for incomplete or foreign cases: on click,
+      // explain the real restriction rather than presenting a dead button.
+      button.disabled=!supplyHasEditableContext()
+      const check=archivePreflight()
+      button.title=check.ok
+        ? 'Vollständig dokumentierten Vorgang geschützt archivieren.'
+        :check.reason
+      button.setAttribute('aria-describedby','archiveActionNotice')
     }
 
     function updateSupplyEditState(){
@@ -5187,17 +5216,13 @@ import { versorgungsziele } from './versorgungsziele.js'
     }
 
     async function archiveActiveSupply(){
-      if(!supplyHasEditableContext()) return
-      if(activeSupplyRecord()?.ownerUserId!==currentSession?.user?.id){
-        showWizardError('Die Archivierung durch andere Teammitglieder ist serverseitig noch nicht freigeschaltet.')
+      const check=archivePreflight()
+      if(!check.ok){
+        showArchiveActionNotice(check.reason)
+        showWizardError(check.reason)
         return
       }
-      const missing=archiveMissingSteps()
-      if(missing.length){
-        showWizardError('Archivierung ist erst nach vollständiger v0.9-Dokumentation möglich:',missing)
-        updateArchiveButtonState()
-        return
-      }
+      showArchiveActionNotice('')
       const patient=([values.patientFirstName,values.patientLastName].filter(Boolean).join(' ')||values.patientName||values.caseNumber||'diese Versorgung')
       if(!window.confirm('Versorgung „'+patient+'“ extern archivieren? Der aktuelle Stand, die Revisionshistorie und zugehörige Bilder werden nach Prüfsummenprüfung in das geschützte EU-Archiv übertragen und anschließend aus dem operativen Bestand entfernt.')) return
 
@@ -5209,7 +5234,9 @@ import { versorgungsziele } from './versorgungsziele.js'
       try{
         const saved=await persistActiveSupplyNow()
         if(!saved) throw new Error('Der aktuelle Stand konnte vor der Archivierung nicht gespeichert werden.')
-
+        // A concurrent edit may have changed eligibility while saving.
+        const fresh=archivePreflight()
+        if(!fresh.ok) throw new Error(fresh.reason)
         const result=await supabase.functions.invoke('archive-care-case',{body:{care_case_id:activeSupplyId}})
         if(result.error){
           let detail=result.error.message||'Archivierungsdienst nicht erreichbar.'
@@ -5241,6 +5268,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       }catch(err){
         console.error(err)
         showWizardError('Archivierung fehlgeschlagen. Die Versorgung bleibt im operativen Bestand.',[err?.message||String(err)])
+        showArchiveActionNotice('Archivierung fehlgeschlagen. Der Vorgang bleibt erhalten. '+(err?.message||String(err)))
       }finally{
         if(button){button.textContent=oldText;updateSupplyEditState()}
       }
@@ -5285,6 +5313,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     }
 
     function startNewSupply(){
+      showArchiveActionNotice('')
       if(activeSupplyId) void autosaveSupplyDraft()
       activeSupplyId=(crypto.randomUUID?crypto.randomUUID():'versorgung-'+Date.now()+'-'+Math.random().toString(16).slice(2))
       Object.keys(values).forEach(k=>delete values[k])
