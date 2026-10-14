@@ -158,6 +158,25 @@ test('PG24 AOK source original renders distinct insured/provider signatures and 
   await page.locator('#wizardNext').click()
   await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
   await expect(page.locator('#aokProfilePdfPages .aok-pdf-page')).toHaveCount(4)
+  // Regression: controls must lie OVER the source PDF, not flow below it.
+  // Assert actual browser layout, not just DOM count or PDF widget keys.
+  const overlayGeometry=await page.locator('#aokProfilePdfPages .aok-pdf-page').evaluateAll(pages=>{
+    let count=0,misplaced=0
+    for(const pdfPage of pages){
+      const canvas=pdfPage.querySelector('canvas')
+      const bounds=canvas.getBoundingClientRect()
+      for(const field of pdfPage.querySelectorAll('.aok-pdf-input')){
+        count++
+        const box=field.getBoundingClientRect()
+        const pos=getComputedStyle(field).position
+        if(pos!=='absolute' || box.left<bounds.left-8 || box.right>bounds.right+8 ||
+          box.top<bounds.top-8 || box.bottom>bounds.bottom+8) misplaced++
+      }
+    }
+    return {count,misplaced}
+  })
+  expect(overlayGeometry.count).toBeGreaterThan(75)
+  expect(overlayGeometry.misplaced,'PDF widgets outside their source canvas').toBe(0)
   await expect(page.locator('#aokProfilePdfPages [data-signature-role="insured"]')).toHaveCount(1)
   await expect(page.locator('#aokProfilePdfPages [data-signature-role="provider"]')).toHaveCount(1)
   // Official form uses 'Textfeld N', application must persist stable TextN IDs.

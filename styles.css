@@ -189,3 +189,30 @@
   .topbar p{font-size:.7rem}
   .utility-nav summary{font-size:.7rem}
 }
+
+/* PG24 original-PDF overlays: keep widgets in their canvas coordinate system.
+   Specificity is intentional: form-wide input layout rules must never detach
+   these controls from the PDF. PDF geometry is computed in app.js as %.
+   The page container's dimensions follow its responsive PDF canvas. */
+.aok-pdf-page {position:relative!important;display:block!important;isolation:isolate}
+.aok-pdf-page > canvas {display:block;width:100%;height:auto}
+.aok-pdf-page > .aok-pdf-input {
+  position:absolute!important;
+  display:block;
+  margin:0!important;
+  padding:0 2px!important;
+  border:0!important;
+  border-radius:2px!important;
+  background:rgba(255,255,255,.10)!important;
+  box-shadow:none!important;
+  min-width:0!important;
+  max-width:none;
+  z-index:2;
+}
+.aok-pdf-page > .aok-pdf-input.aok-pdf-check {
+  margin:0!important;
+  padding:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+}
+.aok-pdf-page > .aok-signature-pad {position:absolute!important}
