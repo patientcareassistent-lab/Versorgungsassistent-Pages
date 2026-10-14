@@ -742,3 +742,61 @@ test('PG24 AOK BW uses the exact same FMB measurement workspace as other payers 
   expect(await checkLayout()).toEqual(aokLayout)
   await expect(page.locator('#fieldInfo')).toContainText('AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen')
 })
+
+
+test('PG24 shared FMB measure sheet inherits order fields and omits redundant administrative controls',async({page})=>{
+  await installSupabaseMock(page,{mode:'signed-in',rpcOverrides:{
+    care_reference_bootstrap:{
+      kassen:[{Kasse_Kanonisch:'AOK Baden-Württemberg'},{Kasse_Kanonisch:'Testkasse'}],
+      produktgruppen:[{PG:'24',Generisches_Blatt:'Beinprothesen',Reifegrad:'PRODUKTIV'}],
+      sourceCount:1,formCount:1
+    },
+    himi_logic_for_pg:[{
+      Himi_ID:'PG24_UKB',PG:'24',Bezeichnung:'Unterschenkelprothese',
+      Generisches_Formular_ID:'PG24',Profil_erforderlich:true,Mass_erforderlich:true,
+      Erprobung_erforderlich:false,Verlauf_erforderlich:true,Aktiv:true
+    }],
+    forms_for_pg:[],himi_form_rules_for_himi:[],form_fields_for_pg:[]
+  }})
+  await page.goto('/index.html')
+  await page.locator('#newSupplyOverviewButton').click()
+  await page.locator('#careKasse').selectOption({label:'AOK Baden-Württemberg'})
+  await page.locator('#carePg').selectOption('24')
+  await page.locator('#careHimi').selectOption('PG24_UKB')
+  await page.locator('[data-case-field="patientFirstName"]').fill('Testvorname')
+  await page.locator('[data-case-field="patientLastName"]').fill('Testnachname')
+  await page.locator('[data-case-field="patientBirthDate"]').fill('1985-11-22')
+  await page.locator('[data-case-field="caseNumber"]').fill('TEST-VORGANG-123')
+  await page.locator('#careSide').selectOption('rechts')
+  await page.locator('input[name="caseKindChoice"][value="Neuversorgung"]').check()
+  await page.locator('#careSupplyType').selectOption('Definitiv')
+  await page.locator('#careAmpLevel').selectOption('Unterschenkel')
+  await page.locator('[data-case-field="measureDate"]').evaluate(el=>{el.value='2026-10-14';el.dispatchEvent(new Event('input',{bubbles:true}))})
+  const measurement=page.locator('#measureFieldList')
+  const expectCommonPrefill=async()=>{
+    const key=id=>measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:'+id+'"]')
+    await expect(measurement.locator('.pg24-measure-workspace')).toHaveCount(1)
+    await expect(key('last')).toHaveValue('Testnachname')
+    await expect(key('first')).toHaveValue('Testvorname')
+    await expect(key('case')).toHaveValue('TEST-VORGANG-123')
+    await expect(key('date')).toHaveValue('2026-10-14')
+    await expect(key('side').first()).toBeChecked()
+    await expect(key('nz')).toHaveCount(0)
+    await expect(key('branch')).toHaveCount(0)
+    await expect(key('patientRef')).toHaveCount(0)
+    await expect(measurement.locator('.source-measure-title h3')).toHaveText('Maßblatt Unterschenkelprothetik und Kosmetik')
+    return await measurement.locator('.source-measure-section').first().evaluate(el=>[...el.querySelectorAll('.source-measure-field')].map(x=>x.querySelector('span')?.textContent||''))
+  }
+  const aokLayout=await expectCommonPrefill()
+  await measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:weight"]').evaluate(el=>{el.value='74';el.dispatchEvent(new Event('input',{bubbles:true}))})
+  await measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:height"]').evaluate(el=>{el.value='175';el.dispatchEvent(new Event('input',{bubbles:true}))})
+  await page.locator('#careKasse').selectOption({label:'Testkasse'})
+  await expect(measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:weight"]')).toHaveValue('74')
+  await expect(measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:height"]')).toHaveValue('175')
+  expect(await expectCommonPrefill()).toEqual(aokLayout)
+  await page.locator('#careKasse').selectOption({label:'AOK Baden-Württemberg'})
+  await expect(measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:weight"]')).toHaveValue('74')
+  await expect(measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:height"]')).toHaveValue('175')
+  await expectCommonPrefill()
+  await expect(page.locator('#fieldInfo')).toContainText('AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen')
+})

@@ -1015,6 +1015,70 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
     }
 
+    // Explicit, non-heuristic mapping: only unambiguous order/recipe fields are copied.
+    // Never infer clinical measurements or patient IDs from similarly named fields.
+    // Saved handwritten values take precedence over automatically supplied defaults.
+    function firstRecordedValue(...candidates){
+      const found=candidates.find(x=>x!==undefined && x!==null && String(x).trim()!=='')
+      return found===undefined?'':String(found)
+    }
+    function recordedMeasurement(kind){
+      const suffix=kind==='height'?'height':'weight'
+      const saved=Object.keys(values).filter(key=>/^sourceMeasure:FMB0200[123]:header:(?:height|weight)$/.test(key)&&key.endsWith(':'+suffix))
+      return firstRecordedValue(values['tech:'+suffix],...saved.map(key=>values[key]))
+    }
+    function orderPrefillForLabel(label){
+      const name=norm(String(label||'').replace(/\s*\([^)]*\)\s*$/,''))
+      const first=values.patientFirstName||''
+      const last=values.patientLastName||''
+      if(['vorname','rufname'].includes(name)) return first
+      if(['nachname','familienname','name'].includes(name)) return last
+      if(['name vorname','patientenname','name des versicherten','name der versicherten person'].includes(name))
+        return [last,first].filter(Boolean).join(', ')
+      if(['geburtsdatum','geburtsdatum patient','geburtsdatum versicherte person'].includes(name)) return values.patientBirthDate||''
+      if(['versichertennummer','krankenversichertennummer','kv nummer','kv nr'].includes(name)) return values.insuredNo||''
+      if(['vorgangsnummer','auftragsnummer','sic vorgangsnummer','vorgangs nr'].includes(name)) return values.caseNumber||''
+      if(['krankenkasse','kostentrager','kostentrager krankenkasse'].includes(name)) return $('careKasse')?.value||''
+      if(['produktgruppe','pg'].includes(name)) return $('carePg')?.value||''
+      if(['hilfsmittel','hilfsmittel produkt','hilfsmittelbezeichnung'].includes(name)) return selectedHimi()||''
+      if(['versorgungsart','art der versorgung'].includes(name)) return values.supplyType||''
+      if(['betroffene seite','amputationsseite','seite'].includes(name)) return values.side||''
+      if(['amputationshohe','amputationsniveau'].includes(name)) return values.ampLevel||''
+      if(['verordnender arzt praxis','verordnende arztpraxis','arztpraxis'].includes(name))
+        return [values.rxDoctor,values.rxPracticeAddress].filter(Boolean).join(' · ')
+      if(['verordnungsdatum','datum der verordnung'].includes(name)) return values.rxDate||''
+      if(['messdatum','datum der massnahme','datum der massaufnahme'].includes(name)) return values.measureDate||''
+      if(['korpergewicht','gewicht','gewicht kg'].includes(name)) return recordedMeasurement('weight')
+      if(['korpergrosse','grosse','grosse cm','korpergrosse cm'].includes(name)) return recordedMeasurement('height')
+      return ''
+    }
+
+    // Mirror edits to existing auto-filled FMB headers only when those values
+    // still match the previous order value; preserve deliberate sheet overrides.
+    function syncLinkedMeasureHeader(orderKey,oldValue,newValue){
+      const field={
+        patientFirstName:'first',patientLastName:'last',
+        caseNumber:'case',measureDate:'date',
+        'tech:weight':'weight','tech:height':'height'
+      }[orderKey]
+      if(!field) return
+      const oldText=String(oldValue??'')
+      const nextText=String(newValue??'')
+      const schema=$('carePg')?.value==='24'?pg24SourceMeasureSchema():null
+      if(!schema) return
+      for(const code of [schema.code]){
+        const key='sourceMeasure:'+code+':header:'+field
+        const existing=values[key]
+        if(existing!==undefined && existing!==null && String(existing)!=='' && String(existing)!==oldText) continue
+        values[key]=nextText
+        document.querySelectorAll('[data-measure-key="'+CSS.escape(key)+'"]').forEach(input=>{
+          if(input.tagName!=='INPUT' || input.type==='checkbox') return
+          if(input.value==='' || input.value===oldText) input.value=nextText
+        })
+      }
+      if($('measureSummaryList') && $('measureFieldList')?.querySelector('[data-measure-summary="true"]')) renderSourceMeasureSummary()
+    }
+
     function createDynamicControl(f,keyPrefix){
       let control
       const type=String(f.Datentyp||'Text')
@@ -1042,6 +1106,12 @@ import { versorgungsziele } from './versorgungsziele.js'
       control.dataset.measureContext=[f.Abschnitt,f.Einheit_Optionen].filter(Boolean).join(' · ')
       control.setAttribute('aria-label',control.dataset.measureFieldId+' · '+control.dataset.measureLabel)
       control.dataset.required=String(f.Pflichtstatus).toLowerCase()==='ja'?'true':'false'
+      let prefill=orderPrefillForLabel(f.Feldbezeichnung)
+      if(control.tagName==='SELECT' && prefill!==''){
+        const match=[...control.options].find(option=>norm(option.value)===norm(prefill))
+        prefill=match?.value||''
+      }
+      if(values[key]===undefined && prefill!=='') values[key]=prefill
       if(values[key]!==undefined) control.value=values[key]
       const save=()=>{values[key]=control.value;showWizardError('');updateWizardStatus()}
       control.addEventListener('input',save);control.addEventListener('change',save)
@@ -1780,12 +1850,18 @@ import { versorgungsziele } from './versorgungsziele.js'
 
     function profilePdfPrefill(){
       const fullName=[values.patientFirstName,values.patientLastName].filter(Boolean).join(' ')
+      const dob=values.patientBirthDate
+        ?new Date(values.patientBirthDate+'T12:00:00').toLocaleDateString('de-DE'):''
       const doctor=[values.rxDoctor,values.rxPracticeAddress].filter(Boolean).join(' · ')
+      // AOK Anlage 4 Text3 explicitly expects metres; internal FMB/technician
+      // measurements are in centimetres. Do not fabricate measurements.
+      const cm=recordedMeasurement('height')
+      const height=cm && /^\d+(?:[.,]\d+)?$/.test(cm) ? (Number(cm.replace(',','.'))/100).toFixed(2).replace('.',',') : ''
       return {
         Text1: values.serviceReason||'',
-        Text2: fullName,
-        Text3: values['tech:height']||'',
-        Text4: values['tech:weight']||'',
+        Text2: [fullName,dob].filter(Boolean).join(' · '),
+        Text3: height,
+        Text4: recordedMeasurement('weight'),
         Text5: doctor,
         Text6: values.rxDoctorSpecialty||''
       }
@@ -2253,7 +2329,12 @@ import { versorgungsziele } from './versorgungsziele.js'
       }else{
         el.value=values[key]??''
         if(readonly){el.readOnly=true;el.classList.add('tech-profile-readonly')}
-        const save=()=>{values[key]=el.value;updateWizardStatus()}
+        const save=()=>{
+          const previous=values[key]
+          values[key]=el.value
+          if(key==='tech:weight'||key==='tech:height') syncLinkedMeasureHeader(key,previous,el.value)
+          updateWizardStatus()
+        }
         if(!readonly){el.addEventListener('input',save);el.addEventListener('change',save)}
       }
       el.dataset.techKey=key
@@ -2270,7 +2351,8 @@ import { versorgungsziele } from './versorgungsziele.js'
         el=document.createElement('select')
         el.innerHTML='<option value="">Bitte wählen</option>'+options.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')
       }else{el=document.createElement('input');el.type=type}
-      bindTechProfileControl(el,key,prefill,readonly)
+      const source=firstRecordedValue(prefill,orderPrefillForLabel(label))
+      bindTechProfileControl(el,key,source,readonly)
       box.appendChild(el);parent.appendChild(box);return el
     }
 
@@ -2900,12 +2982,12 @@ import { versorgungsziele } from './versorgungsziele.js'
       sourceMeasureField(grid,schema,'Vorname','header:first','text',[],values.patientFirstName||'')
       sourceMeasureField(grid,schema,'Datum','header:date','date',[],values.measureDate||'')
       sourceMeasureField(grid,schema,'Vorgangsnummer','header:case','text',[],values.caseNumber||'')
-      sourceMeasureField(grid,schema,'NZ','header:nz')
-      sourceMeasureField(grid,schema,'Niederlassung','header:branch')
-      sourceMeasureField(grid,schema,'Pat.-Nr. / Geburtsdatum','header:patientRef')
-      sourceMeasureField(grid,schema,'Körpergewicht','header:weight','number',[],'',false,true)
+      // NZ, Niederlassung and the duplicate patient-reference / birth-date field
+      // are deliberately omitted from the shared FMB layout (user-specified).
+      // The case and DOB remain available from the original order record.
+      sourceMeasureField(grid,schema,'Körpergewicht','header:weight','number',[],recordedMeasurement('weight'),false,true)
       sourceMeasureChecks(grid,schema,'Gewicht gemessen','header:weightMode',['mit HiMi','ohne HiMi'])
-      sourceMeasureField(grid,schema,'Körpergröße','header:height','number',[],'',false,true)
+      sourceMeasureField(grid,schema,'Körpergröße','header:height','number',[],recordedMeasurement('height'),false,true)
       sourceMeasureChecks(grid,schema,'Seite','header:side',['Rechts','Links'],values.side==='rechts'?['Rechts']:values.side==='links'?['Links']:[])
       sourceMeasureChecks(grid,schema,'Fotos','header:photos',['erhaltenes Bein / aktuelle Versorgung frontal, lateral und dorsal'])
       sourceMeasureField(grid,schema,'Anprobetermin','header:trialDate','date')
@@ -3508,18 +3590,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     }
 
     function profileAutofillValue(f){
-      const label=String(f.Feldbezeichnung||'').trim().toLowerCase()
-      const id=String(f.Feldzeile_ID||'').toLowerCase()
-      if(label==='name, vorname' || label==='name / vorname'){
-        const name=[values.patientLastName,values.patientFirstName].filter(Boolean).join(', ')
-        return name||''
-      }
-      if(label==='vorname') return values.patientFirstName||''
-      if(label==='nachname' || label==='name') return values.patientLastName||''
-      if(['versichertennummer','kv-nummer','kv.-nr.'].includes(label)) return values.insuredNo||''
-      if(label==='geburtsdatum') return values.patientBirthDate||''
-      if(label==='seite' || label==='betroffene seite') return values.side||''
-      return ''
+      return orderPrefillForLabel(f.Feldbezeichnung)
     }
 
     function fieldOptionValues(f){
@@ -3615,10 +3686,14 @@ import { versorgungsziele } from './versorgungsziele.js'
       const sourceStatus=String(f.Pflichtstatus||'').toLowerCase()
       const required=type==='Hinweis'?false:conditional.required
       const options=fieldOptionValues(f)
-      const autoValue=profileAutofillValue(f)
-      if(autoValue!=='') values[id]=autoValue
+      let autoValue=profileAutofillValue(f)
+      if(autoValue!=='' && ['Auswahl','Mehrfachauswahl'].includes(type) && options.length){
+        const match=options.find(option=>norm(option)===norm(autoValue))
+        autoValue=match||''
+      }
+      if(autoValue!=='' && (values[id]===undefined || values[id]===null || values[id]==='')) values[id]=autoValue
       const metaParts=[f.Abschnitt,f.Einheit_Optionen,f.Bedingung_UI].filter(Boolean)
-      if(autoValue!=='') metaParts.push('aus Stammdaten übernommen')
+      if(autoValue!=='' && String(values[id]??'')===String(autoValue)) metaParts.push('aus Stammdaten übernommen')
       if(sourceStatus==='bedingt' && !f.Bedingung_UI) metaParts.push('bedingt laut Quelle · Auslöser nicht eindeutig hinterlegt')
       if((type==='Auswahl'||type==='Mehrfachauswahl') && !options.length) metaParts.push('Auswahloptionen in der Quelle nicht einzeln hinterlegt · Freitext')
       if(type==='Hinweis') metaParts.push('Hinweis · keine Eingabe erforderlich')
@@ -3633,7 +3708,7 @@ import { versorgungsziele } from './versorgungsziele.js'
           else control.value=values[id]
         }
         control.dataset.required=required?'true':'false'
-        if(autoValue!==''){
+        if(autoValue!=='' && String(values[id]??'')===String(autoValue)){
           control.dataset.profileLinked='true'
           if('readOnly' in control && control.tagName!=='SELECT') control.readOnly=true
           if(control.tagName==='SELECT') control.disabled=true
@@ -4555,8 +4630,10 @@ import { versorgungsziele } from './versorgungsziele.js'
           if(el.type==='radio' && !el.checked) return
           const next=readCaseField(el)
           if(next!==undefined){
+            const previous=values[key]
             values[key]=next
             syncCaseFieldControls(key,next,el)
+            syncLinkedMeasureHeader(key,previous,next)
           }
           if(key==='planGoal'){
             values.versorgungGoalText=String(next||'')
