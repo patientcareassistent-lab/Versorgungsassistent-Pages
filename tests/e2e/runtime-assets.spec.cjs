@@ -162,6 +162,7 @@ test('PG24 AOK source original renders distinct insured/provider signatures and 
   // Assert actual browser layout, not just DOM count or PDF widget keys.
   const overlayGeometry=await page.locator('#aokProfilePdfPages .aok-pdf-page').evaluateAll(pages=>{
     let count=0,misplaced=0
+    const samples=[]
     for(const pdfPage of pages){
       const canvas=pdfPage.querySelector('canvas')
       const bounds=canvas.getBoundingClientRect()
@@ -170,13 +171,22 @@ test('PG24 AOK source original renders distinct insured/provider signatures and 
         const box=field.getBoundingClientRect()
         const pos=getComputedStyle(field).position
         if(pos!=='absolute' || box.left<bounds.left-8 || box.right>bounds.right+8 ||
-          box.top<bounds.top-8 || box.bottom>bounds.bottom+8) misplaced++
+          box.top<bounds.top-8 || box.bottom>bounds.bottom+8){
+          misplaced++
+          if(samples.length<5) samples.push({
+            pos,page:pdfPage.className,css:field.className,
+            field:field.dataset.profileKey,
+            canvas:[bounds.x,bounds.y,bounds.width,bounds.height].map(x=>Math.round(x)),
+            control:[box.x,box.y,box.width,box.height].map(x=>Math.round(x)),
+            styleLink:document.getElementById('appStyles')?.getAttribute('href')
+          })
+        }
       }
     }
-    return {count,misplaced}
+    return {count,misplaced,samples}
   })
   expect(overlayGeometry.count).toBeGreaterThan(75)
-  expect(overlayGeometry.misplaced,'PDF widgets outside their source canvas').toBe(0)
+  expect(overlayGeometry.misplaced,'PDF widgets outside their source canvas: '+JSON.stringify(overlayGeometry.samples)).toBe(0)
   await expect(page.locator('#aokProfilePdfPages [data-signature-role="insured"]')).toHaveCount(1)
   await expect(page.locator('#aokProfilePdfPages [data-signature-role="provider"]')).toHaveCount(1)
   // Official form uses 'Textfeld N', application must persist stable TextN IDs.
