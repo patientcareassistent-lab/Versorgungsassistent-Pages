@@ -2210,7 +2210,15 @@ import { versorgungsziele } from './versorgungsziele.js'
       // Keep both original documents in the DOM for an eight-page print;
       // render serially to avoid concurrent PDF canvases exhausting memory.
       void (async()=>{
-        const loadedPdf=await getAokPg24PdfFromR2()
+        // The official AOK contract PDF is collected as a same-origin build
+        // asset by the Pages pipeline. Use it immediately when available;
+        // the protected R2 import remains the controlled fallback.
+        let loadedPdf=null
+        try{
+          const local=await fetch(url,{method:'HEAD',cache:'no-store'})
+          if(local.ok && /^application\/pdf/i.test(local.headers.get('content-type')||'')) loadedPdf=url
+        }catch(_){}
+        if(!loadedPdf) loadedPdf=await getAokPg24PdfFromR2()
         if(generation!==aokProfileRenderGeneration || !host.isConnected) return
         if(!loadedPdf){
           showAokPg24PdfImport(host)
