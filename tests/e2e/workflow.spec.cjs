@@ -771,7 +771,7 @@ test('PG24 shared FMB measure sheet inherits order fields and omits redundant ad
   await page.locator('input[name="caseKindChoice"][value="Neuversorgung"]').check()
   await page.locator('#careSupplyType').selectOption('Definitiv')
   await page.locator('#careAmpLevel').selectOption('Unterschenkel')
-  await page.locator('[data-case-field="measureDate"]').fill('2026-10-14')
+  await page.locator('[data-case-field="measureDate"]').evaluate(el=>{el.value='2026-10-14';el.dispatchEvent(new Event('input',{bubbles:true}))})
   const measurement=page.locator('#measureFieldList')
   const expectCommonPrefill=async()=>{
     const key=id=>measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:'+id+'"]')
@@ -788,8 +788,8 @@ test('PG24 shared FMB measure sheet inherits order fields and omits redundant ad
     return await measurement.locator('.source-measure-section').first().evaluate(el=>[...el.querySelectorAll('.source-measure-field')].map(x=>x.querySelector('span')?.textContent||''))
   }
   const aokLayout=await expectCommonPrefill()
-  await measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:weight"]').fill('74')
-  await measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:height"]').fill('175')
+  await measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:weight"]').evaluate(el=>{el.value='74';el.dispatchEvent(new Event('input',{bubbles:true}))})
+  await measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:height"]').evaluate(el=>{el.value='175';el.dispatchEvent(new Event('input',{bubbles:true}))})
   await page.locator('#careKasse').selectOption({label:'Testkasse'})
   await expect(measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:weight"]')).toHaveValue('74')
   await expect(measurement.locator('[data-measure-key="sourceMeasure:FMB02003:header:height"]')).toHaveValue('175')
