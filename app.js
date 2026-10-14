@@ -2117,6 +2117,78 @@ import { versorgungsziele } from './versorgungsziele.js'
         (bilateral?'<p><strong>Beidseitige Amputation:</strong> Anlage 4 wird als zwei separate, vierseitige Originalbögen ausgegeben: zuerst rechts, danach links. Feldwerte, PLUS-M und Unterschriften werden pro Seite getrennt gespeichert. Der Profilschritt erfordert Angaben für beide Seiten.</p>':'')
     }
 
+    const AOK_PG24_PROFILE_TEMPLATE_ID='aok-bw-pg24-anlage-4-profilerhebung'
+    const AOK_PG24_PROFILE_VERSION='2026-09-01'
+    const AOK_PG24_FORM_GATEWAY='https://versorgungsassistent-formular-gateway.patientcare-assistent-archive.workers.dev'
+    let aokPg24PdfCache=null
+    async function getAokPg24PdfFromR2(){
+      const accessToken=currentSession?.access_token
+      if(!accessToken) return null
+      if(aokPg24PdfCache) return aokPg24PdfCache
+      try{
+        const response=await fetch(AOK_PG24_FORM_GATEWAY+'/v1/templates/'+AOK_PG24_PROFILE_TEMPLATE_ID+'/'+AOK_PG24_PROFILE_VERSION,{
+          headers:{Authorization:'Bearer '+accessToken},cache:'no-store'
+        })
+        if(!response.ok || !/^application\/pdf/i.test(response.headers.get('content-type')||'')) return null
+        const blob=await response.blob()
+        if(blob.size!==1234561) return null
+        aokPg24PdfCache=URL.createObjectURL(blob)
+        return aokPg24PdfCache
+      }catch(_){return null}
+    }
+    function showAokPg24PdfImport(host){
+      const area=document.createElement('section')
+      area.className='status-card open'
+      area.setAttribute('data-aok-pdf-import','')
+      const label=document.createElement('label')
+      label.className='field'
+      const title=document.createElement('strong')
+      title.textContent='AOK-BW-Vertragsoriginal einmalig bereitstellen (Anlage 4, 01.09.2026)'
+      const explanation=document.createElement('small')
+      explanation.textContent='Nur das unveränderte vierseitige Original-PDF aus dem AOK-Vertrag auswählen. Die Datei wird auf ihre SHA-256-Prüfsumme geprüft und ohne Patientendaten in den privaten Formularspeicher übernommen. Keine Installation erforderlich.'
+      const input=document.createElement('input')
+      input.type='file'
+      input.accept='application/pdf,.pdf'
+      const status=document.createElement('span')
+      status.setAttribute('role','status')
+      status.textContent='Das Original fehlt derzeit im Formularspeicher. Der Bogen kann bis zum Import nicht bearbeitet werden.'
+      label.append(title,explanation,input)
+      area.append(label,status)
+      host.prepend(area)
+      input.addEventListener('change',async()=>{
+        const file=input.files?.[0]
+        if(!file) return
+        input.disabled=true
+        status.textContent='Original und Prüfsumme werden kontrolliert …'
+        try{
+          if(file.size!==1234561) throw new Error('Dateigröße entspricht nicht der freigegebenen AOK-Originalfassung.')
+          const bytes=await file.arrayBuffer()
+          const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)))
+            .map(b=>b.toString(16).padStart(2,'0')).join('')
+          if(digest!=='becb2f40a35ba30804a78e41b3375a073325172844dc1270cf0b1e0bac5a4a09'){
+            throw new Error('Das PDF entspricht nicht der AOK-Anlage 4 vom 01.09.2026.')
+          }
+          const token=currentSession?.access_token
+          if(!token) throw new Error('Bitte erneut anmelden.')
+          status.textContent='Vertragsoriginal wird in den geschützten Formularspeicher übertragen …'
+          const response=await fetch(AOK_PG24_FORM_GATEWAY+'/v1/import/aok-bw-pg24-profile',{
+            method:'POST',
+            headers:{Authorization:'Bearer '+token,'Content-Type':'application/pdf'},
+            body:bytes,
+            cache:'no-store'
+          })
+          if(!response.ok) throw new Error('Speichern nicht möglich (HTTP '+response.status+').')
+          aokPg24PdfCache=null
+          status.textContent='Original erfolgreich abgelegt. Formular wird neu geladen …'
+          renderAokPg24Profile()
+        }catch(err){
+          status.textContent='Import fehlgeschlagen: '+(err?.message||'unbekannter Fehler')
+          input.disabled=false
+          input.value=''
+        }
+      })
+    }
+
     let aokProfileRenderGeneration=0
     function renderAokPg24Profile(){
       // A case restore can launch more than one asynchronous PDF load.
@@ -2138,11 +2210,24 @@ import { versorgungsziele } from './versorgungsziele.js'
       // Keep both original documents in the DOM for an eight-page print;
       // render serially to avoid concurrent PDF canvases exhausting memory.
       void (async()=>{
+        const loadedPdf=await getAokPg24PdfFromR2()
+        if(generation!==aokProfileRenderGeneration || !host.isConnected) return
+        if(!loadedPdf){
+          showAokPg24PdfImport(host)
+          host.querySelectorAll('.aok-pdf-pages').forEach(box=>{
+            box.dataset.pdfReady='error'
+            box.innerHTML='<div class="aok-pdf-loading">Das Vertragsoriginal muss einmalig in den geschützten Speicher übernommen werden.</div>'
+          })
+          host.querySelectorAll('.aok-measure-open').forEach(link=>link.removeAttribute('href'))
+          updateWizardStatus()
+          return
+        }
+        host.querySelectorAll('.aok-measure-open').forEach(link=>link.href=loadedPdf)
         for(const side of sides){
           if(generation!==aokProfileRenderGeneration || !host.isConnected) return
           const box=host.querySelector('[data-aok-pdf-side="'+(side||'einseitig')+'"]')
           if(!box || !box.isConnected) return
-          await renderEditableProfilePdf(url,box,side)
+          await renderEditableProfilePdf(loadedPdf,box,side)
         }
       })()
     }
