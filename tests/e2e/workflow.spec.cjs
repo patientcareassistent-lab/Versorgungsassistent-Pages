@@ -300,7 +300,13 @@ test('version 0.9 keeps archiving but hides billing and calculation from the use
   await expect(page.locator('#careView')).toBeVisible()
 
   await expect(page.locator('#archiveSupplyButton')).toBeVisible()
-  await expect(page.locator('#archiveSupplyButton')).toBeDisabled()
+  // Incomplete cases remain protected, but the user gets an actionable explanation.
+  await expect(page.locator('#archiveSupplyButton')).toBeEnabled()
+  const archiveRequests=[]
+  page.on('request',request=>{if(request.url().includes('/functions/v1/archive-care-case')) archiveRequests.push(request.url())})
+  await page.locator('#archiveSupplyButton').click()
+  await expect(page.locator('#archiveActionNotice')).toContainText('erforderliche Arbeitsschritte sind offen')
+  expect(archiveRequests).toHaveLength(0)
   await expect(page.locator('.wizard-step[data-step="10"]')).toBeHidden()
   await expect(page.locator('.wizard-panel[data-panel="10"]')).toBeHidden()
   await expect(page.locator('[data-case-field="quoteCalc"]')).toHaveCount(0)
