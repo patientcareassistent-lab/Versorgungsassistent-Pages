@@ -326,13 +326,15 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf dist
-          mkdir -p dist/vendor dist/whispercpp dist/assets/aok-pg24 dist/tools/konfiguration-uex
+          mkdir -p dist/vendor dist/whispercpp dist/assets/aok-pg24 dist/tools/konfiguration-uex dist/tools/reparatur-uex
 
           cp index.html app.js prescribers.js versorgungsziele.js frame-guard.js styles.css prescribers.css brand-logo.jpg .nojekyll dist/
           cp -a vendor/. dist/vendor/
           cp whispercpp/runtime.js whispercpp/worker.js whispercpp/whisper.js whispercpp/ggml-tiny-q5_1.bin dist/whispercpp/
           cp -a assets/aok-pg24/. dist/assets/aok-pg24/
           cp tools/konfiguration-uex/index.html dist/tools/konfiguration-uex/index.html
+          test -s tools/reparatur-uex/index.html || { echo 'PG24 Reparaturtool V13 fehlt: Upload vor Deploy erforderlich.'; exit 1; }
+          cp tools/reparatur-uex/index.html dist/tools/reparatur-uex/index.html
 
           required=(
             dist/index.html
@@ -350,6 +352,7 @@ jobs:
             dist/whispercpp/ggml-tiny-q5_1.bin
             dist/assets/aok-pg24/anlage-4-profilerhebungsbogen.pdf
             dist/tools/konfiguration-uex/index.html
+            dist/tools/reparatur-uex/index.html
           )
           for file in "${required[@]}"; do test -s "$file" || { echo "Missing production artifact: $file"; exit 1; }; done
           test -e dist/.nojekyll || { echo "Missing production artifact: dist/.nojekyll"; exit 1; }
