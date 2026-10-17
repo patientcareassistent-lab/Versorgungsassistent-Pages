@@ -1,0 +1,27 @@
+name: One-time UKB v0.4 source assembly
+on:
+  push:
+    branches:
+      - feature/ukb-konfigurator-v04-20261017
+permissions:
+  contents: write
+jobs:
+  assemble:
+    if: contains(github.event.head_commit.message, 'Enable one-time UKB source assembly')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Assemble exact reviewed HTML and verify SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .tmp/ukb-v04.part{1..5} | base64 --decode | gzip -dc > tools/konfiguration-uex/index.html
+          echo '75633cf1e2c708204c597372c77043cc4e9d97213cbcf0a858c74249ec510a6a  tools/konfiguration-uex/index.html' | sha256sum -c -
+          grep -q "uex-konfiguration-0.4" tools/konfiguration-uex/index.html
+          if grep -q '<header>' tools/konfiguration-uex/index.html; then echo 'Header still present'; exit 1; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/konfiguration-uex/index.html
+          git commit -m 'Import verified standalone UKB v0.4 without header'
+          git push origin HEAD:feature/ukb-konfigurator-v04-20261017
