@@ -349,13 +349,13 @@ jobs:
               raise SystemExit('Invalid GitHub commit SHA for cache keys')
           raw = raw.replace('v=RELEASESHA', 'v='+sha)
           html.write_text(raw, encoding='utf-8')
-          for pattern in (
-              r'<script type="module" src="\\./app\\.js\\?v='+sha+r'"></script>',
-              r'<link id="appStyles" rel="stylesheet" href="\\./styles\\.css\\?v='+sha+r'"',
-              r'uex/index\\.html\\?v='+sha+r'"',
+          for expected in (
+              f'<script type="module" src="./app.js?v={sha}"></script>',
+              f'<link id="appStyles" rel="stylesheet" href="./styles.css?v={sha}"',
+              f'tools/konfiguration-uex/index.html?v={sha}"',
           ):
-              if not re.search(pattern, raw):
-                  raise SystemExit('Deployed asset cache key missing: '+pattern)
+              if expected not in raw:
+                  raise SystemExit('Deployed asset cache key missing: '+expected)
           print('Production asset URLs updated for commit', sha[:12])
           PY
 
