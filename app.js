@@ -1186,6 +1186,198 @@ import { versorgungsziele } from './versorgungsziele.js'
       host.appendChild(section)
     }
 
+
+    const UKB_CONFIG_SOURCE='./sources/pg24/ukb-konfiguration-2026-10-08.json'
+    const UKB_CONFIG_PREFIX='ukbConfig:2026-10-08:'
+    let ukbConfigurationSchemaPromise=null
+    let ukbConfigurationGeneration=0
+    function ukbConfigurationApplicable(){
+      return $('carePg')?.value==='24' && !isRepairCase() &&
+        pg24SourceMeasureSchema()?.code==='FMB02003' && requiresMeasure()
+    }
+    function ukbConfigurationSource(){
+      if(!ukbConfigurationSchemaPromise){
+        ukbConfigurationSchemaPromise=fetch(UKB_CONFIG_SOURCE,{cache:'no-store'})
+          .then(response=>{
+            if(!response.ok) throw new Error('Konfigurationsvorlage konnte nicht geladen werden.')
+            return response.json()
+          }).then(schema=>{
+            if(schema.schemaVersion!==1 || schema.sourceId!=='SRC_PG24_UKB_CONFIG_20261008' ||
+              schema.applicability?.pg!=='24' || !Array.isArray(schema.sections) ||
+              !Array.isArray(schema.variants)) throw new Error('Ungültige Konfigurationsvorlage')
+            return schema
+          }).catch(error=>{ukbConfigurationSchemaPromise=null;throw error})
+      }
+      return ukbConfigurationSchemaPromise
+    }
+    function ukbHeaderValue(field){
+      const v=values
+      switch(field.sourceKey){
+        case 'patientLastName+patientFirstName': return [v.patientLastName,v.patientFirstName].filter(Boolean).join(', ')
+        case 'patientBirthDate': return v.patientBirthDate||''
+        case 'careKasse': return $('careKasse')?.value||''
+        case 'tech:weight': return recordedMeasurement('weight')
+        case 'measureDate': return v.measureDate||''
+        case 'measureTech': return v.measureTech||''
+        case 'caseNumber': return v.caseNumber||''
+        case 'side': return v.side||''
+        default: return ''
+      }
+    }
+    function renderUkbConfigControl(label,id,kind='text',options=[]){
+      const key=UKB_CONFIG_PREFIX+id
+      const wrap=document.createElement('label')
+      wrap.className='ukb-config-field'
+      const span=document.createElement('span')
+      span.textContent=label
+      wrap.appendChild(span)
+      let input
+      if(kind==='select'){
+        input=document.createElement('select')
+        const placeholder=document.createElement('option')
+        placeholder.value='';placeholder.textContent='Bauweise auswählen'
+        input.appendChild(placeholder)
+        for(const option of options){
+          const el=document.createElement('option')
+          el.value=option.id;el.textContent=option.label
+          input.appendChild(el)
+        }
+      }else{
+        input=document.createElement(kind==='textarea'?'textarea':'input')
+        if(kind==='textarea') input.rows=2
+        else input.type=kind
+      }
+      input.dataset.ukbConfigFieldId='SRC_PG24_UKB_CONFIG_20261008:'+id
+      input.dataset.ukbConfigKey=key
+      input.setAttribute('aria-label',label)
+      if(kind==='checkbox') input.checked=values[key]===true
+      else input.value=values[key]??''
+      const save=()=>{
+        values[key]=kind==='checkbox'?input.checked:input.value
+        queueAutosaveSupply()
+      }
+      input.addEventListener('input',save)
+      input.addEventListener('change',save)
+      wrap.appendChild(input)
+      return {wrap,input}
+    }
+    async function renderUkbConfiguration(){
+      const host=$('ukbConfigurationSection')
+      if(!host) return
+      const gen=++ukbConfigurationGeneration
+      host.classList.add('hidden')
+      host.replaceChildren()
+      if(!ukbConfigurationApplicable()) return
+      let schema
+      try{schema=await ukbConfigurationSource()}
+      catch(error){
+        if(gen!==ukbConfigurationGeneration) return
+        host.classList.remove('hidden')
+        const warning=document.createElement('p')
+        warning.className='source-note'
+        warning.textContent='Konfigurationsvorlage derzeit nicht verfügbar: '+(error?.message||'Unbekannter Fehler')
+        host.appendChild(warning)
+        return
+      }
+      if(gen!==ukbConfigurationGeneration || !ukbConfigurationApplicable()) return
+      host.classList.remove('hidden')
+      const header=document.createElement('div')
+      header.className='ukb-config-header'
+      const title=document.createElement('h3')
+      title.textContent='Prothesenkonfiguration · Unterschenkel'
+      const small=document.createElement('p')
+      small.textContent='Nach dem Maßblatt · PG24 UKB · Konfigurationsbogen vom 08.10.2026 · interne Vorlage'
+      const source=document.createElement('p')
+      source.className='source-note'
+      source.textContent=schema.disclaimer
+      header.append(title,small,source)
+      host.appendChild(header)
+      const meta=document.createElement('div')
+      meta.className='ukb-config-order'
+      schema.headerFields.forEach(field=>{
+        if(field.readOnly){
+          const div=document.createElement('div')
+          div.className='ukb-config-prefill'
+          const label=document.createElement('small')
+          label.textContent=field.label
+          const val=document.createElement('strong')
+          val.textContent=ukbHeaderValue(field)||'—'
+          div.append(label,val)
+          meta.appendChild(div)
+        }else{
+          meta.appendChild(renderUkbConfigControl(field.label,'header:'+field.id).wrap)
+        }
+      })
+      host.appendChild(meta)
+      const choice=renderUkbConfigControl('Versorgungsbauweise / Schaftausführung','variant','select',schema.variants)
+      choice.wrap.classList.add('ukb-config-variant')
+      host.appendChild(choice.wrap)
+      const introduction=document.createElement('p')
+      introduction.className='source-note'
+      introduction.textContent='Originalmatrix: Die Kombinierbarkeit der Bauteile mit der ausgewählten Bauweise ist fachlich anhand der hinterlegten Vorlage zu prüfen. Es werden keine automatischen Vertragsfreigaben behauptet.'
+      host.appendChild(introduction)
+      const top=document.createElement('div')
+      top.className='ukb-config-prequestions'
+      schema.preQuestions.forEach(field=>{
+        const ctl=renderUkbConfigControl(field.label,'pre:'+field.id,'checkbox')
+        ctl.wrap.classList.add('ukb-config-check')
+        top.appendChild(ctl.wrap)
+        if(field.reason){
+          top.appendChild(renderUkbConfigControl('Begründung / Maßdokumentation · '+field.label,'pre:'+field.id+':reason','textarea').wrap)
+        }
+        if(field.note){
+          const note=document.createElement('small')
+          note.textContent=field.note
+          top.appendChild(note)
+        }
+      })
+      host.appendChild(top)
+      for(const section of schema.sections){
+        const details=document.createElement('details')
+        details.className='ukb-config-group'
+        if(['socket','foot','closure'].includes(section.id)) details.open=true
+        const summary=document.createElement('summary')
+        summary.textContent=section.title
+        details.appendChild(summary)
+        const grid=document.createElement('div')
+        grid.className='ukb-config-items'
+        for(const field of section.fields){
+          if(field.payerOnly && field.payerOnly!==$('careKasse')?.value) continue
+          const row=document.createElement('div')
+          row.className='ukb-config-row'
+          const ctl=renderUkbConfigControl(field.label,section.id+':'+field.id,'checkbox')
+          ctl.wrap.classList.add('ukb-config-check')
+          row.appendChild(ctl.wrap)
+          if(field.article){
+            const article=renderUkbConfigControl('Artikelnummer / Ausführung',section.id+':'+field.id+':article')
+            article.wrap.classList.add('ukb-config-article')
+            row.appendChild(article.wrap)
+          }
+          if(field.reason){
+            const reason=renderUkbConfigControl('Begründung',section.id+':'+field.id+':reason','textarea')
+            reason.wrap.classList.add('ukb-config-reason')
+            row.appendChild(reason.wrap)
+          }
+          if(field.note){
+            const note=document.createElement('small')
+            note.className='ukb-config-note'
+            note.textContent=field.note
+            row.appendChild(note)
+          }
+          grid.appendChild(row)
+        }
+        details.appendChild(grid)
+        host.appendChild(details)
+      }
+      const notes=renderUkbConfigControl('Weitere Konfigurationshinweise','notes','textarea')
+      host.appendChild(notes.wrap)
+      const footer=document.createElement('p')
+      footer.className='source-note'
+      footer.textContent='Die Angaben werden im Versorgungsvorgang gespeichert, nicht im öffentlichen Quellkatalog. Die Konfiguration ersetzt keine vertragliche oder technische Freigabe.'
+      host.appendChild(footer)
+      updateSupplyEditState()
+    }
+
     function renderMeasureFields(){
       const host=$('measureFieldList')
       if(!host) return
@@ -1193,7 +1385,11 @@ import { versorgungsziele } from './versorgungsziele.js'
       // All PG24 payers, including AOK Baden-Württemberg, use the same
       // FMB measurement workspace and its existing visual layout.
       // This does not change the payer-specific profile or contract source PDFs.
-      if($('carePg').value==='24' && renderPg24SourceMeasureSheet()) return
+      if($('carePg').value==='24' && renderPg24SourceMeasureSheet()){
+        void renderUkbConfiguration()
+        return
+      }
+      void renderUkbConfiguration()
       const meta=selectedHimiMeta()
       host.innerHTML=''
       const note=$('measureLogicNote')
