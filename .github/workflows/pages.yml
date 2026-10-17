@@ -334,6 +334,31 @@ jobs:
           cp -a assets/aok-pg24/. dist/assets/aok-pg24/
           cp tools/konfiguration-uex/index.html dist/tools/konfiguration-uex/index.html
 
+          # Per-release URL versioning: GitHub Pages and browsers may cache JS
+          # separately from HTML. Never serve an old app.js with a new interface.
+          # This only changes the deployed HTML; original sources stay testable.
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, re
+          html = Path('dist/index.html')
+          raw = html.read_text(encoding='utf-8')
+          if raw.count('v=RELEASESHA') != 3:
+              raise SystemExit('Expected three cache-key placeholders (app, CSS, UKB iframe).')
+          sha = os.environ['GITHUB_SHA']
+          if not re.fullmatch(r'[0-9a-f]{40}', sha):
+              raise SystemExit('Invalid GitHub commit SHA for cache keys')
+          raw = raw.replace('v=RELEASESHA', 'v='+sha)
+          html.write_text(raw, encoding='utf-8')
+          for pattern in (
+              r'<script type="module" src="\\./app\\.js\\?v='+sha+r'"></script>',
+              r'<link id="appStyles" rel="stylesheet" href="\\./styles\\.css\\?v='+sha+r'"',
+              r'uex/index\\.html\\?v='+sha+r'"',
+          ):
+              if not re.search(pattern, raw):
+                  raise SystemExit('Deployed asset cache key missing: '+pattern)
+          print('Production asset URLs updated for commit', sha[:12])
+          PY
+
           required=(
             dist/index.html
             dist/app.js
