@@ -4605,6 +4605,10 @@ import { versorgungsziele } from './versorgungsziele.js'
         }
       } else if(i===2){
         if(isRepairCase()){
+          if(repairV13ReadyForCase()){
+            if(!values.repairUexV13?.completed)missing.push('Reparaturtool: Dokumentation mit „Fertigstellen“ abschließen')
+            return {ok:missing.length===0,missing}
+          }
           missing=missingValues(['repairSicHimiId','repairDate','repairTechnician','repairPreperformed','repairComplaint','repairWork','repairFunctionTest','repairUsable','repairCompleted'])
           return {ok:missing.length===0,missing}
         }
@@ -5421,6 +5425,118 @@ import { versorgungsziele } from './versorgungsziele.js'
       window.scrollTo({top:0,behavior:'smooth'})
     }
 
+
+    // VA_REPAIR_V13: PG24 repair module. Legacy form remains available until handshake succeeds.
+    let repairV13Token='',repairV13SupplyId='',repairV13SaveTimer=0,repairV13Ready=false,repairV13Observer=null;
+    const isRepairV13Case=()=>isRepairCase()&&String($('carePg')?.value||'')==='24';
+    const repairV13ReadyForCase=()=>isRepairV13Case()&&repairV13Ready&&repairV13SupplyId===String(activeSupplyId||'');
+    function repairV13Context(){
+      const side=String(values.side||'').toLowerCase();
+      const level=String(values.ampLevel||'').toLowerCase();
+      const laenge=/hüft/.test(level)?'Hüft-Ex':/knie.?ex/.test(level)?'Knie-Ex':/ober/.test(level)?'OKB':/unter/.test(level)?'UKB':/vor|mittel/.test(level)?'Vor-/Mittelfuß':/fuß|fuss/.test(level)?'Fuß':level==='ukb'?'UKB':level==='okb'?'OKB':'';
+      return {
+        patient:{vorname:String(values.patientFirstName||''),nachname:String(values.patientLastName||'')},
+        kostentraeger:String($('careKasse')?.value||''),
+        mitarbeiter:String(values.repairTechnician||values.assignedTechnician||currentSession?.user?.email||''),
+        versorgung:{hilfsmittelIdSic:String(values.repairSicHimiId||values.hilfsmittelIdSic||''),
+          herstellungsdatum:String(values.repairManufacturedAt||values.manufactureDate||''),
+          seite:/rechts/.test(side)?'rechts':/links/.test(side)?'links':'',laenge},
+        rezepterfassung:{rezeptFolgt:!!values.rxFollowOn,rezeptFolgtVon:String(values.rxFollowFrom||'')},
+        reparaturdatum:String(values.repairDate||'')
+      };
+    }
+    function repairV13Post(message){
+      const frame=$('repairV13Frame');
+      if(frame?.contentWindow&&repairV13Token)
+        frame.contentWindow.postMessage({type:'VA_REPAIR_V13_PARENT',token:repairV13Token,...message},'*');
+    }
+    function repairV13PhotoPanels(useModule){
+      const old=$('repairStepContent')?.querySelector('.repair-protocol'),newHost=$('repairV13SecurePhotos');
+      if(!old||!newHost)return;
+      for(const id of ['repairPhotoCamera','repairLabelCamera']){
+        const panel=$(id)?.closest('.repair-protocol-card');
+        if(panel)(useModule?newHost:old).appendChild(panel);
+      }
+      old.classList.toggle('hidden',useModule);
+      newHost.classList.toggle('hidden',!useModule);
+    }
+    async function repairV13SyncPhotos(){
+      if(!repairV13ReadyForCase())return;
+      const source=[
+        ...repairLabelPhotos().map(p=>({p,kind:'label'})),
+        ...repairPhotos().map(p=>({p,kind:'prothese'}))
+      ];
+      const photos=await Promise.all(source.map(async ({p,kind})=>({
+        kind,name:String(p.name||''),src:await repairPhotoDisplayUrl(p).catch(()=>'')
+      })));
+      if(repairV13ReadyForCase())repairV13Post({action:'photos',photos:photos.filter(p=>p.src)});
+    }
+    function mountRepairV13(){
+      const host=$('repairV13Mount'),frame=$('repairV13Frame');
+      if(!host||!frame)return;
+      const visible=isRepairV13Case()&&!!activeSupplyId;
+      if(!visible){
+        host.classList.add('hidden');repairV13PhotoPanels(false);return;
+      }
+      const id=String(activeSupplyId);
+      if(repairV13SupplyId!==id){
+        repairV13Token=crypto.randomUUID();repairV13SupplyId=id;repairV13Ready=false;
+        frame.dataset.ready='0';
+        frame.src='./tools/reparatur-uex/index.html?v=13';
+      }
+      const ready=repairV13ReadyForCase();
+      host.classList.toggle('hidden',!ready);
+      repairV13PhotoPanels(ready);
+      if(ready)repairV13Post({action:'context',context:repairV13Context(),
+        state:values.repairUexV13?.state||{},completed:!!values.repairUexV13?.completed,
+        readOnly:activeSupplyIsReadOnly()});
+      if(!repairV13Observer){
+        repairV13Observer=new MutationObserver(()=>{void repairV13SyncPhotos()});
+        for(const id of ['repairPhotoGallery','repairLabelGallery']){
+          const gallery=$(id);if(gallery)repairV13Observer.observe(gallery,{childList:true,subtree:true});
+        }
+      }
+    }
+    window.addEventListener('message',event=>{
+      const frame=$('repairV13Frame'),d=event.data;
+      if(!frame||event.source!==frame.contentWindow||event.origin!=='null'||!d
+        ||d.type!=='VA_REPAIR_V13'||!isRepairV13Case())return;
+      if(d.action==='loaded'){
+        if(!activeSupplyId||!repairV13Token||repairV13SupplyId!==String(activeSupplyId))return;
+        repairV13Ready=true;frame.dataset.ready='1';
+        repairV13Post({action:'context',context:repairV13Context(),
+          state:values.repairUexV13?.state||{},completed:!!values.repairUexV13?.completed,
+          readOnly:activeSupplyIsReadOnly()});
+        $('repairV13Mount')?.classList.remove('hidden');repairV13PhotoPanels(true);
+        updateWizardStatus();void repairV13SyncPhotos();return;
+      }
+      if(!repairV13ReadyForCase()||d.token!==repairV13Token)return;
+      if(d.action==='ready'){void repairV13SyncPhotos();return}
+      if(d.action==='resize'){
+        const h=Number(d.height);
+        if(Number.isFinite(h))frame.style.height=Math.max(500,Math.min(12000,h+20))+'px';
+        return;
+      }
+      if(d.action==='error'){
+        showWizardError('Das Reparaturtool konnte nicht vollständig geladen werden.',[String(d.message||'')]);
+        return;
+      }
+      if(d.action==='change'&&d.state&&typeof d.state==='object'&&!Array.isArray(d.state)){
+        if(activeSupplyIsReadOnly())return;
+        const serialized=JSON.stringify(d.state);
+        if(serialized.length>90000){showWizardError('Reparaturdaten überschreiten die zulässige Größe.');return}
+        values.repairUexV13={version:13,state:d.state,completed:d.completed===true};
+        updateWizardStatus();
+        clearTimeout(repairV13SaveTimer);
+        const expected=repairV13SupplyId;
+        repairV13SaveTimer=setTimeout(async()=>{
+          if(expected!==String(activeSupplyId||''))return;
+          if(!await persistActiveSupplyNow())
+            showWizardError('Reparaturdokumentation konnte nicht gespeichert werden. Bitte nicht schließen.');
+        },d.completed===true?0:650);
+      }
+    });
+
     function renderWizard(){
       syncWizardBranchLabels()
       if(!stepApplicable(wizardIndex)){
@@ -5444,6 +5560,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       $('wizardBack').disabled=previousApplicableIndex(wizardIndex)===wizardIndex
       const next=nextApplicableIndex(wizardIndex)
       $('wizardNext').textContent=next===wizardIndex?'Status prüfen':'Weiter →'
+      if(wizardIndex===2) mountRepairV13()
       if(wizardIndex===4) mountUexConfigurationFrame()
       updateUexNextVisibility()
       updateWizardStatus(false)
