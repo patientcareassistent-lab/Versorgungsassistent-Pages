@@ -842,6 +842,12 @@ test('UKB PG24 configurator appears after the unchanged FMB sheet, prefills orde
     return !!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING)
   })
   expect(documentOrder).toBe(true)
+  // The user must see the configuration in step 5 (Versorgungsplanung),
+  // not buried below the long measure sheet in step 4.
+  await expect(page.locator('.wizard-panel[data-panel="3"] #ukbConfigurationSection')).toHaveCount(0)
+  await expect(page.locator('.wizard-panel[data-panel="4"] #ukbConfigurationSection')).toHaveCount(1)
+  await expect(page.locator('.wizard-panel[data-panel="4"] #ukbConfigurationSection')).not.toHaveClass(/hidden/)
+  expect(await config.evaluate(el=>el.compareDocumentPosition(el.closest('.wizard-panel').querySelector('.mini-grid')) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy()
   const variant=config.locator('[data-ukb-config-field-id="SRC_PG24_UKB_CONFIG_20261008:variant"]')
   await expect(variant.locator('option')).toHaveCount(11)
   await variant.evaluate(el=>{el.value='modular_kond_day';el.dispatchEvent(new Event('change',{bubbles:true}))})
