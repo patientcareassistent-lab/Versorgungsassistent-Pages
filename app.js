@@ -432,60 +432,70 @@ import { versorgungsziele } from './versorgungsziele.js'
       return (i+1)+'. '+wizardSteps[i].name
     }
 
+    let supplySelectedStatus=''
+    let supplySelectedPg=''
+
     function renderSupplyOverview(){
       const body=$('supplyOverviewBody')
       if(!body) return
       const drafts=readSupplyDrafts().filter(x=>x.status!=='Abgeschlossen' && isActiveProductGroup(x.pg))
-      const q=($('supplySearch')?.value||'').trim().toLowerCase()
-      const status=$('supplyStatusFilter')?.value||''
-      const pg=$('supplyPgFilter')?.value||''
-
+      const search=($('supplySearch')?.value||'').trim().toLowerCase()
       const pgs=[...new Set(drafts.map(x=>String(x.pg||'')).filter(Boolean))].sort((a,b)=>Number(a)-Number(b))
-      if($('supplyPgFilter')){
-        const old=$('supplyPgFilter').value
-        $('supplyPgFilter').innerHTML='<option value="">Alle Produktgruppen</option>'+pgs.map(x=>'<option value="'+escapeHtml(x)+'">PG '+escapeHtml(x)+'</option>').join('')
-        if(pgs.includes(old)) $('supplyPgFilter').value=old
+      if(supplySelectedPg && !pgs.includes(supplySelectedPg)) supplySelectedPg=''
+
+      const pgButtons=$('supplyPgButtons')
+      if(pgButtons){
+        const items=[{id:'',label:'Alle PG'},...pgs.map(pg=>({id:pg,label:'PG '+pg}))]
+        pgButtons.innerHTML=items.map(item=>'<button type="button" class="supply-filter-chip'+(supplySelectedPg===item.id?' is-selected':'')+
+          '" data-supply-pg="'+escapeHtml(item.id)+'" aria-pressed="'+(supplySelectedPg===item.id)+'">'+escapeHtml(item.label)+'</button>').join('')
       }
-
-      $('supplyCountActive').textContent=drafts.filter(x=>x.status==='Laufend').length
-      $('supplyCountWaiting').textContent=drafts.filter(x=>x.status==='Warten / Genehmigung').length
-      $('supplyCountQuery').textContent=drafts.filter(x=>x.status==='Rückfrage / offen').length
-      $('supplyCountClose').textContent=drafts.filter(x=>x.status==='Abschluss offen').length
-
+      document.querySelectorAll('[data-supply-status]').forEach(button=>{
+        const active=button.dataset.supplyStatus===supplySelectedStatus
+        button.classList.toggle('is-selected',active)
+        button.setAttribute('aria-pressed',String(active))
+      })
+      const count=status=>drafts.filter(x=>x.status===status).length
+      $('supplyCountAll').textContent=String(drafts.length)
+      $('supplyCountActive').textContent=String(count('Laufend'))
+      $('supplyCountWaiting').textContent=String(count('Warten / Genehmigung'))
+      $('supplyCountQuery').textContent=String(count('Rückfrage / offen'))
+      $('supplyCountClose').textContent=String(count('Abschluss offen'))
       const filtered=drafts.filter(x=>{
-        if(status && x.status!==status) return false
-        if(pg && String(x.pg)!==String(pg)) return false
-        if(q){
-          const hay=[x.values?.patientFirstName,x.values?.patientLastName,x.values?.patientName,x.values?.caseNumber,x.kasse,x.pg,x.himi,x.values?.insuredNo,x.assignedTechnician,supplyEditorDisplayName(x)].join(' ').toLowerCase()
-          if(!hay.includes(q)) return false
+        if(supplySelectedStatus && x.status!==supplySelectedStatus) return false
+        if(supplySelectedPg && String(x.pg)!==supplySelectedPg) return false
+        if(search){
+          const hay=[x.values?.patientFirstName,x.values?.patientLastName,x.values?.patientName,
+            x.values?.caseNumber,x.kasse,x.pg,x.himi,x.values?.insuredNo,x.values?.caseKind,
+            x.assignedTechnician,supplyEditorDisplayName(x)].join(' ').toLowerCase()
+          if(!hay.includes(search)) return false
         }
         return true
       })
+      $('supplyFilteredCount').textContent=filtered.length+' von '+drafts.length+' Vorgängen'
+      $('supplyFiltersReset')?.classList.toggle('hidden',!search&&!supplySelectedStatus&&!supplySelectedPg)
 
       if(!filtered.length){
-        body.innerHTML='<tr><td colspan="9" class="supply-empty"><strong>Keine passenden Versorgungen.</strong><small>Filter anpassen oder eine neue Versorgung beginnen. Änderungen werden automatisch zwischengespeichert.</small></td></tr>'
+        body.innerHTML='<tr><td colspan="6" class="supply-empty"><strong>'+
+          (drafts.length?'Keine passenden Vorgänge.':'Keine offenen Versorgungen.')+
+          '</strong><small>'+(drafts.length?'Andere Filter wählen oder zurücksetzen.':'Mit „Neue Versorgung“ einen Vorgang anlegen.')+'</small></td></tr>'
         return
       }
-
       body.innerHTML=filtered.map(x=>{
-        const name=([x.values?.patientFirstName,x.values?.patientLastName].filter(Boolean).join(' ')||x.values?.patientName||'Patient noch nicht erfasst')
+        const name=[x.values?.patientFirstName,x.values?.patientLastName].filter(Boolean).join(' ')||x.values?.patientName||'Patient noch nicht erfasst'
         const caseNo=x.values?.caseNumber||x.id.slice(0,8)
-        const pgText=x.pg?'PG '+escapeHtml(x.pg):'PG offen'
-        const caseKind=x.values?.caseKind||''
+        const caseKind=x.values?.caseKind||'Vorgangsart offen'
         const caseKindClass=caseKind==='Reparatur'?'warning':caseKind==='Neuversorgung'?'blue':''
-        const caseKindText=caseKind||'Nicht erfasst'
         const assignedTechnician=String(x.assignedTechnician||x.values?.assignedTechnician||'').trim()||'Nicht zugewiesen'
-        const lastEditor=supplyEditorDisplayName(x)
         return '<tr class="supply-row" data-supply-id="'+escapeHtml(x.id)+'" tabindex="0" title="Versorgung öffnen">'+
-          '<td><strong>'+escapeHtml(name)+'</strong><br><small>'+escapeHtml(caseNo)+'</small></td>'+
-          '<td><span class="pill '+caseKindClass+'">'+escapeHtml(caseKindText)+'</span></td>'+
-          '<td>'+escapeHtml(x.kasse||'—')+'</td>'+
-          '<td>'+pgText+(x.himi?'<br><small>'+escapeHtml(x.himi)+'</small>':'')+'</td>'+
-          '<td>'+escapeHtml(supplyStepLabel(x))+'</td>'+
-          '<td><span class="pill '+(x.status==='Rückfrage / offen'?'warning':x.status==='Warten / Genehmigung'?'blue':'')+'">'+escapeHtml(x.status)+'</span></td>'+
-          '<td>'+escapeHtml(lastEditor)+'</td>'+
-          '<td>'+escapeHtml(assignedTechnician)+'</td>'+
-          '<td>'+escapeHtml(formatDraftTime(x.updatedAt))+'</td>'+
+          '<td data-label="Person / Vorgang"><strong class="supply-row-name">'+escapeHtml(name)+'</strong><small class="supply-row-sub">'+escapeHtml(caseNo)+'</small></td>'+
+          '<td data-label="Versorgung"><span class="pill '+caseKindClass+'">'+escapeHtml(caseKind)+'</span>'+
+             '<strong class="supply-row-aux">'+escapeHtml(x.pg?'PG '+x.pg:'PG offen')+(x.himi?' · '+escapeHtml(x.himi):'')+'</strong>'+
+             '<small class="supply-row-sub">'+escapeHtml(x.kasse||'Kostenträger offen')+'</small></td>'+
+          '<td data-label="Arbeitsstand"><strong class="supply-row-aux">'+escapeHtml(supplyStepLabel(x))+'</strong>'+
+             '<span class="supply-row-status"><span class="pill '+(x.status==='Rückfrage / offen'?'warning':x.status==='Warten / Genehmigung'?'blue':'')+'">'+escapeHtml(x.status)+'</span></span></td>'+
+          '<td data-label="Zuletzt bearbeitet von">'+escapeHtml(supplyEditorDisplayName(x))+'</td>'+
+          '<td data-label="Zuständiger Techniker">'+escapeHtml(assignedTechnician)+'</td>'+
+          '<td data-label="Geändert" class="supply-row-date">'+escapeHtml(formatDraftTime(x.updatedAt))+'</td>'+
         '</tr>'
       }).join('')
     }
@@ -5801,8 +5811,25 @@ import { versorgungsziele } from './versorgungsziele.js'
     $('measureTranscriptAnalyze')?.addEventListener('click',analyzeMeasureTranscript)
     $('measureTranscriptApply')?.addEventListener('click',applyMeasureTranscript)
     $('supplySearch').addEventListener('input',renderSupplyOverview)
-    $('supplyStatusFilter').addEventListener('change',renderSupplyOverview)
-    $('supplyPgFilter').addEventListener('change',renderSupplyOverview)
+    $('supplyStatusButtons').addEventListener('click',event=>{
+      const button=event.target.closest('button[data-supply-status]')
+      if(!button)return
+      supplySelectedStatus=button.dataset.supplyStatus
+      renderSupplyOverview()
+    })
+    $('supplyPgButtons').addEventListener('click',event=>{
+      const button=event.target.closest('button[data-supply-pg]')
+      if(!button)return
+      supplySelectedPg=button.dataset.supplyPg
+      renderSupplyOverview()
+    })
+    $('supplyFiltersReset').addEventListener('click',()=>{
+      supplySelectedStatus=''
+      supplySelectedPg=''
+      $('supplySearch').value=''
+      renderSupplyOverview()
+      $('supplySearch').focus()
+    })
     $('supplyOverviewBody').addEventListener('click',e=>{const row=e.target.closest('[data-supply-id]');if(row)restoreSupplyDraft(row.dataset.supplyId)})
     $('supplyOverviewBody').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-supply-id]')){e.preventDefault();restoreSupplyDraft(e.target.dataset.supplyId)}})
     if($('archiveRefreshButton')) $('archiveRefreshButton').addEventListener('click',()=>loadArchiveOverview())
