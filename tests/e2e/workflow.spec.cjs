@@ -880,6 +880,13 @@ test('UKB tool is a separate wizard step after the original measure sheet, persi
   await expect(inner.locator('.context-line')).toContainText('Testkasse')
   await expect(inner.locator('.context-line')).toContainText('rechts')
   await expect(inner.locator('input[name="patientFirstName"]')).toHaveCount(0)
+  await expect(page.locator('#wizardNext')).toBeHidden()
+  // Attempting to finish an incomplete configuration does not unlock the wizard.
+  await inner.locator('[data-step="6"]').click()
+  await inner.locator('#next').click()
+  await expect(inner.locator('#finishNotice')).toContainText('Konfiguration noch nicht abschließbar')
+  await expect(page.locator('#wizardNext')).toBeHidden()
+  await inner.locator('[data-step="0"]').click()
   await inner.locator('#bauweise').selectOption('Modularbauweise')
   await inner.locator('#schaftrand').selectOption('Kondylenübergreifend')
   await inner.locator('#zweck').selectOption('Alltag')
@@ -899,6 +906,39 @@ test('UKB tool is a separate wizard step after the original measure sheet, persi
   await inner.locator('[data-step="1"]').click()
   await expect(inner.locator('[data-part="Weichwandschaft"]')).toBeChecked()
   await expect(inner.locator('[data-article="Weichwandschaft"]')).toHaveValue('TEST-UKB-1')
+
+  // "Weiter" belongs to the outer workflow and is NEVER shown solely because
+  // the technical configuration has data. Only explicit "Fertig" unlocks it.
+  await expect(page.locator('#wizardNext')).toBeHidden()
+  await inner.locator('[data-step="6"]').click()
+  await expect(inner.locator('#next')).toHaveText('Fertig')
+  await expect(page.locator('#wizardNext')).toBeHidden()
+  await inner.locator('#next').click()
+  await expect(inner.locator('#next')).toHaveText('Abgeschlossen')
+  await expect(inner.locator('#next')).toBeDisabled()
+  await expect(page.locator('#wizardNext')).toBeVisible()
+  await expect.poll(async () => page.evaluate(() => {
+    const rows=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
+    return rows[0]?.payload?.uexConfigurationV02?.abgeschlossen===true
+  }), {timeout:10000}).toBe(true)
+  // The status is durable across reloads and doesn't require a second click.
+  await page.reload()
+  await page.locator('#supplyOverviewBody [data-supply-id]').first().click()
+  await expect(page.locator('.wizard-panel[data-panel="4"]')).toBeVisible()
+  await expect(page.locator('#wizardNext')).toBeVisible()
+  await inner.locator('[data-step="6"]').click()
+  await expect(inner.locator('#next')).toHaveText('Abgeschlossen')
+  // Later edits revoke completion and lock the outer wizard again.
+  await inner.locator('[data-step="1"]').click()
+  await inner.locator('[data-article="Weichwandschaft"]').fill('TEST-UKB-2')
+  await expect(page.locator('#wizardNext')).toBeHidden()
+  await inner.locator('[data-step="6"]').click()
+  await expect(inner.locator('#next')).toHaveText('Fertig')
+  await inner.locator('#next').click()
+  await expect(inner.locator('#next')).toHaveText('Abgeschlossen')
+  await expect(page.locator('#wizardNext')).toBeVisible()
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('.wizard-panel[data-panel="5"]')).toBeVisible()
 });
 
 test('configuration step is skipped for repair cases', async ({page}) => {
