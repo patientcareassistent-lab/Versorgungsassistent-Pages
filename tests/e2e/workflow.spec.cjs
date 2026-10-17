@@ -31,6 +31,9 @@ async function prepareNewSupply(page) {
 test('overview lists last editor and separately assigned technician without mixing creator and responsibility', async ({ page }) => {
   await installSupabaseMock(page, { mode: 'signed-in' })
   await page.addInitScript(() => {
+    // addInitScript executes again on reload; seed only once to test durability.
+    if(localStorage.getItem('va:e2e:staff-overview-seeded')==='1') return
+    localStorage.setItem('va:e2e:staff-overview-seeded','1')
     localStorage.setItem('va:e2e:mock-care-cases', JSON.stringify([{
       id:'44444444-4444-4444-8444-444444444444',
       owner_user_id:'33333333-3333-4333-8333-333333333333',
