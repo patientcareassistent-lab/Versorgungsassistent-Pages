@@ -307,8 +307,8 @@ test('version 0.9 keeps archiving but hides billing and calculation from the use
   await page.locator('#archiveSupplyButton').click()
   await expect(page.locator('#archiveActionNotice')).toContainText('erforderliche Arbeitsschritte sind offen')
   expect(archiveRequests).toHaveLength(0)
-  await expect(page.locator('.wizard-step[data-step="10"]')).toBeHidden()
-  await expect(page.locator('.wizard-panel[data-panel="10"]')).toBeHidden()
+  await expect(page.locator('.wizard-step[data-step="11"]')).toBeHidden()
+  await expect(page.locator('.wizard-panel[data-panel="11"]')).toBeHidden()
   await expect(page.locator('[data-case-field="quoteCalc"]')).toHaveCount(0)
 
   await expect(page.locator('[data-view="pg26"]')).toBeHidden()
@@ -546,7 +546,7 @@ test('multi-PG contract forms remain discoverable for a selected product group',
   await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
   await expect(page.locator('#fieldList')).not.toContainText('Versorgungsziel')
   await page.locator('#wizardNext').click()
-  await expect(page.locator('.wizard-panel[data-panel="4"]')).toBeVisible()
+  await expect(page.locator('.wizard-panel[data-panel="5"]')).toBeVisible()
   await page.locator('[data-case-field="planGoal"]').fill('Individuelle Orthesenversorgung')
 
   await expect(page.locator('#careForm')).toContainText('mehrere Reha-/OT-Bereiche')
@@ -808,12 +808,12 @@ test('PG24 shared FMB measure sheet inherits order fields and omits redundant ad
 })
 
 
-test('UKB PG24 configurator appears after the unchanged FMB sheet, prefills order values and persists technical selections', async ({ page }) => {
+test('UKB tool is a separate wizard step after the original measure sheet, persists selections and does not duplicate master data', async ({ page }) => {
   await installSupabaseMock(page, {
     mode:'signed-in',
     rpcOverrides:{
       care_reference_bootstrap:{
-        kassen:[{Kasse_Kanonisch:'AOK Baden-Württemberg'},{Kasse_Kanonisch:'Testkasse'}],
+        kassen:[{Kasse_Kanonisch:'Testkasse'},{Kasse_Kanonisch:'AOK Baden-Württemberg'}],
         produktgruppen:[{PG:'24',Generisches_Blatt:'PG24 Prothesen',Reifegrad:'TEST'}],
         sourceCount:1,formCount:1
       },
@@ -829,43 +829,83 @@ test('UKB PG24 configurator appears after the unchanged FMB sheet, prefills orde
   })
   await page.goto('/index.html')
   await page.locator('#newSupplyOverviewButton').click()
-  await page.locator('#careKasse').selectOption({label:'AOK Baden-Württemberg'})
+  await page.locator('#careKasse').selectOption({label:'Testkasse'})
   await page.locator('#carePg').selectOption('24')
   await page.locator('#careHimi').selectOption('PG24_UKB')
-  const config=page.locator('#ukbConfigurationSection')
-  await expect(config).not.toHaveClass(/hidden/)
-  await expect(config.locator('h3')).toHaveText('Prothesenkonfiguration · Unterschenkel')
-  await expect(page.locator('#measureFieldList .source-measure-sheet')).toHaveCount(1)
-  const documentOrder=await page.evaluate(()=>{
-    const a=document.getElementById('measureFieldList')
-    const b=document.getElementById('ukbConfigurationSection')
-    return !!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING)
-  })
-  expect(documentOrder).toBe(true)
-  // The user must see the configuration in step 5 (Versorgungsplanung),
-  // not buried below the long measure sheet in step 4.
-  await expect(page.locator('.wizard-panel[data-panel="3"] #ukbConfigurationSection')).toHaveCount(0)
-  await expect(page.locator('.wizard-panel[data-panel="4"] #ukbConfigurationSection')).toHaveCount(1)
-  await expect(page.locator('.wizard-panel[data-panel="4"] #ukbConfigurationSection')).not.toHaveClass(/hidden/)
-  expect(await config.evaluate(el=>el.compareDocumentPosition(el.closest('.wizard-panel').querySelector('.mini-grid')) & Node.DOCUMENT_POSITION_FOLLOWING)).toBeTruthy()
-  const variant=config.locator('[data-ukb-config-field-id="SRC_PG24_UKB_CONFIG_20261008:variant"]')
-  await expect(variant.locator('option')).toHaveCount(11)
-  await variant.evaluate(el=>{el.value='modular_kond_day';el.dispatchEvent(new Event('change',{bubbles:true}))})
-  const socket=config.locator('[data-ukb-config-field-id="SRC_PG24_UKB_CONFIG_20261008:socket:softWall"]')
-  await socket.evaluate(el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}))})
-  const article=config.locator('[data-ukb-config-field-id="SRC_PG24_UKB_CONFIG_20261008:foot:prostheticFoot:article"]')
-  await article.evaluate(el=>{el.value='TEST-FOOT-123';el.dispatchEvent(new Event('input',{bubbles:true}))})
   await page.locator('[data-case-field="patientFirstName"]').fill('Test')
-  await page.locator('[data-case-field="patientLastName"]').fill('Muster')
-  await page.locator('#careKasse').selectOption({label:'Testkasse'})
-  await expect(variant).toHaveValue('modular_kond_day')
-  await expect(socket).toBeChecked()
-  await expect(article).toHaveValue('TEST-FOOT-123')
-  await expect(config.locator('.ukb-config-prefill').filter({hasText:'Kostenträger'})).toContainText('Testkasse')
-  // AOK-specific TT2 is available only for AOK BW, never for other payers.
-  await expect(config.locator('[data-ukb-config-field-id="SRC_PG24_UKB_CONFIG_20261008:exceptions:tt2"]')).toHaveCount(0)
-  await page.locator('#careKasse').selectOption({label:'AOK Baden-Württemberg'})
-  await expect(config.locator('[data-ukb-config-field-id="SRC_PG24_UKB_CONFIG_20261008:exceptions:tt2"]')).toHaveCount(1)
-  await expect(variant).toHaveValue('modular_kond_day')
-  await expect(config.locator('.ukb-config-prefill').filter({hasText:'Name, Vorname'})).toContainText('Muster, Test')
+  await page.locator('[data-case-field="patientLastName"]').fill('Person')
+  await page.locator('[data-case-field="patientBirthDate"]').fill('1980-01-02')
+  await page.locator('input[name="caseKindChoice"][value="Neuversorgung"]').check()
+  await page.locator('#careSupplyType').selectOption('Definitiv')
+  await page.locator('#careSide').selectOption('rechts')
+  await expect(page.locator('#measureFieldList .source-measure-sheet')).toHaveCount(1)
+  await expect(page.locator('#ukbConfigurationSection')).toHaveCount(0)
+  await expect(page.locator('.wizard-step[data-step="4"] .step-label')).toHaveText('Prothesenkonfiguration')
+  await expect(page.locator('.wizard-panel[data-panel="4"] #uexConfigFrame')).toHaveCount(1)
+  await expect(page.locator('.wizard-panel[data-panel="3"] #uexConfigFrame')).toHaveCount(0)
+
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('.wizard-panel[data-panel="1"]')).toBeVisible()
+  await page.locator('#rxPresent').selectOption('Nein')
+  await page.locator('#rxNeededText').fill('Unterschenkelprothese')
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('.wizard-panel[data-panel="2"]')).toBeVisible()
+
+  // Populate only clinical inputs in the PG24 non-AOK profile.
+  await page.evaluate(() => {
+    for(const el of document.querySelectorAll('#fieldList input, #fieldList textarea, #fieldList select')){
+      if(el.disabled || el.readOnly || el.dataset.signatureRole)continue
+      if(el.type==='checkbox')el.checked=true
+      else if(el.tagName==='SELECT'){const o=[...el.options].find(x=>x.value);if(o)el.value=o.value}
+      else if(el.type==='number')el.value='20'
+      else if(el.type==='date')el.value='2026-10-17'
+      else if(el.type==='text'||el.tagName==='TEXTAREA')el.value='Testwert'
+      el.dispatchEvent(new Event('input',{bubbles:true}))
+      el.dispatchEvent(new Event('change',{bubbles:true}))
+    }
+  })
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('.wizard-panel[data-panel="3"]')).toBeVisible()
+  await page.locator('[data-case-field="measureDate"]').fill('2026-10-17')
+  await page.locator('#measureFieldList [data-measure-value="true"]').first().evaluate(el=>{
+    if(el.type==='checkbox')el.checked=true
+    else el.value='34'
+    el.dispatchEvent(new Event('input',{bubbles:true}))
+    el.dispatchEvent(new Event('change',{bubbles:true}))
+  })
+  await page.locator('#wizardNext').click()
+  await expect(page.locator('.wizard-panel[data-panel="4"]')).toBeVisible()
+  const inner=page.frameLocator('#uexConfigFrame')
+  await expect(inner.locator('h1')).toHaveText('Versorgung & Aufbau')
+  await expect(inner.locator('.context-line')).toContainText('Testkasse')
+  await expect(inner.locator('.context-line')).toContainText('rechts')
+  await expect(inner.locator('input[name="patientFirstName"]')).toHaveCount(0)
+  await inner.locator('#bauweise').selectOption('Modularbauweise')
+  await inner.locator('#schaftrand').selectOption('Kondylenübergreifend')
+  await inner.locator('#zweck').selectOption('Alltag')
+  await inner.locator('[data-step="1"]').click()
+  await inner.locator('[data-part="Weichwandschaft"]').check()
+  await inner.locator('[data-article="Weichwandschaft"]').fill('TEST-UKB-1')
+
+  await expect.poll(async () => page.evaluate(() => {
+    const rows=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
+    return rows[0]?.payload?.uexConfigurationV02?.bauteile?.Weichwandschaft?.artikelnummer || ''
+  }), {timeout:10000}).toBe('TEST-UKB-1')
+  await expect(page.locator('.wizard-step[data-step="4"]')).not.toHaveClass(/skipped/)
+  await page.reload()
+  await page.locator('#supplyOverviewBody [data-supply-id]').first().click()
+  await expect(page.locator('.wizard-panel[data-panel="4"]')).toBeVisible()
+  await expect(inner.locator('#bauweise')).toHaveValue('Modularbauweise')
+  await inner.locator('[data-step="1"]').click()
+  await expect(inner.locator('[data-part="Weichwandschaft"]')).toBeChecked()
+  await expect(inner.locator('[data-article="Weichwandschaft"]')).toHaveValue('TEST-UKB-1')
+});
+
+test('configuration step is skipped for repair cases', async ({page}) => {
+  await installSupabaseMock(page,{mode:'signed-in'})
+  await page.goto('/index.html')
+  await page.locator('#newSupplyOverviewButton').click()
+  await page.locator('input[name="caseKindChoice"][value="Reparatur"]').check()
+  await expect(page.locator('.wizard-step[data-step="4"]')).toHaveClass(/skipped/)
+  await expect(page.locator('.wizard-step[data-step="4"]')).toBeDisabled()
 });
