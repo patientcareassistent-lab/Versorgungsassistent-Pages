@@ -1,0 +1,536 @@
+{
+  "schemaVersion": 1,
+  "sourceId": "SRC_PG24_UKB_CONFIG_20261008",
+  "title": "PG24 Prothetik UKB – Konfigurationsbogen",
+  "source": {
+    "filename": "2026_10_08_PG24_Konfigurationsbogen_UKB.docx",
+    "sha256": "40b3c349b8b5339ab3112bd1837fb4e222d5e566ca7f5790ff885cf21a26812a",
+    "bytes": 258840,
+    "pages": 3,
+    "kind": "Interne Muster-Vorlage",
+    "sourceDateFromFilename": "2026-10-08",
+    "originalAvailability": "Projektdatei; Original-DOCX nicht im Web-Storage veröffentlicht"
+  },
+  "applicability": {
+    "pg": "24",
+    "amputationLevel": "Unterschenkel",
+    "excludesCaseKind": "Reparatur",
+    "payer": "*",
+    "stage": "after_measure_sheet"
+  },
+  "disclaimer": "Digitaler Konfigurationsentwurf gemäß interner Vorlage. Die 10 Spalten geben Bauvarianten wieder; die Originalmatrix enthält variantenabhängige Freigaben, die maschinell nicht verifiziert sind. Auswahl, Artikel, Positionsnummern und Kassenbesonderheiten fachlich/vertraglich prüfen.",
+  "variants": [
+    {
+      "id": "interim_kniespalt",
+      "label": "Interim · Kniespaltübergreifend"
+    },
+    {
+      "id": "interim_kondylen",
+      "label": "Interim · Kondylenübergreifend"
+    },
+    {
+      "id": "modular_ks_day",
+      "label": "Modularbauweise · Kniespaltübergreifend · Alltag"
+    },
+    {
+      "id": "modular_ks_wet",
+      "label": "Modularbauweise · Kniespaltübergreifend · Wasserfest"
+    },
+    {
+      "id": "modular_kond_day",
+      "label": "Modularbauweise · Kondylenübergreifend · Alltag"
+    },
+    {
+      "id": "modular_kond_wet",
+      "label": "Modularbauweise · Kondylenübergreifend · Wasserfest"
+    },
+    {
+      "id": "shell_ks_day",
+      "label": "Schalenbauweise · Kniespaltübergreifend · Alltag"
+    },
+    {
+      "id": "shell_ks_wet",
+      "label": "Schalenbauweise · Kniespaltübergreifend · Wasserfest"
+    },
+    {
+      "id": "shell_kond_day",
+      "label": "Schalenbauweise · Kondylenübergreifend · Alltag"
+    },
+    {
+      "id": "shell_kond_wet",
+      "label": "Schalenbauweise · Kondylenübergreifend · Wasserfest"
+    }
+  ],
+  "headerFields": [
+    {
+      "id": "name",
+      "label": "Name, Vorname",
+      "sourceKey": "patientLastName+patientFirstName",
+      "readOnly": true
+    },
+    {
+      "id": "birth",
+      "label": "Geburtsdatum",
+      "sourceKey": "patientBirthDate",
+      "readOnly": true
+    },
+    {
+      "id": "payer",
+      "label": "Kostenträger",
+      "sourceKey": "careKasse",
+      "readOnly": true
+    },
+    {
+      "id": "weight",
+      "label": "Gewicht (kg)",
+      "sourceKey": "tech:weight",
+      "readOnly": true
+    },
+    {
+      "id": "date",
+      "label": "Datum",
+      "sourceKey": "measureDate",
+      "readOnly": true
+    },
+    {
+      "id": "technician",
+      "label": "Mitarbeiter*in",
+      "sourceKey": "measureTech",
+      "readOnly": true
+    },
+    {
+      "id": "branch",
+      "label": "Filiale"
+    },
+    {
+      "id": "case",
+      "label": "Vorgangsnummer",
+      "sourceKey": "caseNumber",
+      "readOnly": true
+    },
+    {
+      "id": "side",
+      "label": "Seite",
+      "sourceKey": "side",
+      "readOnly": true
+    }
+  ],
+  "preQuestions": [
+    {
+      "id": "reuseInterim",
+      "label": "Übernahme Bauteile aus Interim"
+    },
+    {
+      "id": "postopLiner",
+      "label": "Post-Op-Liner",
+      "reason": true,
+      "note": "Mit Begründung und Maßdokumentation"
+    }
+  ],
+  "sections": [
+    {
+      "id": "socket",
+      "title": "Schaft",
+      "fields": [
+        {
+          "id": "adjustable",
+          "label": "Verstellbarer Schaft"
+        },
+        {
+          "id": "softWall",
+          "label": "Weichwandschaft"
+        },
+        {
+          "id": "siliconeContact",
+          "label": "Silikon-Kontaktschaft"
+        },
+        {
+          "id": "flexibleEdge",
+          "label": "+ flexible Randgestaltung"
+        },
+        {
+          "id": "flexibleInner",
+          "label": "Flexibler Innenschaft"
+        }
+      ]
+    },
+    {
+      "id": "thighSleeve",
+      "title": "Oberschenkelhülse",
+      "fields": [
+        {
+          "id": "leather",
+          "label": "Leder"
+        },
+        {
+          "id": "plastic",
+          "label": "Kunststoff"
+        },
+        {
+          "id": "adaptiveRails",
+          "label": "+ Adaptive Schienen",
+          "article": true
+        }
+      ]
+    },
+    {
+      "id": "valves",
+      "title": "Ventil",
+      "fields": [
+        {
+          "id": "L641000",
+          "label": "L-641000"
+        },
+        {
+          "id": "L551002",
+          "label": "L-551002"
+        },
+        {
+          "id": "otherValve",
+          "label": "Weiteres Ventil",
+          "article": true
+        }
+      ]
+    },
+    {
+      "id": "closure",
+      "title": "Verschlüsse",
+      "fields": [
+        {
+          "id": "6A3020N",
+          "label": "6A30=20N (OB)"
+        },
+        {
+          "id": "IceLockL651000",
+          "label": "Ice-Lock L-651000 (Össur)"
+        },
+        {
+          "id": "otherPin",
+          "label": "Sonstiges Pin-/Lock",
+          "article": true
+        },
+        {
+          "id": "velcro",
+          "label": "Klett-/Gurt",
+          "article": true
+        },
+        {
+          "id": "cord",
+          "label": "Seilzug-/Kordel",
+          "article": true
+        },
+        {
+          "id": "boa",
+          "label": "BOA (Einhand)",
+          "article": true
+        },
+        {
+          "id": "otherClosure",
+          "label": "Sonstiger Verschluss",
+          "article": true
+        }
+      ]
+    },
+    {
+      "id": "socketAdapter",
+      "title": "Schaftadapter",
+      "fields": [
+        {
+          "id": "4R100",
+          "label": "4R100 (OB)"
+        },
+        {
+          "id": "APTI740L",
+          "label": "AP.TI-740L (WJT) · bis 166 kg"
+        },
+        {
+          "id": "otherSocketAdapter",
+          "label": "Sonstiger Schaftadapter",
+          "article": true
+        }
+      ]
+    },
+    {
+      "id": "screwAdapter",
+      "title": "Schraubadapter",
+      "fields": [
+        {
+          "id": "4R52",
+          "label": "4R52 (OB)"
+        },
+        {
+          "id": "APTI100CFL",
+          "label": "AP.TI-100C-FL (WJT) · bis 166 kg"
+        },
+        {
+          "id": "4WR953",
+          "label": "4WR95=3 (OB)"
+        },
+        {
+          "id": "otherScrewAdapter",
+          "label": "Sonstiger Schraubadapter",
+          "article": true
+        }
+      ]
+    },
+    {
+      "id": "tubeAdapter",
+      "title": "Rohradapter",
+      "fields": [
+        {
+          "id": "2R37",
+          "label": "2R37 (OB)"
+        },
+        {
+          "id": "APTI10TC",
+          "label": "AP.TI-10TC (WJT) · bis 166 kg"
+        },
+        {
+          "id": "2WR95",
+          "label": "2WR95 (OB)"
+        },
+        {
+          "id": "otherTubeAdapter",
+          "label": "Sonstiger Rohradapter",
+          "article": true
+        }
+      ]
+    },
+    {
+      "id": "otherParts",
+      "title": "Sonstige Bauteile",
+      "fields": [
+        {
+          "id": "otherParts",
+          "label": "Sonstige Bauteile",
+          "article": true
+        }
+      ]
+    },
+    {
+      "id": "foot",
+      "title": "Fuß",
+      "fields": [
+        {
+          "id": "prostheticFoot",
+          "label": "Prothesenfuß",
+          "article": true
+        },
+        {
+          "id": "footShell",
+          "label": "Fußhülle",
+          "article": true
+        },
+        {
+          "id": "trialFoot",
+          "label": "Prothesenfußtest (bei Folgeversorgung)"
+        }
+      ]
+    },
+    {
+      "id": "cosmesis",
+      "title": "Kosmetik",
+      "fields": [
+        {
+          "id": "stocking",
+          "label": "Verkleidung Strumpf"
+        },
+        {
+          "id": "individual",
+          "label": "Verkleidung individuell"
+        },
+        {
+          "id": "individualShape",
+          "label": "+ individueller Formausgleich"
+        },
+        {
+          "id": "superskin",
+          "label": "Superskin einteilig"
+        }
+      ]
+    },
+    {
+      "id": "liner",
+      "title": "Stumpfkissen / Liner",
+      "fields": [
+        {
+          "id": "prefabCushion",
+          "label": "Stumpfkissen konfektioniert",
+          "article": true
+        },
+        {
+          "id": "customCushion",
+          "label": "Stumpfkissen individuell"
+        },
+        {
+          "id": "customLiner",
+          "label": "Liner individuell",
+          "article": true
+        },
+        {
+          "id": "prefabLiner",
+          "label": "Liner konfektioniert",
+          "article": true
+        },
+        {
+          "id": "kneeSleeve",
+          "label": "Kniekappe",
+          "article": true
+        }
+      ]
+    },
+    {
+      "id": "stumpSocks",
+      "title": "Stumpfstrümpfe",
+      "fields": [
+        {
+          "id": "nylonIhleHole",
+          "label": "Nylon · Ihle mit Loch · 22 050 011 ___",
+          "article": true
+        },
+        {
+          "id": "nylonIhle",
+          "label": "Nylon · Ihle · 22 000 011 ___",
+          "article": true
+        },
+        {
+          "id": "nylonWjt1",
+          "label": "Nylon · WJT · 30.211 ___",
+          "article": true
+        },
+        {
+          "id": "nylonWjt2",
+          "label": "Nylon · WJT · 30.208 ___",
+          "article": true
+        },
+        {
+          "id": "nylonOb",
+          "label": "Nylon · OB Schutzhülle · 451F21 ___",
+          "article": true
+        },
+        {
+          "id": "cottonIhleHole",
+          "label": "Baumwolle · Ihle mit Loch · 24 051 011 ___",
+          "article": true
+        },
+        {
+          "id": "cottonIhle",
+          "label": "Baumwolle · Ihle · 24 001 011 ___",
+          "article": true
+        },
+        {
+          "id": "terryIhleHole",
+          "label": "Baumwolle Frottee · Ihle mit Loch · 25 150 011 ___",
+          "article": true
+        },
+        {
+          "id": "terryIhle",
+          "label": "Baumwolle Frottee · Ihle · 25 000 011 ___",
+          "article": true
+        },
+        {
+          "id": "terryIhleAlt",
+          "label": "Baumwolle Frottee · Ihle · 25 100 011 ___",
+          "article": true
+        },
+        {
+          "id": "otherOssur1",
+          "label": "Andere · Össur · K-190200 ___",
+          "article": true
+        },
+        {
+          "id": "otherOssur2",
+          "label": "Andere · Össur · K-520002 ___",
+          "article": true
+        },
+        {
+          "id": "otherOssur3",
+          "label": "Andere · Össur · K-520004 ___",
+          "article": true
+        },
+        {
+          "id": "otherSilver",
+          "label": "Andere · Ihle Silberstrümpfe · 22 015 013 ___",
+          "article": true
+        },
+        {
+          "id": "otherWool",
+          "label": "Andere · Wolle WJT · 30. ___",
+          "article": true
+        }
+      ]
+    },
+    {
+      "id": "accessories",
+      "title": "Sonstiges Zubehör",
+      "fields": [
+        {
+          "id": "donningAid",
+          "label": "Anziehhilfe",
+          "article": true
+        }
+      ]
+    },
+    {
+      "id": "exceptions",
+      "title": "Sonderpositionen und Begründungen",
+      "fields": [
+        {
+          "id": "tt2",
+          "label": "Interims-Pauschale TT2 · nur AOK BW",
+          "payerOnly": "AOK Baden-Württemberg",
+          "note": "Zusätzlicher Prothesenfuß muss mindestens 10 Tage getestet werden."
+        },
+        {
+          "id": "extendInterim",
+          "label": "Verlängerung der Interimsphase um 3 Monate",
+          "note": "Mit Begründung; laut Vorlage nicht möglich bei IKK."
+        },
+        {
+          "id": "interruptionHealth",
+          "label": "Unterbrechung der Interimsphase aus gesundheitlichen Gründen"
+        },
+        {
+          "id": "interruptionRevision",
+          "label": "Stumpfrevision mit Unterbrechung der Interimsphase"
+        },
+        {
+          "id": "extraTestSocket",
+          "label": "Zusätzlicher Testschaft",
+          "reason": true
+        },
+        {
+          "id": "extraTestSilicone",
+          "label": "Silikon-Kontaktschaft (zusätzlicher Testschaft)"
+        },
+        {
+          "id": "replacementSocket",
+          "label": "Folgeschaft",
+          "reason": true
+        },
+        {
+          "id": "reasonRevision",
+          "label": "Folgeschaft: Stumpfrevision"
+        },
+        {
+          "id": "reasonCircumference",
+          "label": "Folgeschaft: mindestens 5 % Stumpfumfangsveränderung · durch Vergleichsmaßblätter belegen"
+        },
+        {
+          "id": "reasonDamage",
+          "label": "Folgeschaft: Verschleiß oder Defekt · ggf. Fotodokumentation"
+        },
+        {
+          "id": "reasonLifetime",
+          "label": "Folgeschaft: Neuversorgung nach Ablauf der Nutzungsdauer"
+        },
+        {
+          "id": "homeVisit",
+          "label": "Klinik-/Hausbesuch",
+          "note": "Besuch muss verordnet, quittiert und begründet sein.",
+          "reason": true
+        }
+      ]
+    }
+  ]
+}
