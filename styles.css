@@ -345,3 +345,12 @@
   #supplyOverviewView .supply-dashboard-table .supply-row-date{white-space:normal}
   #supplyOverviewView .supply-dashboard-table .supply-empty{display:block}
 }
+
+/* Auftragsstand: compact selectable workflow steps, consistent with PG smartbuttons. */
+.supply-stage-filter-wrap{display:flex;align-items:flex-start;flex-wrap:wrap;gap:10px 18px;margin-top:14px;padding-top:14px;border-top:1px solid #e8edf5}
+.supply-stage-filter-wrap>.supply-dashboard-filter-label{margin:8px 0 0;min-width:100px}
+.supply-stage-buttons{display:flex;align-items:center;gap:7px;flex-wrap:wrap;min-width:0;flex:1}
+.supply-stage-chip{display:inline-flex;align-items:center;gap:7px;min-height:35px;white-space:normal;text-align:left}
+.supply-stage-count{display:inline-flex;align-items:center;justify-content:center;min-width:21px;min-height:20px;border-radius:999px;padding:2px 5px;background:#edf2fc;color:#344b86;font-weight:750;font-variant-numeric:tabular-nums;font-size:.7rem}
+.supply-stage-chip.is-selected .supply-stage-count{background:#ffffff24;color:#fff}
+@media(max-width:620px){.supply-stage-filter-wrap{display:block}.supply-stage-buttons{margin-top:10px}.supply-stage-chip{font-size:.76rem}}

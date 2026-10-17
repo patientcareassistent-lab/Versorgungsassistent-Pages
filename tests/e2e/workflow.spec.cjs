@@ -158,6 +158,74 @@ test('dashboard filters status and PG with smartbuttons and keeps every case acc
   await expect(page.locator('#supplyFiltersReset')).toBeHidden()
 })
 
+
+test('Auftragsstand smartbuttons distinguish profile vs repair, legacy step mapping and combine all dashboard filters', async ({page}) => {
+  await installSupabaseMock(page, {mode:'signed-in'})
+  await page.addInitScript(() => {
+    const cases=[
+      {id:'00000000-0000-4000-8000-000000000001',pg:'23',index:0,kind:'Neuversorgung',status:'Laufend',name:'Order',current:true},
+      {id:'00000000-0000-4000-8000-000000000002',pg:'24',index:1,kind:'Neuversorgung',status:'Laufend',name:'Recipe',current:true},
+      {id:'00000000-0000-4000-8000-000000000003',pg:'24',index:2,kind:'Neuversorgung',status:'Laufend',name:'Profile',current:true},
+      {id:'00000000-0000-4000-8000-000000000004',pg:'24',index:2,kind:'Reparatur',status:'Rückfrage / offen',name:'Repair',current:true},
+      {id:'00000000-0000-4000-8000-000000000005',pg:'23',index:4,kind:'Neuversorgung',status:'Warten / Genehmigung',name:'LegacyPlanning',current:false},
+      {id:'00000000-0000-4000-8000-000000000006',pg:'24',index:4,kind:'Neuversorgung',status:'Laufend',name:'UKBConfig',current:true},
+      {id:'00000000-0000-4000-8000-000000000007',pg:'24',index:10,kind:'Neuversorgung',status:'Laufend',name:'Delivery',current:true}
+    ]
+    localStorage.setItem('va:e2e:mock-care-cases', JSON.stringify(cases.map(c=>({
+      id:c.id,owner_user_id:'11111111-1111-4111-8111-111111111111',
+      last_modified_by:'11111111-1111-4111-8111-111111111111',
+      created_at:'2026-10-17T08:00:00Z',updated_at:'2026-10-17T08:00:00Z',
+      wizard_index:c.index,insurer:'Testkasse',product_group:c.pg,himi:'Test-Hilfsmittel',himi_id:'TEST',
+      schema_version:1,status:c.status,payload:{
+        patientFirstName:'Test',patientLastName:c.name,caseKind:c.kind,
+        ...(c.current?{uexWizardSchema:'2026-10-17'}:{})
+      }
+    }))))
+  })
+  await page.goto('/index.html')
+  const table=page.locator('#supplyOverviewBody')
+  const buttons=page.locator('#supplyStageButtons button[data-supply-stage]')
+  await expect(table.locator('[data-supply-id]')).toHaveCount(7)
+  await expect(buttons).toHaveCount(8)
+  await expect(page.locator('[data-supply-stage="0"]')).toContainText('Auftragserfassung')
+  await expect(page.locator('[data-supply-stage="1"]')).toContainText('Rezepterfassung')
+  await expect(page.locator('[data-supply-stage="2:profile"]')).toContainText('Profilerhebung')
+  await expect(page.locator('[data-supply-stage="2:repair"]')).toContainText('Reparaturprotokoll')
+  await expect(page.locator('[data-supply-stage="4"]')).toContainText('Prothesenkonfiguration')
+  await expect(page.locator('[data-supply-stage="5"]')).toContainText('Versorgungsplanung')
+  await expect(page.locator('[data-supply-stage="10"]')).toContainText('Abgabe')
+  await expect(page.locator('[data-supply-stage=""]')).toHaveAttribute('aria-pressed','true')
+  // Different cases in the same wizard position have distinct labels/filter keys.
+  await page.locator('[data-supply-stage="2:profile"]').click()
+  await expect(table.locator('[data-supply-id]')).toHaveCount(1)
+  await expect(table).toContainText('Test Profile')
+  await expect(table).not.toContainText('Test Repair')
+  await expect(page.locator('#supplyFilteredCount')).toHaveText('1 von 7 Vorgängen')
+  await expect(page.locator('#supplyFiltersReset')).toBeVisible()
+  await page.locator('[data-supply-stage="2:repair"]').click()
+  await expect(table).toContainText('Test Repair')
+  await expect(table).not.toContainText('Test Profile')
+  await page.locator('[data-supply-status="Rückfrage / offen"]').click()
+  await page.locator('[data-supply-pg="24"]').click()
+  await expect(table.locator('[data-supply-id]')).toHaveCount(1)
+  await page.locator('#supplySearch').fill('nicht vorhanden')
+  await expect(table).toContainText('Keine passenden Vorgänge.')
+  await page.locator('#supplyFiltersReset').click()
+  await expect(table.locator('[data-supply-id]')).toHaveCount(7)
+  await expect(page.locator('[data-supply-stage=""]')).toHaveAttribute('aria-pressed','true')
+  await expect(page.locator('[data-supply-pg=""]')).toHaveAttribute('aria-pressed','true')
+  await expect(page.locator('[data-supply-status=""]')).toHaveAttribute('aria-pressed','true')
+  // Older stored cases are mapped as when opened: old step 4 became planning 5.
+  await page.locator('[data-supply-stage="5"]').click()
+  await expect(table.locator('[data-supply-id]')).toHaveCount(1)
+  await expect(table).toContainText('Test LegacyPlanning')
+  await expect(table).toContainText('6. Versorgungsplanung')
+  await page.locator('#supplyFiltersReset').click()
+  await page.locator('[data-supply-stage="4"]').click()
+  await expect(table).toContainText('Test UKBConfig')
+  await expect(table).not.toContainText('Test LegacyPlanning')
+})
+
 test('order entry labels keep stars and optional badges aligned with fields at desktop and phone width', async ({page}) => {
   await openSignedInApp(page)
   await page.locator('#newSupplyOverviewButton').click()

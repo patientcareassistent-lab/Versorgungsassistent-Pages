@@ -425,15 +425,28 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
     }
 
-    function supplyStepLabel(item){
+    // Derive the dashboard work step from each case, never from the currently
+    // opened case. Repair/profiling share step index 2 but need distinct filters.
+    // Historical cases from before the UKB configuration step use the same
+    // +1 migration as restoreSupplyDraft().
+    function supplyStepMeta(item){
       const oldIndex=Number(item.wizardIndex)||0
       const migrated=item.values?.uexWizardSchema==='2026-10-17'?oldIndex:(oldIndex>=4?oldIndex+1:oldIndex)
       const i=Math.max(0,Math.min(migrated,wizardSteps.length-1))
-      return (i+1)+'. '+wizardSteps[i].name
+      const values=item.values||{}
+      const repair=values.caseKind==='Reparatur' ||
+        (!values.caseKind && ['Reparatur','Änderung','Instandhaltung'].includes(values.supplyType))
+      const label=i===2?(repair?'Reparaturprotokoll':'Profilerhebung'):wizardSteps[i].name
+      return {key:i===2?(repair?'2:repair':'2:profile'):String(i),index:i,label}
+    }
+    function supplyStepLabel(item){
+      const step=supplyStepMeta(item)
+      return (step.index+1)+'. '+step.label
     }
 
     let supplySelectedStatus=''
     let supplySelectedPg=''
+    let supplySelectedStage=''
 
     function renderSupplyOverview(){
       const body=$('supplyOverviewBody')
@@ -442,6 +455,27 @@ import { versorgungsziele } from './versorgungsziele.js'
       const search=($('supplySearch')?.value||'').trim().toLowerCase()
       const pgs=[...new Set(drafts.map(x=>String(x.pg||'')).filter(Boolean))].sort((a,b)=>Number(a)-Number(b))
       if(supplySelectedPg && !pgs.includes(supplySelectedPg)) supplySelectedPg=''
+      // Only display work steps present in open supplies. Labels are resolved
+      // per case so Reparaturprotokoll and Profilerhebung remain distinct.
+      const stageCounts=new Map()
+      for(const supply of drafts){
+        const meta=supplyStepMeta(supply)
+        const current=stageCounts.get(meta.key)
+        if(current) current.count++
+        else stageCounts.set(meta.key,{...meta,count:1})
+      }
+      if(supplySelectedStage && !stageCounts.has(supplySelectedStage)) supplySelectedStage=''
+      const stageButtons=$('supplyStageButtons')
+      if(stageButtons){
+        const options=[{key:'',label:'Alle Schritte',count:drafts.length},
+          ...[...stageCounts.values()].sort((a,b)=>a.index-b.index||a.label.localeCompare(b.label,'de'))]
+        stageButtons.innerHTML=options.map(step=>{
+          const active=supplySelectedStage===step.key
+          return '<button type="button" class="supply-filter-chip supply-stage-chip'+(active?' is-selected':'')+
+            '" data-supply-stage="'+escapeHtml(step.key)+'" aria-pressed="'+active+'">'+
+            escapeHtml(step.label)+' <span class="supply-stage-count">'+step.count+'</span></button>'
+        }).join('')
+      }
 
       const pgButtons=$('supplyPgButtons')
       if(pgButtons){
@@ -463,6 +497,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       const filtered=drafts.filter(x=>{
         if(supplySelectedStatus && x.status!==supplySelectedStatus) return false
         if(supplySelectedPg && String(x.pg)!==supplySelectedPg) return false
+        if(supplySelectedStage && supplyStepMeta(x).key!==supplySelectedStage) return false
         if(search){
           const hay=[x.values?.patientFirstName,x.values?.patientLastName,x.values?.patientName,
             x.values?.caseNumber,x.kasse,x.pg,x.himi,x.values?.insuredNo,x.values?.caseKind,
@@ -472,7 +507,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         return true
       })
       $('supplyFilteredCount').textContent=filtered.length+' von '+drafts.length+' Vorgängen'
-      $('supplyFiltersReset')?.classList.toggle('hidden',!search&&!supplySelectedStatus&&!supplySelectedPg)
+      $('supplyFiltersReset')?.classList.toggle('hidden',!search&&!supplySelectedStatus&&!supplySelectedPg&&!supplySelectedStage)
 
       if(!filtered.length){
         body.innerHTML='<tr><td colspan="6" class="supply-empty"><strong>'+
@@ -5823,9 +5858,16 @@ import { versorgungsziele } from './versorgungsziele.js'
       supplySelectedPg=button.dataset.supplyPg
       renderSupplyOverview()
     })
+    $('supplyStageButtons').addEventListener('click',event=>{
+      const button=event.target.closest('button[data-supply-stage]')
+      if(!button)return
+      supplySelectedStage=button.dataset.supplyStage
+      renderSupplyOverview()
+    })
     $('supplyFiltersReset').addEventListener('click',()=>{
       supplySelectedStatus=''
       supplySelectedPg=''
+      supplySelectedStage=''
       $('supplySearch').value=''
       renderSupplyOverview()
       $('supplySearch').focus()
