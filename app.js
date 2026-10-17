@@ -4185,7 +4185,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         if(doc?.body && typeof ResizeObserver==='function'){
           uexFrameResizeObserver=new ResizeObserver(()=>{
             if(frame.contentDocument!==doc)return
-            frame.style.height=Math.max(750,Math.ceil(doc.body.scrollHeight)+24)+'px'
+            frame.height=String(Math.max(750,Math.ceil(doc.body.scrollHeight)+24))
           })
           uexFrameResizeObserver.observe(doc.body)
         }
@@ -4395,7 +4395,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       return !!meta?.Erprobung_erforderlich || supplyType()==='Funktionsbauteilerprobung' || supplyType()==='Erprobung' || values.requiresTrialEvidence==='Ja' || values.evidenceRequired===true
     }
     function stepApplicable(i){
-      if(V09_ANAMNESIS_SCOPE && i===10) return false
+      if(V09_ANAMNESIS_SCOPE && i===11) return false
       if(i===2) return selectedCaseKind()==='Neuversorgung' || selectedCaseKind()==='Reparatur'
       if(i===3) return !isRepairCase() && requiresMeasure()
       if(i===4) return selectedCaseKind()==='Neuversorgung' && ukbConfigurationApplicable()
