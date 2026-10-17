@@ -104,6 +104,92 @@ test('overview marks missing responsibility and unavailable staff mapping withou
   await expect(row).not.toContainText('88888888-8888')
 })
 
+
+test('dashboard filters status and PG with smartbuttons and keeps every case accessible', async ({ page }) => {
+  await installSupabaseMock(page, {mode:'signed-in'})
+  await page.addInitScript(() => {
+    localStorage.setItem('va:e2e:mock-care-cases', JSON.stringify([
+      ['11111111-1111-4111-8111-000000000001','Laufend','23','A'],
+      ['11111111-1111-4111-8111-000000000002','Laufend','24','B'],
+      ['11111111-1111-4111-8111-000000000003','Warten / Genehmigung','24','C'],
+      ['11111111-1111-4111-8111-000000000004','Rückfrage / offen','23','D']
+    ].map(([id,status,pg,name],i)=>({
+      id,owner_user_id:'11111111-1111-4111-8111-111111111111',
+      last_modified_by:'11111111-1111-4111-8111-111111111111',
+      created_at:'2026-10-17T08:00:00.000Z',
+      updated_at:'2026-10-17T08:00:00.000Z',
+      wizard_index:0,insurer:'AOK Baden-Württemberg',product_group:pg,
+      himi:'Test-Hilfsmittel',himi_id:'TEST',status,schema_version:1,
+      payload:{patientFirstName:'Test',patientLastName:name,caseKind:'Neuversorgung',
+        assignedTechnician:'Techniker '+i}
+    }))))
+  })
+  await page.goto('/index.html')
+  const body=page.locator('#supplyOverviewBody')
+  await expect(body.locator('[data-supply-id]')).toHaveCount(4)
+  await expect(page.locator('#supplyCountAll')).toHaveText('4')
+  await expect(page.locator('#supplyCountActive')).toHaveText('2')
+  await expect(page.locator('#supplyCountWaiting')).toHaveText('1')
+  await expect(page.locator('#supplyCountQuery')).toHaveText('1')
+  await expect(page.locator('#supplyPgButtons button')).toHaveCount(3)
+  await expect(page.locator('#supplyOverviewView select')).toHaveCount(0)
+
+  const status=page.locator('[data-supply-status="Laufend"]')
+  await status.click()
+  await expect(status).toHaveAttribute('aria-pressed','true')
+  await expect(page.locator('[data-supply-status=""]')).toHaveAttribute('aria-pressed','false')
+  await expect(body.locator('[data-supply-id]')).toHaveCount(2)
+  await expect(page.locator('#supplyFilteredCount')).toHaveText('2 von 4 Vorgängen')
+  await page.locator('[data-supply-pg="24"]').click()
+  await expect(page.locator('[data-supply-pg="24"]')).toHaveAttribute('aria-pressed','true')
+  await expect(body.locator('[data-supply-id]')).toHaveCount(1)
+  await expect(body).toContainText('Test B')
+  await expect(body).toContainText('Techniker 1')
+  await page.locator('[data-supply-status="Warten / Genehmigung"]').click()
+  await expect(body.locator('[data-supply-id]')).toHaveCount(1)
+  await expect(body).toContainText('Test C')
+  await page.locator('#supplySearch').fill('nicht vorhanden')
+  await expect(body).toContainText('Keine passenden Vorgänge.')
+  await expect(page.locator('#supplyFiltersReset')).toBeVisible()
+  await page.locator('#supplyFiltersReset').click()
+  await expect(body.locator('[data-supply-id]')).toHaveCount(4)
+  await expect(page.locator('[data-supply-status=""]')).toHaveAttribute('aria-pressed','true')
+  await expect(page.locator('[data-supply-pg=""]')).toHaveAttribute('aria-pressed','true')
+  await expect(page.locator('#supplyFiltersReset')).toBeHidden()
+})
+
+test('order entry labels keep stars and optional badges aligned with fields at desktop and phone width', async ({page}) => {
+  await openSignedInApp(page)
+  await page.locator('#newSupplyOverviewButton').click()
+  for(const width of [1440,390]){
+    await page.setViewportSize({width,height:850})
+    const panel=page.locator('.wizard-panel[data-panel="0"]')
+    for(const [label,marker,control] of [
+      ['.order-field-name','*','[data-case-field="patientFirstName"]'],
+      ['.order-field-case','optional','[data-case-field="caseNumber"]'],
+      ['.order-field-payer','*','#careKasse'],
+      ['.order-field-technician','optional','[data-case-field="assignedTechnician"]']
+    ]){
+      const parent=panel.locator(label).first()
+      const title=parent.locator('.order-field-title')
+      await expect(title).toBeVisible()
+      await expect(title).toContainText(marker)
+      await expect(parent.locator(control)).toBeVisible()
+      const metric=await parent.evaluate(el=>{
+        const title=el.querySelector('.order-field-title')
+        const control=el.querySelector('input, select')
+        const t=title.getBoundingClientRect()
+        const c=control.getBoundingClientRect()
+        return {layout:getComputedStyle(el).display,top:t.top,bottom:t.bottom,inputTop:c.top}
+      })
+      expect(metric.layout).toBe('flex')
+      expect(metric.inputTop).toBeGreaterThanOrEqual(metric.bottom-1)
+    }
+  }
+  await page.locator('[data-case-field="patientFirstName"]').fill('Test')
+  await expect(page.locator('[data-case-field="patientFirstName"]')).toHaveValue('Test')
+})
+
 test('wizard validation blocks incomplete orders', async ({ page }) => {
   await openSignedInApp(page)
   await page.locator('#newSupplyOverviewButton').click()
