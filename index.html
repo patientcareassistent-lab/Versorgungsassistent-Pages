@@ -9,7 +9,7 @@
   <meta name="color-scheme" content="light" />
   <title>Versorgungsassistent</title>
   <script src="./frame-guard.js"></script>
-  <link id="appStyles" rel="stylesheet" href="./styles.css?v=20261017-team-overview" />
+  <link id="appStyles" rel="stylesheet" href="./styles.css?v=20261017-dashboard-smart" />
   <link rel="stylesheet" href="./prescribers.css" />
 
 </head>
@@ -78,48 +78,51 @@
 
         <section id="supplyOverviewView" class="hidden">
           <div class="page-grid">
-            <section class="card span2">
+            <section class="card span2 supply-dashboard">
               <div class="supply-overview-head">
                 <div>
-                  <h2>Offene Versorgungen</h2>
-                  <p>Übersicht der laufenden beziehungsweise noch nicht abgeschlossenen Versorgungsaufträge.</p>
+                  <p class="supply-dashboard-eyebrow">ARBEITSÜBERSICHT</p>
+                  <h2>Versorgungsdashboard</h2>
+                  <p>Offene Versorgungen auf einen Blick. Status und Produktgruppe per Klick filtern.</p>
                 </div>
                 <button id="newSupplyOverviewButton" class="primary no-print" type="button">+ Neue Versorgung</button>
               </div>
-              <div class="supply-overview-toolbar">
-                <div class="search"><span>⌕</span><input id="supplySearch" type="search" placeholder="Patient, Vorgang, Kasse, PG oder Hilfsmittel …" aria-label="Versorgung suchen" /></div>
-                <select id="supplyStatusFilter" aria-label="Status filtern">
-                  <option value="">Alle offenen Status</option>
-                  <option value="Laufend">Laufend</option>
-                  <option value="Warten / Genehmigung">Warten / Genehmigung</option>
-                  <option value="Rückfrage / offen">Rückfrage / offen</option>
-                  <option value="Abschluss offen">Abschluss offen</option>
-                </select>
-                <select id="supplyPgFilter" aria-label="Produktgruppe filtern"><option value="">Alle Produktgruppen</option></select>
+              <div class="supply-dashboard-filter-label">Status <small>Auswahl als Schnellfilter</small></div>
+              <div class="supply-status-grid" role="group" aria-label="Versorgungen nach Status filtern" id="supplyStatusButtons">
+                <button type="button" class="supply-status-card is-selected" data-supply-status="" aria-pressed="true"><span>Alle offenen</span><strong id="supplyCountAll">0</strong><small>Gesamtbestand</small></button>
+                <button type="button" class="supply-status-card" data-supply-status="Laufend" aria-pressed="false"><span>Laufend</span><strong id="supplyCountActive">0</strong><small>In Bearbeitung</small></button>
+                <button type="button" class="supply-status-card" data-supply-status="Warten / Genehmigung" aria-pressed="false"><span>Warten / Genehmigung</span><strong id="supplyCountWaiting">0</strong><small>Rückmeldung ausstehend</small></button>
+                <button type="button" class="supply-status-card" data-supply-status="Rückfrage / offen" aria-pressed="false"><span>Rückfrage / offen</span><strong id="supplyCountQuery">0</strong><small>Klärungsbedarf</small></button>
+                <button type="button" class="supply-status-card" data-supply-status="Abschluss offen" aria-pressed="false"><span>Abschluss offen</span><strong id="supplyCountClose">0</strong><small>Abgabe ausstehend</small></button>
               </div>
-              <div class="supply-status-grid">
-                <div class="supply-status-card"><span>Laufend</span><strong id="supplyCountActive">0</strong><small>aktiv in Bearbeitung</small></div>
-                <div class="supply-status-card"><span>Warten / Genehmigung</span><strong id="supplyCountWaiting">0</strong><small>externe Rückmeldung ausstehend</small></div>
-                <div class="supply-status-card"><span>Rückfrage / offen</span><strong id="supplyCountQuery">0</strong><small>Klärung erforderlich</small></div>
-                <div class="supply-status-card"><span>Abschluss offen</span><strong id="supplyCountClose">0</strong><small>Abgabe / Dokumentation noch offen</small></div>
+              <div class="supply-overview-toolbar">
+                <label class="search supply-dashboard-search"><span aria-hidden="true">⌕</span><input id="supplySearch" type="search" placeholder="Name, Vorgang, Kasse, Techniker …" aria-label="Versorgung suchen" /></label>
+                <button id="supplyFiltersReset" class="secondary hidden" type="button">Filter zurücksetzen</button>
+              </div>
+              <div class="supply-pg-filter-wrap">
+                <span class="supply-dashboard-filter-label">Produktgruppe</span>
+                <div id="supplyPgButtons" class="supply-pg-buttons" role="group" aria-label="Produktgruppe filtern">
+                  <button class="supply-filter-chip is-selected" type="button" data-supply-pg="" aria-pressed="true">Alle PG</button>
+                </div>
               </div>
             </section>
             <section class="card span2 supply-list-card">
-              <div class="supply-list-head"><div class="section-title">
-                <div><h3>Offene Versorgungen</h3><p>Detaillierte Arbeitsliste unterhalb der kompakten Statusübersicht.</p></div>
-              </div></div>
+              <div class="supply-list-head">
+                <div><h3>Vorgänge</h3><p>Ein Vorgang kann durch Anklicken der Zeile geöffnet werden.</p></div>
+                <span id="supplyFilteredCount" class="supply-filtered-count" role="status" aria-live="polite">0 von 0</span>
+              </div>
               <div class="table-wrap">
-                <table>
-                  <thead><tr><th>Kunde / Vorgang</th><th>Vorgangsart</th><th>Kasse</th><th>PG / Hilfsmittel</th><th>Aktueller Schritt</th><th>Status</th><th>Zuletzt bearbeitet von</th><th>Zuständiger Techniker</th><th>Letzte Änderung</th></tr></thead>
+                <table class="supply-dashboard-table">
+                  <thead><tr><th>Person / Vorgang</th><th>Versorgung</th><th>Arbeitsstand</th><th>Zuletzt bearbeitet von</th><th>Zuständiger Techniker</th><th>Geändert</th></tr></thead>
                   <tbody id="supplyOverviewBody">
-                    <tr><td colspan="9" class="supply-empty"><strong>Noch keine zwischengespeicherten Versorgungen vorhanden.</strong><small>Sobald in einer neuen Versorgung eine Änderung erfolgt, wird der Vorgang automatisch zwischengespeichert und hier angezeigt.</small></td></tr>
+                    <tr><td colspan="6" class="supply-empty"><strong>Keine offenen Versorgungen.</strong><small>Mit „Neue Versorgung“ einen Vorgang anlegen.</small></td></tr>
                   </tbody>
                 </table>
               </div>
             </section>
           </div>
         </section>
-        
+
         <section id="archiveView" class="hidden">
           <div class="page-grid">
             <section class="card span2 supply-list-card">
@@ -185,7 +188,7 @@
                 <section class="wizard-panel active" data-panel="0"><div class="card">
                   <h2>1. Auftragserfassung</h2>
                   <p class="lead">Die wichtigsten Stammdaten einmal erfassen. Sie steuern anschließend Rezept, Profilerhebung und Maßblatt.</p>
-                  <div class="order-flow-note">Rezept- und Versichertendaten folgen im nächsten Schritt.</div>
+                  <div class="order-flow-note">Pflichtfelder sind mit * gekennzeichnet. Rezeptdaten werden anschließend erfasst.</div>
 
                   <div class="order-capture">
                     <section class="order-section">
@@ -195,24 +198,24 @@
                       </div>
                       <div class="order-section-body">
                         <div class="order-grid">
-                          <label class="order-field order-field-name">Vorname <span class="order-required">*</span>
+                          <label class="order-field order-field-name"><span class="order-field-title">Vorname <span class="order-required" aria-label="Pflichtfeld">*</span></span>
                             <input data-case-field="patientFirstName" autocomplete="off" placeholder="Vorname" />
                           </label>
-                          <label class="order-field order-field-name">Nachname <span class="order-required">*</span>
+                          <label class="order-field order-field-name"><span class="order-field-title">Nachname <span class="order-required" aria-label="Pflichtfeld">*</span></span>
                             <input data-case-field="patientLastName" autocomplete="off" placeholder="Nachname" />
                           </label>
-                          <label class="order-field order-field-birth">Geburtsdatum <span class="order-required">*</span>
+                          <label class="order-field order-field-birth"><span class="order-field-title">Geburtsdatum <span class="order-required" aria-label="Pflichtfeld">*</span></span>
                             <input type="date" data-case-field="patientBirthDate" autocomplete="off" />
                           </label>
-                          <label class="order-field order-field-case">Vorgangsnummer <span class="order-optional">optional</span>
+                          <label class="order-field order-field-case"><span class="order-field-title">Vorgangsnummer <span class="order-optional">optional</span></span>
                             <input data-case-field="caseNumber" placeholder="SIC-Vorgangsnummer" />
                             <small>Nur eintragen, wenn bereits eine Vorgangsnummer aus SIC vorhanden ist.</small>
                           </label>
-                          <label class="order-field order-field-insured">Versichertennummer <span class="order-optional">optional bis Rezept/Profil</span>
+                          <label class="order-field order-field-insured"><span class="order-field-title">Versichertennummer <span class="order-optional">optional bis Rezept/Profil</span></span>
                             <input data-case-field="insuredNo" autocomplete="off" placeholder="Versichertennummer" />
                             <small>Kann hier eingetragen oder im nächsten Schritt aus dem Rezept übernommen werden.</small>
                           </label>
-                          <label class="order-field order-field-technician">Zuständiger Techniker <span class="order-optional">optional</span>
+                          <label class="order-field order-field-technician"><span class="order-field-title">Zuständiger Techniker <span class="order-optional">optional</span></span>
                             <input data-case-field="assignedTechnician" autocomplete="off" placeholder="Techniker / Technikerin" maxlength="100" />
                             <small>Verantwortliche Fachkraft für diesen Vorgang; unabhängig von der letzten Bearbeitung.</small>
                           </label>
@@ -227,13 +230,13 @@
                       </div>
                       <div class="order-section-body">
                         <div class="order-grid">
-                          <label class="order-field order-field-payer">Krankenkasse / Kostenträger <span class="order-required">*</span>
+                          <label class="order-field order-field-payer"><span class="order-field-title">Krankenkasse / Kostenträger <span class="order-required" aria-label="Pflichtfeld">*</span></span>
                             <select id="careKasse"><option value="">Bitte wählen</option></select>
                           </label>
-                          <label class="order-field order-field-pg">Produktgruppe <span class="order-required">*</span>
+                          <label class="order-field order-field-pg"><span class="order-field-title">Produktgruppe <span class="order-required" aria-label="Pflichtfeld">*</span></span>
                             <select id="carePg"><option value="">Bitte wählen</option></select>
                           </label>
-                          <label class="order-field order-field-aid">Hilfsmittel / Versorgungsbereich <span class="order-required">*</span>
+                          <label class="order-field order-field-aid"><span class="order-field-title">Hilfsmittel / Versorgungsbereich <span class="order-required" aria-label="Pflichtfeld">*</span></span>
                             <select id="careHimi"><option value="">Bitte zuerst PG wählen</option></select>
                           </label>
                         </div>
