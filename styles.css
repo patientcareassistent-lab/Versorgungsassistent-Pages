@@ -216,3 +216,25 @@
   background:transparent!important;
 }
 .aok-pdf-page > .aok-signature-pad {position:absolute!important}
+
+/* UKB configurator: separate section after the unchanged FMB measurement sheet. */
+.ukb-config-section{margin-top:24px;padding:18px;border:1px solid #d3dfeb;border-radius:13px;background:#fff}
+.ukb-config-header h3{margin:0 0 5px;color:#071d67}
+.ukb-config-header p{margin:3px 0 13px}
+.ukb-config-order{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.ukb-config-prefill,.ukb-config-field{display:flex;flex-direction:column;gap:5px;border:1px solid #dbe3ed;border-radius:8px;padding:9px;min-width:0}
+.ukb-config-prefill small,.ukb-config-field>span{color:#18345e;font-size:.78rem}
+.ukb-config-prefill strong{font-size:.9rem;overflow-wrap:anywhere}
+.ukb-config-field input:not([type=checkbox]),.ukb-config-field select,.ukb-config-field textarea{width:100%;min-width:0;padding:7px;border:1px solid #bfcddd;border-radius:7px;background:white;color:#152b42}
+.ukb-config-check{display:flex;flex-direction:row;align-items:center;gap:9px;border:0;padding:5px;flex-wrap:nowrap}
+.ukb-config-check input{order:-1;width:16px;height:16px;flex:0 0 auto}
+.ukb-config-variant{margin:8px 0 15px}
+.ukb-config-prequestions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:15px 0}
+.ukb-config-group{margin:10px 0;border:1px solid #d8e3f0;border-radius:8px;overflow:hidden}
+.ukb-config-group>summary{padding:12px;background:#eef3fb;color:#0a246c;font-weight:700;cursor:pointer}
+.ukb-config-items{padding:7px 12px}
+.ukb-config-row{display:grid;grid-template-columns:minmax(170px,2fr) minmax(125px,1fr);gap:8px;padding:7px 0;border-bottom:1px solid #e4ebf3;align-items:center}
+.ukb-config-row:last-child{border-bottom:0}
+.ukb-config-article{grid-column:2}
+.ukb-config-reason,.ukb-config-note{grid-column:1 / -1}
+@media(max-width:760px){.ukb-config-order{grid-template-columns:repeat(2,minmax(0,1fr))}.ukb-config-row{grid-template-columns:1fr}.ukb-config-article{grid-column:1}.ukb-config-prequestions{grid-template-columns:1fr}}
