@@ -241,3 +241,12 @@
 
 /* Eigenständige UKB-Konfiguration: nur Neuversorgungen nach dem Maßblatt. */
 #uexConfigFrame{display:block;width:100%;min-height:750px;border:0;border-radius:10px;background:#f3f7fb}
+
+/* Team attribution and optional responsibility in the existing order layout. */
+.order-field-technician{grid-column:span 6}
+@media(max-width:900px){.order-field-technician{grid-column:span 6}}
+@media(max-width:620px){.order-field-technician{grid-column:1}}
+#supplyOverviewView .table-wrap table th:nth-last-child(3),
+#supplyOverviewView .table-wrap table td:nth-last-child(3),
+#supplyOverviewView .table-wrap table th:nth-last-child(2),
+#supplyOverviewView .table-wrap table td:nth-last-child(2){min-width:132px}
