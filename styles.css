@@ -238,3 +238,6 @@
 .ukb-config-article{grid-column:2}
 .ukb-config-reason,.ukb-config-note{grid-column:1 / -1}
 @media(max-width:760px){.ukb-config-order{grid-template-columns:repeat(2,minmax(0,1fr))}.ukb-config-row{grid-template-columns:1fr}.ukb-config-article{grid-column:1}.ukb-config-prequestions{grid-template-columns:1fr}}
+
+/* Eigenständige UKB-Konfiguration: nur Neuversorgungen nach dem Maßblatt. */
+#uexConfigFrame{display:block;width:100%;min-height:750px;border:0;border-radius:10px;background:#f3f7fb}

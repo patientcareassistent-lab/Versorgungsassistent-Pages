@@ -171,13 +171,14 @@
                 <button class="wizard-step" data-step="1"><span class="step-no">2</span><span class="step-label">Rezepterfassung</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="2"><span class="step-no">3</span><span class="step-label">Profilerhebung</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="3"><span class="step-no">4</span><span class="step-label">Maßblatt</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="4"><span class="step-no">5</span><span class="step-label">Versorgungsplanung</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="5"><span class="step-no">6</span><span class="step-label">Vertrag & Kostenvoranschlag</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="6"><span class="step-no">7</span><span class="step-label">Genehmigung / Voraussetzungen</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="7"><span class="step-no">8</span><span class="step-label">Versorgungsverlauf</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="8"><span class="step-no">9</span><span class="step-label">Erprobung / Bild / Video</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="9"><span class="step-no">10</span><span class="step-label">Abgabe</span><span class="step-state"></span></button>
-                <button class="wizard-step hidden" data-step="10" aria-hidden="true" tabindex="-1"><span class="step-no">11</span><span class="step-label">Abrechnung & Abschluss</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="4"><span class="step-no">5</span><span class="step-label">Prothesenkonfiguration</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="5"><span class="step-no">6</span><span class="step-label">Versorgungsplanung</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="6"><span class="step-no">7</span><span class="step-label">Vertrag & Kostenvoranschlag</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="7"><span class="step-no">8</span><span class="step-label">Genehmigung / Voraussetzungen</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="8"><span class="step-no">9</span><span class="step-label">Versorgungsverlauf</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="9"><span class="step-no">10</span><span class="step-label">Erprobung / Bild / Video</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="10"><span class="step-no">11</span><span class="step-label">Abgabe</span><span class="step-state"></span></button>
+                <button class="wizard-step hidden" data-step="11" aria-hidden="true" tabindex="-1"><span class="step-no">12</span><span class="step-label">Abrechnung & Abschluss</span><span class="step-state"></span></button>
               </aside>
 
               <div class="wizard-stage">
@@ -483,8 +484,14 @@
                 </div></section>
 
                 <section class="wizard-panel" data-panel="4"><div class="card">
-                  <h2>5. Versorgungsplanung</h2><p class="lead">Erst die fachliche Planung, danach Vertrag und Preis. So bleibt die Versorgung und nicht die Gebührenposition der Ausgangspunkt.</p>
-                  <section id="ukbConfigurationSection" class="ukb-config-section hidden" aria-label="Prothesenkonfiguration nach Maßblatt"></section>
+                  <h2>5. Prothesenkonfiguration</h2>
+                  <p class="lead">Nach dem Maßblatt: Technischen Prothesenaufbau konfigurieren. Die Grunddaten kommen ausschließlich aus der Auftragserfassung. Dieser Schritt wird aktuell nur für Neuversorgungen PG24 / Unterschenkel eingeblendet.</p>
+                  <p class="source-note">Fachliche Vorlage: Konfigurationsbogen UKB vom 18.08.2026. Die Auswahl ersetzt keine Prüfung der Vertragskombinationen oder Artikelnummern.</p>
+                  <div id="uexConfigNotice" class="status-card open" role="status">Konfigurationswerkzeug wird geladen …</div>
+                  <iframe id="uexConfigFrame" title="Technische Prothesenkonfiguration UKB" src="./tools/konfiguration-uex/index.html" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin" height="850" ></iframe>
+                </div></section>
+                <section class="wizard-panel" data-panel="5"><div class="card">
+                  <h2>6. Versorgungsplanung</h2><p class="lead">Erst die fachliche Planung, danach Vertrag und Preis. So bleibt die Versorgung und nicht die Gebührenposition der Ausgangspunkt.</p>
                   <div class="mini-grid">
                     <label>Formular / Regel<select id="careForm"><option value="">Generisches Blatt / automatisch</option></select></label>
                     <label>Versorgungsziel (nach der Maßaufnahme)<textarea data-case-field="planGoal" rows="3"></textarea></label>
@@ -497,8 +504,8 @@
                   <div id="versorgungGoalSuggestions" class="field-list mt-14 hidden"></div>
                 </div></section>
 
-                <section class="wizard-panel" data-panel="5"><div class="card">
-                  <h2>6. Vertrag & Kostenvoranschlag</h2><p class="lead">Die ausgewählte Kasse und Versorgung bestimmen die anzuwendende Formular- und Vertragslogik. Die Datenbank bleibt die Quelle; der Vorgang zeigt nur die relevanten Hinweise.</p>
+                <section class="wizard-panel" data-panel="6"><div class="card">
+                  <h2>7. Vertrag & Kostenvoranschlag</h2><p class="lead">Die ausgewählte Kasse und Versorgung bestimmen die anzuwendende Formular- und Vertragslogik. Die Datenbank bleibt die Quelle; der Vorgang zeigt nur die relevanten Hinweise.</p>
                   <div id="ruleBox" class="rule-box hidden"></div>
                   <div class="step-section"><h4>Kostenvoranschlag</h4><div class="mini-grid">
                     <label>Beantragte Positionen / HMV / GPOS<textarea data-case-field="quotePositions" rows="5"></textarea></label>
@@ -507,8 +514,8 @@
                   </div></div>
                 </div></section>
 
-                <section class="wizard-panel" data-panel="6"><div class="card">
-                  <h2>7. Genehmigung / offene Voraussetzungen</h2><p class="lead">Vor der Einreichung wird sichtbar, welche Unterlagen vorhanden sind und welche Punkte noch offen sind.</p>
+                <section class="wizard-panel" data-panel="7"><div class="card">
+                  <h2>8. Genehmigung / offene Voraussetzungen</h2><p class="lead">Vor der Einreichung wird sichtbar, welche Unterlagen vorhanden sind und welche Punkte noch offen sind.</p>
                   <div class="check-grid">
                     <label class="check-tile"><input type="checkbox" data-case-field="docRx"><span><b>Verordnung geprüft</b><small>Rezept / Entlassverordnung, sofern erforderlich.</small></span></label>
                     <label class="check-tile"><input type="checkbox" data-case-field="docProfile"><span><b>Profilerhebung vorhanden</b><small>Kassen- oder PG-spezifischer Bogen.</small></span></label>
@@ -522,8 +529,8 @@
                   </div>
                 </div></section>
 
-                <section class="wizard-panel" data-panel="7"><div class="card">
-                  <h2>8. Versorgungsverlauf</h2><p class="lead">Der tatsächliche Verlauf der Versorgung wird chronologisch dokumentiert – von Formerfassung und statischen Anproben bis zur dynamischen Erprobung.</p>
+                <section class="wizard-panel" data-panel="8"><div class="card">
+                  <h2>9. Versorgungsverlauf</h2><p class="lead">Der tatsächliche Verlauf der Versorgung wird chronologisch dokumentiert – von Formerfassung und statischen Anproben bis zur dynamischen Erprobung.</p>
                   <div class="step-section"><div class="course-grid">
                     <div class="head">Maßnahme</div><div class="head">Ergebnis / Bemerkung</div><div class="head">Datum</div>
                     <div><strong>Formerfassung</strong></div><div><input data-case-field="courseFormNote" /></div><div><input type="date" data-case-field="courseFormDate" /></div>
@@ -535,8 +542,8 @@
                   <div class="mini-grid mt-14"><label>Erprobte Komponenten<textarea data-case-field="testedParts" rows="4"></textarea></label><label>Ergebnis / Gebrauchsvorteile<textarea data-case-field="courseResult" rows="4"></textarea></label></div>
                 </div></section>
 
-                <section class="wizard-panel" data-panel="8"><div class="card">
-                  <h2>9. Erprobung / Bild / Video</h2><p class="lead">Dieser Schritt wird nur genutzt, wenn der konkrete Fall eine Erprobungs-, Bild-/Video- oder Ganganalyse-Dokumentation erfordert.</p>
+                <section class="wizard-panel" data-panel="9"><div class="card">
+                  <h2>10. Erprobung / Bild / Video</h2><p class="lead">Dieser Schritt wird nur genutzt, wenn der konkrete Fall eine Erprobungs-, Bild-/Video- oder Ganganalyse-Dokumentation erfordert.</p>
                   <div class="check-grid">
                     <label class="check-tile"><input type="checkbox" data-case-field="evidenceRequired"><span><b>Bild-/Videodokumentation erforderlich</b><small>Fallbezogene Anforderung.</small></span></label>
                     <label class="check-tile"><input type="checkbox" data-case-field="consentPresent"><span><b>Einwilligung vorhanden</b><small>Vor Erstellung bzw. Übermittlung prüfen.</small></span></label>
@@ -546,8 +553,8 @@
                   <div class="mini-grid mt-14"><label>Erprobungszeitraum / Verlauf<textarea data-case-field="trialPeriod" rows="4"></textarea></label><label>Funktionsverbesserung / Gebrauchsvorteil<textarea data-case-field="functionalBenefit" rows="4"></textarea></label></div>
                 </div></section>
 
-                <section class="wizard-panel" data-panel="9"><div class="card">
-                  <h2>10. Abgabe</h2><p class="lead">Abgabe, Gebrauchseinweisung und Empfang werden zusammengeführt.</p>
+                <section class="wizard-panel" data-panel="10"><div class="card">
+                  <h2>11. Abgabe</h2><p class="lead">Abgabe, Gebrauchseinweisung und Empfang werden zusammengeführt.</p>
                   <div class="mini-grid three">
                     <label>Abgabedatum<input type="date" data-case-field="deliveryDate" /></label>
                     <label>Hilfsmittel / Produkt<input data-case-field="deliveredAid" /></label>
@@ -561,8 +568,8 @@
                   </div>
                 </div></section>
 
-                <section class="wizard-panel hidden" data-panel="10" aria-hidden="true"><div class="card">
-                  <h2>11. Abrechnung & Abschluss</h2><p class="lead">Dieser Schritt ist in Version 0.9 nicht Teil der sichtbaren Anamnese-Oberfläche.</p>
+                <section class="wizard-panel hidden" data-panel="11" aria-hidden="true"><div class="card">
+                  <h2>12. Abrechnung & Abschluss</h2><p class="lead">Dieser Schritt ist in Version 0.9 nicht Teil der sichtbaren Anamnese-Oberfläche.</p>
                   <div class="mini-grid three">
                     <label>Abrechnungsposition<input data-case-field="billingPosition" /></label>
                     <label>VWKZ<input data-case-field="billingVwkz" /></label>
