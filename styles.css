@@ -250,3 +250,78 @@
 #supplyOverviewView .table-wrap table td:nth-last-child(3),
 #supplyOverviewView .table-wrap table th:nth-last-child(2),
 #supplyOverviewView .table-wrap table td:nth-last-child(2){min-width:132px}
+
+
+/* Versorgungsdashboard: status cards and PG chips are actual keyboard-accessible filters. */
+#supplyOverviewView .supply-dashboard{padding:22px 24px}
+.supply-dashboard-eyebrow{font-size:.68rem!important;font-weight:800;color:#00157A!important;letter-spacing:.11em;margin:0 0 5px!important}
+.supply-dashboard-filter-label{display:flex;align-items:baseline;gap:10px;font-size:.82rem;font-weight:760;color:#344054;margin-top:19px}
+.supply-dashboard-filter-label small{font-weight:500;color:#667085;font-size:.72rem}
+#supplyOverviewView .supply-status-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:9px}
+#supplyOverviewView .supply-status-card{appearance:none;text-align:left;cursor:pointer;color:#344054;min-height:104px;min-width:0;border:1px solid #dce4ee;box-shadow:none;transition:border-color .15s,background .15s,box-shadow .15s}
+#supplyOverviewView .supply-status-card:hover{border-color:#8094be;background:#f7f9ff}
+#supplyOverviewView .supply-status-card.is-selected{border-color:#00157A;background:#f0f3ff;box-shadow:inset 0 0 0 1px #00157A}
+#supplyOverviewView .supply-status-card.is-selected strong{color:#00157A}
+#supplyOverviewView .supply-status-card span{line-height:1.35}
+#supplyOverviewView .supply-status-card strong{font-size:1.65rem;line-height:1.1}
+#supplyOverviewView .supply-status-card:focus-visible,.supply-filter-chip:focus-visible{outline:3px solid #00157A;outline-offset:3px}
+#supplyOverviewView .supply-overview-toolbar{margin-top:18px;align-items:stretch}
+#supplyOverviewView .supply-dashboard-search{flex:1;display:flex;align-items:center;min-width:230px;gap:8px;border:1px solid #ccd7e7;border-radius:11px;padding:0 12px;background:#fff}
+#supplyOverviewView .supply-dashboard-search:focus-within{box-shadow:0 0 0 2px #cbd5fb}
+#supplyOverviewView .supply-dashboard-search input{min-height:42px;border:0;box-shadow:none;width:100%;padding:8px 2px}
+.supply-pg-filter-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:15px}
+.supply-pg-filter-wrap .supply-dashboard-filter-label{margin:0}
+.supply-pg-buttons{display:flex;gap:7px;flex-wrap:wrap}
+.supply-filter-chip{appearance:none;border:1px solid #d4ddea;border-radius:999px;background:#fff;padding:8px 13px;font-size:.8rem;color:#344054;font-weight:730;line-height:1.15}
+.supply-filter-chip:hover{background:#f2f5ff;border-color:#8094be}
+.supply-filter-chip.is-selected{background:#00157A;border-color:#00157A;color:#fff}
+#supplyOverviewView .supply-list-head{display:flex;align-items:center;justify-content:space-between;gap:18px}
+#supplyOverviewView .supply-list-head h3{margin:0 0 4px;color:#00157A}
+#supplyOverviewView .supply-list-head p{margin:0;color:#667085;font-size:.76rem}
+.supply-filtered-count{display:inline-block;border-radius:999px;padding:7px 12px;background:#eff3ff;color:#00157A;font-weight:730;font-size:.77rem;white-space:nowrap}
+#supplyOverviewView .supply-dashboard-table{width:100%;min-width:860px}
+#supplyOverviewView .supply-dashboard-table th{font-size:.68rem;letter-spacing:.02em;text-transform:none;white-space:nowrap}
+#supplyOverviewView .supply-dashboard-table td{font-size:.78rem;color:#344054;line-height:1.4;padding:15px 12px;max-width:250px;overflow-wrap:anywhere}
+.supply-row-name{font-size:.87rem;color:#102a43}
+.supply-row-sub{display:block;color:#667085;font-size:.72rem;margin-top:5px}
+.supply-row-aux{display:block;font-size:.76rem;font-weight:700;color:#344054;margin-top:6px}
+.supply-row-status{display:block;margin-top:8px}
+.supply-row-date{white-space:nowrap;color:#667085}
+#supplyOverviewView .supply-row:hover,#supplyOverviewView .supply-row:focus-visible{background:#f0f4ff}
+/* Ordered field title + required/optional marker now share a single grid cell. */
+#careView .order-field{display:flex;flex-direction:column;gap:6px;min-width:0;align-self:stretch}
+#careView .order-field-title{display:flex;align-items:center;justify-content:flex-start;gap:5px;flex-wrap:wrap;min-height:21px;line-height:1.4;font-size:.8rem;font-weight:700}
+#careView .order-field .order-required{display:inline;position:static;flex:0 0 auto;margin:0;font-size:.8rem;line-height:1}
+#careView .order-field .order-optional{display:inline-flex;position:static;vertical-align:middle;margin:0 0 0 3px;font-size:.65rem;white-space:normal}
+#careView .order-field>input,#careView .order-field>select{height:44px;min-height:44px;flex-shrink:0}
+#careView .order-field>small{font-size:.69rem;line-height:1.4;color:#667085;font-weight:400}
+#careView .order-field-case,#careView .order-field-insured,#careView .order-field-technician{grid-column:span 4}
+#careView .order-field-payer{grid-column:span 5}
+#careView .order-field-pg{grid-column:span 3}
+#careView .order-field-aid{grid-column:span 4}
+#careView .order-section-head{padding:12px 16px}
+#careView .order-section-body{padding:15px 16px}
+#careView .order-grid{gap:15px}
+#careView .order-field-kind .case-kind-options{width:100%}
+#careView .case-kind-option:focus-within{outline:2px solid #00157A;outline-offset:1px}
+@media(max-width:1150px){
+  #supplyOverviewView .supply-status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:900px){
+  #careView .order-field-name,#careView .order-field-birth,
+  #careView .order-field-case,#careView .order-field-insured,#careView .order-field-technician,
+  #careView .order-field-payer,#careView .order-field-pg,#careView .order-field-aid{grid-column:span 6}
+  #supplyOverviewView .supply-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:620px){
+  #careView .order-grid{grid-template-columns:1fr;gap:12px}
+  #careView .order-field-name,#careView .order-field-birth,#careView .order-field-case,
+  #careView .order-field-insured,#careView .order-field-technician,
+  #careView .order-field-payer,#careView .order-field-pg,#careView .order-field-aid,
+  #careView .order-field-kind,#careView .order-field-supply,#careView .order-field-side,
+  #careView .order-field-level{grid-column:1}
+  #supplyOverviewView .supply-dashboard{padding:17px}
+  #supplyOverviewView .supply-status-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  #supplyOverviewView .supply-status-card{min-height:92px}
+  #supplyOverviewView .supply-list-head{align-items:start;flex-wrap:wrap}
+}
