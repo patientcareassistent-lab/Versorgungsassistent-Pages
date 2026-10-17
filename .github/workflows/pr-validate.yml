@@ -67,6 +67,9 @@ jobs:
             exit 1
           fi
 
+      - name: Verify complete PG24 Reparaturtool V13 integration
+        run: node --test tests/security/repair-v13-integration.test.mjs
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
