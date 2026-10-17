@@ -50,8 +50,18 @@ async function installSupabaseMock(page, options = {}) {
             const rows = readRows()
             normalizeRows(value).forEach(item => {
               const index = rows.findIndex(row => row.id === item.id)
-              if (index >= 0) rows[index] = { ...rows[index], ...item }
-              else rows.push({ ...item })
+              const existing = index >= 0 ? rows[index] : null
+              // Match the server-side ownership and last-editor trigger.
+              const now = new Date().toISOString()
+              const saved = {
+                ...existing, ...item,
+                owner_user_id: existing?.owner_user_id || SESSION.user.id,
+                last_modified_by: SESSION.user.id,
+                created_at: existing?.created_at || now,
+                updated_at: now
+              }
+              if (index >= 0) rows[index] = saved
+              else rows.push(saved)
             })
             writeRows(rows)
           }
@@ -124,6 +134,11 @@ async function installSupabaseMock(page, options = {}) {
 
     const rpcPayloads = {
       current_access: [{ allowed: true, aal: 'aal2' }],
+      care_team_labels: [
+        { user_id: '11111111-1111-4111-8111-111111111111', display_name: 'Mitarbeiter 1' },
+        { user_id: '22222222-2222-4222-8222-222222222222', display_name: 'Mitarbeiter 2' },
+        { user_id: '33333333-3333-4333-8333-333333333333', display_name: 'Mitarbeiter 3' }
+      ],
       care_reference_bootstrap: {
         kassen: [{ Kasse_Kanonisch: 'AOK Baden-Württemberg' }],
         produktgruppen: [

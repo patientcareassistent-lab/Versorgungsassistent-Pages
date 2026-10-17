@@ -27,6 +27,83 @@ async function prepareNewSupply(page) {
   await page.locator('#careSupplyType').selectOption({ label: 'Post-OP' })
 }
 
+
+test('overview lists last editor and separately assigned technician without mixing creator and responsibility', async ({ page }) => {
+  await installSupabaseMock(page, { mode: 'signed-in' })
+  await page.addInitScript(() => {
+    // addInitScript executes again on reload; seed only once to test durability.
+    if(localStorage.getItem('va:e2e:staff-overview-seeded')==='1') return
+    localStorage.setItem('va:e2e:staff-overview-seeded','1')
+    localStorage.setItem('va:e2e:mock-care-cases', JSON.stringify([{
+      id:'44444444-4444-4444-8444-444444444444',
+      owner_user_id:'33333333-3333-4333-8333-333333333333',
+      last_modified_by:'22222222-2222-4222-8222-222222222222',
+      created_at:'2026-10-15T11:00:00.000Z',
+      updated_at:'2026-10-17T08:30:00.000Z',
+      wizard_index:0, insurer:'Privat', product_group:'23',
+      himi_id:'Orthese untere Extremität',himi:'Orthese untere Extremität',
+      status:'Laufend',schema_version:1,
+      payload:{patientFirstName:'Synthetisch',patientLastName:'Beispiel',
+        caseKind:'Neuversorgung',supplyType:'Post-OP',
+        assignedTechnician:'Werkstatt Test'}
+    }]))
+  })
+  await page.goto('/index.html')
+  const overview=page.locator('#supplyOverviewBody')
+  const row=overview.locator('[data-supply-id="44444444-4444-4444-8444-444444444444"]')
+  await expect(row).toBeVisible()
+  await expect(page.locator('#supplyOverviewView th')).toContainText(['Zuletzt bearbeitet von','Zuständiger Techniker'])
+  await expect(row).toContainText('Mitarbeiter 2')
+  await expect(row).not.toContainText('Mitarbeiter 3')
+  await expect(row).toContainText('Werkstatt Test')
+  await page.locator('#supplySearch').fill('Werkstatt Test')
+  await expect(overview.locator('[data-supply-id]')).toHaveCount(1)
+  await page.locator('#supplySearch').fill('Mitarbeiter 2')
+  await expect(overview.locator('[data-supply-id]')).toHaveCount(1)
+  await page.locator('#supplySearch').fill('Nicht vorhanden')
+  await expect(overview).toContainText('Keine passenden Versorgungen.')
+  await page.locator('#supplySearch').fill('')
+  await row.click()
+  const assignment=page.locator('[data-case-field="assignedTechnician"]')
+  await expect(assignment).toHaveValue('Werkstatt Test')
+  await assignment.fill('Zuständige Technik Test')
+  await expect.poll(async () => page.evaluate(() => {
+    const rows=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
+    const data=rows.find(x=>x.id==='44444444-4444-4444-8444-444444444444')
+    return data && {technician:data.payload?.assignedTechnician, editor:data.last_modified_by, owner:data.owner_user_id}
+  })).toEqual({
+    technician:'Zuständige Technik Test',
+    editor:'11111111-1111-4111-8111-111111111111',
+    owner:'33333333-3333-4333-8333-333333333333'
+  })
+  await page.reload()
+  await expect(overview).toContainText('Zuständige Technik Test')
+  await expect(overview).toContainText('Mitarbeiter 1')
+  await expect(overview).not.toContainText('Mitarbeiter 2')
+})
+
+test('overview marks missing responsibility and unavailable staff mapping without exposing raw UUID', async ({ page }) => {
+  await installSupabaseMock(page, { mode: 'signed-in', rpcOverrides: { care_team_labels: [] } })
+  await page.addInitScript(() => {
+    localStorage.setItem('va:e2e:mock-care-cases', JSON.stringify([{
+      id:'55555555-5555-4555-8555-555555555555',
+      owner_user_id:'99999999-9999-4999-8999-999999999999',
+      last_modified_by:'88888888-8888-4888-8888-888888888888',
+      created_at:'2026-10-15T11:00:00.000Z',
+      updated_at:'2026-10-17T08:30:00.000Z',
+      wizard_index:0, insurer:'Privat', product_group:'23',
+      himi_id:'Orthese untere Extremität',himi:'Orthese untere Extremität',
+      status:'Laufend',schema_version:1,
+      payload:{patientFirstName:'Synthetisch',patientLastName:'Leer',caseKind:'Neuversorgung'}
+    }]))
+  })
+  await page.goto('/index.html')
+  const row=page.locator('#supplyOverviewBody [data-supply-id="55555555-5555-4555-8555-555555555555"]')
+  await expect(row).toContainText('Nicht verfügbar')
+  await expect(row).toContainText('Nicht zugewiesen')
+  await expect(row).not.toContainText('88888888-8888')
+})
+
 test('wizard validation blocks incomplete orders', async ({ page }) => {
   await openSignedInApp(page)
   await page.locator('#newSupplyOverviewButton').click()

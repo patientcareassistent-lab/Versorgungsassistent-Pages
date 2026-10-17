@@ -9,7 +9,7 @@
   <meta name="color-scheme" content="light" />
   <title>Versorgungsassistent</title>
   <script src="./frame-guard.js"></script>
-  <link id="appStyles" rel="stylesheet" href="./styles.css?v=20261017-ukb-config" />
+  <link id="appStyles" rel="stylesheet" href="./styles.css?v=20261017-team-overview" />
   <link rel="stylesheet" href="./prescribers.css" />
 
 </head>
@@ -110,9 +110,9 @@
               </div></div>
               <div class="table-wrap">
                 <table>
-                  <thead><tr><th>Kunde / Vorgang</th><th>Vorgangsart</th><th>Kasse</th><th>PG / Hilfsmittel</th><th>Aktueller Schritt</th><th>Status</th><th>Letzte Änderung</th></tr></thead>
+                  <thead><tr><th>Kunde / Vorgang</th><th>Vorgangsart</th><th>Kasse</th><th>PG / Hilfsmittel</th><th>Aktueller Schritt</th><th>Status</th><th>Zuletzt bearbeitet von</th><th>Zuständiger Techniker</th><th>Letzte Änderung</th></tr></thead>
                   <tbody id="supplyOverviewBody">
-                    <tr><td colspan="7" class="supply-empty"><strong>Noch keine zwischengespeicherten Versorgungen vorhanden.</strong><small>Sobald in einer neuen Versorgung eine Änderung erfolgt, wird der Vorgang automatisch zwischengespeichert und hier angezeigt.</small></td></tr>
+                    <tr><td colspan="9" class="supply-empty"><strong>Noch keine zwischengespeicherten Versorgungen vorhanden.</strong><small>Sobald in einer neuen Versorgung eine Änderung erfolgt, wird der Vorgang automatisch zwischengespeichert und hier angezeigt.</small></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -211,6 +211,10 @@
                           <label class="order-field order-field-insured">Versichertennummer <span class="order-optional">optional bis Rezept/Profil</span>
                             <input data-case-field="insuredNo" autocomplete="off" placeholder="Versichertennummer" />
                             <small>Kann hier eingetragen oder im nächsten Schritt aus dem Rezept übernommen werden.</small>
+                          </label>
+                          <label class="order-field order-field-technician">Zuständiger Techniker <span class="order-optional">optional</span>
+                            <input data-case-field="assignedTechnician" autocomplete="off" placeholder="Techniker / Technikerin" maxlength="100" />
+                            <small>Verantwortliche Fachkraft für diesen Vorgang; unabhängig von der letzten Bearbeitung.</small>
                           </label>
                         </div>
                       </div>
