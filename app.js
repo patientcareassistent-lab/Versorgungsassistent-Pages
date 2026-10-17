@@ -4150,6 +4150,16 @@ import { versorgungsziele } from './versorgungsziele.js'
       return values.uexConfigurationV02?.schema==='uex-konfiguration-0.2' &&
         values.uexConfigurationScope===uexConfigurationScope()
     }
+    function uexConfigurationCompleted(){
+      return uexConfigurationMatchesCase() && values.uexConfigurationV02?.abgeschlossen===true
+    }
+    function updateUexNextVisibility(){
+      const next=$('wizardNext')
+      if(!next) return
+      // Only the explicit "Fertig" action inside the configuration unlocks
+      // navigation to Versorgungplanung, never partial/unsaved input.
+      next.classList.toggle('hidden',wizardIndex===4&&stepApplicable(4)&&!uexConfigurationCompleted())
+    }
     function uexConfigurationContext(){
       return {versorgungshoehe:'Unterschenkel',seite:values.side||'',phase:supplyType(),
         kostentraeger:$('careKasse')?.value||'',mobilitaetsgrad:values['tech:mobilityGrade']||'',
@@ -4177,6 +4187,7 @@ import { versorgungsziele } from './versorgungsziele.js'
           if(!cfg || cfg.schema!=='uex-konfiguration-0.2')return
           values.uexConfigurationV02=cfg
           values.uexConfigurationScope=uexConfigurationScope()
+          updateUexNextVisibility()
           queueAutosaveSupply()
           updateWizardStatus()
         })
@@ -4207,8 +4218,8 @@ import { versorgungsziele } from './versorgungsziele.js'
       const note=$('uexConfigNotice')
       if(note){
         const old=Object.keys(values).some(key=>key.startsWith(UKB_CONFIG_PREFIX))
-        note.className='status-card '+(uexConfigurationMatchesCase()?'ready':'open')
-        note.textContent=(uexConfigurationMatchesCase()?'Konfiguration im Vorgang vorhanden.':'Bitte technische Konfiguration ausfüllen.')+
+        note.className='status-card '+(uexConfigurationCompleted()?'ready':'open')
+        note.textContent=(uexConfigurationCompleted()?'Prothesenkonfiguration abgeschlossen. Weiter ist freigeschaltet.':uexConfigurationMatchesCase()?'Konfiguration gespeichert, bitte mit „Fertig“ abschließen.':'Bitte technische Konfiguration ausfüllen.')+
           (old?' Frühere UKB-Konfigurationswerte bleiben im Vorgang gespeichert; neue Auswahl fachlich abgleichen.':'')+
           ' Keine erneute Grunddatenerfassung.'
       }
@@ -4539,6 +4550,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       } else if(i===4){
         if(!uexConfigurationMatchesCase()) missing.push('Prothesenkonfiguration für diesen Vorgang erfassen / überprüfen')
         else{
+          if(!uexConfigurationCompleted()) missing.push('Konfiguration mit „Fertig“ abschließen')
           const cfg=values.uexConfigurationV02
           if(!cfg?.versorgung?.bauweise) missing.push('Konfiguration: Bauweise')
           if(!cfg?.versorgung?.schaftrand) missing.push('Konfiguration: Schaftrand')
@@ -5358,10 +5370,12 @@ import { versorgungsziele } from './versorgungsziele.js'
       const next=nextApplicableIndex(wizardIndex)
       $('wizardNext').textContent=next===wizardIndex?'Status prüfen':'Weiter →'
       if(wizardIndex===4) mountUexConfigurationFrame()
+      updateUexNextVisibility()
       updateWizardStatus(false)
     }
 
     function updateWizardStatus(rerender=true){
+      updateUexNextVisibility()
       const blocker=firstBlockingIndex()
       const applicable=wizardSteps.map((_,i)=>stepApplicable(i))
       const complete=wizardSteps.map((_,i)=>applicable[i]&&validateStep(i).ok)
