@@ -325,3 +325,23 @@
   #supplyOverviewView .supply-status-card{min-height:92px}
   #supplyOverviewView .supply-list-head{align-items:start;flex-wrap:wrap}
 }
+
+/* Narrow workstations: one concise, clearly labeled card per supply, without sideways scrolling. */
+@media(max-width:760px){
+  #supplyOverviewView .supply-dashboard-table{min-width:0;width:100%;border-collapse:separate}
+  #supplyOverviewView .supply-dashboard-table thead{display:none}
+  #supplyOverviewView .supply-dashboard-table tbody{display:block;padding:10px}
+  #supplyOverviewView .supply-dashboard-table .supply-row{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:0 9px;margin-bottom:10px;border:1px solid #dfe4ef;border-radius:11px;padding:11px;
+  }
+  #supplyOverviewView .supply-dashboard-table .supply-row td{
+    display:block;border:0;padding:7px 0;max-width:none;min-width:0;
+  }
+  #supplyOverviewView .supply-dashboard-table .supply-row td:nth-child(-n+3){grid-column:1/-1}
+  #supplyOverviewView .supply-dashboard-table .supply-row td::before{
+    content:attr(data-label);display:block;color:#667085;font-size:.67rem;font-weight:730;margin-bottom:5px;
+  }
+  #supplyOverviewView .supply-dashboard-table .supply-row-date{white-space:normal}
+  #supplyOverviewView .supply-dashboard-table .supply-empty{display:block}
+}
