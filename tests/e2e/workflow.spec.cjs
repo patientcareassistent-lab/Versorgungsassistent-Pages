@@ -61,7 +61,7 @@ test('overview lists last editor and separately assigned technician without mixi
   await page.locator('#supplySearch').fill('Mitarbeiter 2')
   await expect(overview.locator('[data-supply-id]')).toHaveCount(1)
   await page.locator('#supplySearch').fill('Nicht vorhanden')
-  await expect(overview).toContainText('Keine passenden Versorgungen.')
+  await expect(overview).toContainText('Keine passenden Vorgänge.')
   await page.locator('#supplySearch').fill('')
   await row.click()
   const assignment=page.locator('[data-case-field="assignedTechnician"]')
