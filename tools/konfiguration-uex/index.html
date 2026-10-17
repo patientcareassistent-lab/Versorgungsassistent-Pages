@@ -14,14 +14,14 @@ const groups={
  Kosmetik:['Schaftgestaltung','Verkleidung Strumpf','Verkleidung individuell','Individueller Formausgleich','Superskin einteilig'],
  Zubehör:['Kniekappe','Stumpfstrumpf','Stumpfkissen konfektioniert','Stumpfkissen individuell','Anziehhilfe']
 };
-const emptyState=()=>({versorgung:{},parts:{},notes:''});
+const emptyState=()=>({versorgung:{},parts:{},notes:'',abgeschlossen:false});
 const $=id=>document.getElementById(id);
 const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const allowedContext=['versorgungshoehe','seite','phase','kostentraeger','mobilitaetsgrad','gewicht_kg'];
 const labels={versorgungshoehe:'Versorgungshöhe',seite:'Seite',phase:'Versorgungsphase',kostentraeger:'Kostenträger',mobilitaetsgrad:'Mobilitätsgrad',gewicht_kg:'Gewicht (kg)'};
 let state=emptyState(),step=0,kontext=null,readOnly=false;
 const listeners=new Set();
-function serialize(){return {schema:'uex-konfiguration-0.2',versorgung:{...state.versorgung},bauteile:Object.fromEntries(Object.entries(state.parts).filter(([,p])=>p.enabled).map(([name,p])=>[name,{artikelnummer:p.article||'',menge:Math.max(1,Number(p.count)||1)}])),begruendung:state.notes};}
+function serialize(){return {schema:'uex-konfiguration-0.2',versorgung:{...state.versorgung},bauteile:Object.fromEntries(Object.entries(state.parts).filter(([,p])=>p.enabled).map(([name,p])=>[name,{artikelnummer:p.article||'',menge:Math.max(1,Number(p.count)||1)}])),begruendung:state.notes,abgeschlossen:state.abgeschlossen===true};}
 function notify(){if(readOnly)return;const data=serialize();for(const callback of listeners){try{callback(data)}catch(error){console.error('Konfiguration konnte nicht übergeben werden',error)}}}
 function field(key,label,type='text',opts=[]){const val=state.versorgung[key]??'';return '<div class="field"><label for="'+key+'">'+label+'</label>'+(type==='select'?'<select id="'+key+'" data-key="'+key+'"><option value="">Bitte auswählen</option>'+opts.map(o=>'<option value="'+e(o)+'" '+(val===o?'selected':'')+'>'+e(o)+'</option>').join('')+'</select>':'<input id="'+key+'" data-key="'+key+'" type="'+type+'" value="'+e(val)+'">')+'</div>';}
 function contextView(){if(!kontext)return '<div class="info">Standalone ohne Fallzuordnung · UKB. Für die Einbindung werden die notwendigen Angaben aus dem Versorgungsvorgang übergeben.</div>';return '<div class="section"><h2>Versorgungskontext · schreibgeschützt</h2><div class="context-line">'+allowedContext.filter(k=>kontext[k]).map(k=>'<div><span>'+labels[k]+':</span><strong class="readonly">'+e(kontext[k])+'</strong></div>').join('')+'</div></div>';}
@@ -29,19 +29,44 @@ function rows(group){return '<div class="section"><h2>'+group+'</h2>'+groups[gro
 function issues(){const out=[],v=state.versorgung,k=kontext||{};if(!v.bauweise)out.push('Bauweise nicht ausgewählt.');if(!v.schaftrand)out.push('Schaftrand nicht ausgewählt.');if(!v.zweck)out.push('Einsatzbereich nicht ausgewählt.');if(k.phase==='Interim'&&v.zweck==='Wasserfest'&&/AOK Baden/i.test(k.kostentraeger||''))out.push('Wasserfeste Interimsversorgung ist für AOK Baden-Württemberg nicht vorgesehen.');if(v.zweck==='Wasserfest'&&state.parts['Mechatronisch']?.enabled)out.push('Mechatronische Fußpassteile bei wasserfester Versorgung fachlich und vertraglich prüfen.');if(k.versorgungshoehe&&!['Unterschenkel','UKB','Unterschenkelprothese'].includes(k.versorgungshoehe))out.push('Dieser Konfigurator gilt nur für UKB.');for(const [name,p] of Object.entries(state.parts))if(p.enabled&&!String(p.article||'').trim())out.push('Artikelnummer bitte prüfen: '+name+'.');return out;}
 function save(){document.querySelectorAll('[data-key]').forEach(el=>{state.versorgung[el.dataset.key]=el.value});if($('notes'))state.notes=$('notes').value;}
 function go(i){save();notify();step=Math.max(0,Math.min(steps.length-1,i));render();}
+function invalidateCompletion(){
+ if(!state.abgeschlossen)return;
+ state.abgeschlossen=false;
+ if(step===steps.length-1){$('next').textContent='Fertig';$('next').disabled=readOnly;}
+}
+function finish(){
+ if(readOnly||state.abgeschlossen)return;
+ save();
+ const missing=[];
+ if(!state.versorgung.bauweise)missing.push('Bauweise');
+ if(!state.versorgung.schaftrand)missing.push('Schaftrand');
+ if(!state.versorgung.zweck)missing.push('Einsatzbereich');
+ if(!Object.values(state.parts).some(part=>part.enabled))missing.push('mindestens eine Komponente');
+ if(missing.length){
+   const notice=$('finishNotice');
+   if(notice){notice.hidden=false;notice.textContent='Konfiguration noch nicht abschließbar: '+missing.join(' · ');}
+   return;
+ }
+ state.abgeschlossen=true;
+ notify();
+ render();
+}
 function downloadJson(){save();const blob=new Blob([JSON.stringify(serialize(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='prothesenkonfiguration-uex.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
 function render(){
  let html='<h1>'+steps[step]+'</h1><p class="sub">'+descriptions[step]+'</p>';
  if(step===0)html+=contextView()+'<div class="grid">'+field('bauweise','Bauweise','select',['Modularbauweise','Schalenbauweise'])+field('schaftrand','Schaftrand','select',['Kniespaltübergreifend','Kondylenübergreifend'])+field('zweck','Einsatzbereich','select',['Alltag','Wasserfest'])+'</div><div class="section"><h2>Besondere Versorgungssituationen</h2><div class="grid">'+field('besonderheit','Konfigurationsanlass','select',['Regelversorgung','Verlängerung Interimsphase','Zusätzlicher Testschaft','Folgeschaft','Übernahme Bauteile aus Interim'])+field('grund','Fachliche Begründung')+'</div></div>';
  if(step===1)html+=rows('Schaft');if(step===2)html+=rows('Haltesysteme');if(step===3)html+=rows('Fußpassteile');if(step===4)html+=rows('Bauteile');if(step===5)html+=rows('Kosmetik')+rows('Zubehör');
  if(step===6){const entries=Object.entries(state.parts).filter(([,p])=>p.enabled);html+=contextView()+'<div class="section"><h2>Technische Konfiguration</h2><div class="grid">'+Object.entries(state.versorgung).filter(([,v])=>v).map(([k,v])=>'<div><strong>'+e(k)+'</strong>: '+e(v)+'</div>').join('')+'</div></div>';html+='<div class="section"><h2>Konfigurierte Komponenten ('+entries.length+')</h2><table class="summary"><thead><tr><th>Komponente</th><th>Artikelnummer</th><th>Menge</th></tr></thead><tbody>'+entries.map(([name,p])=>'<tr><td>'+e(name)+'</td><td>'+e(p.article||'–')+'</td><td>'+e(p.count||1)+'</td></tr>').join('')+'</tbody></table></div>';html+='<div class="section"><h2>Prüfhinweise</h2>'+(issues().map(msg=>'<div class="warning">'+e(msg)+'</div>').join('')||'<div class="info">Grundangaben vorhanden; technische und vertragliche Freigabe erfolgt weiterhin fachlich.</div>')+'<div class="info">SIC-Musternummern werden noch nicht automatisch vergeben. Diese Fassung enthält keine bestätigte Vertragsmatrix.</div></div><div class="field"><label for="notes">Freitext / fachliche Begründung</label><textarea id="notes">'+e(state.notes)+'</textarea></div><button type="button" class="action no-print" id="print">Als PDF drucken</button> <button type="button" class="secondary no-print" id="json">Technischen JSON-Export erstellen</button>';}
- $('view').innerHTML=html;$('nav').innerHTML='<div class="muted">Konfigurationsschritte</div>'+steps.map((x,i)=>'<button type="button" data-step="'+i+'" class="'+(step===i?'active':'')+'">'+(i+1)+'. '+x+'</button>').join('');$('back').style.visibility=step===0?'hidden':'visible';$('next').textContent=step===steps.length-1?'Fertig':'Weiter';
- document.querySelectorAll('[data-key]').forEach(el=>el.addEventListener('input',()=>{state.versorgung[el.dataset.key]=el.value;notify()}));
- document.querySelectorAll('[data-part]').forEach(el=>el.addEventListener('change',()=>{const p=state.parts[el.dataset.part]||(state.parts[el.dataset.part]={count:1});p.enabled=el.checked;notify();render()}));
- document.querySelectorAll('[data-article]').forEach(el=>el.addEventListener('input',()=>{const p=state.parts[el.dataset.article]||(state.parts[el.dataset.article]={count:1});p.article=el.value;notify()}));
- document.querySelectorAll('[data-count]').forEach(el=>el.addEventListener('change',()=>{const p=state.parts[el.dataset.count]||(state.parts[el.dataset.count]={count:1});p.count=Math.max(1,Number(el.value)||1);notify()}));
+ if(step===steps.length-1)html+='<div id="finishNotice" class="warning" role="alert" hidden></div>';
+ $('view').innerHTML=html;$('nav').innerHTML='<div class="muted">Konfigurationsschritte</div>'+steps.map((x,i)=>'<button type="button" data-step="'+i+'" class="'+(step===i?'active':'')+'">'+(i+1)+'. '+x+'</button>').join('');$('back').style.visibility=step===0?'hidden':'visible';$('next').textContent=step===steps.length-1?(state.abgeschlossen?'Abgeschlossen':'Fertig'):'Weiter';
+ $('next').disabled=readOnly||(step===steps.length-1&&state.abgeschlossen);
+ $('next').setAttribute('aria-label',step===steps.length-1&&state.abgeschlossen?'Konfiguration abgeschlossen':$('next').textContent);
+ document.querySelectorAll('[data-key]').forEach(el=>el.addEventListener('input',()=>{invalidateCompletion();state.versorgung[el.dataset.key]=el.value;notify()}));
+ document.querySelectorAll('[data-part]').forEach(el=>el.addEventListener('change',()=>{const p=state.parts[el.dataset.part]||(state.parts[el.dataset.part]={count:1});p.enabled=el.checked;invalidateCompletion();notify();render()}));
+ document.querySelectorAll('[data-article]').forEach(el=>el.addEventListener('input',()=>{const p=state.parts[el.dataset.article]||(state.parts[el.dataset.article]={count:1});p.article=el.value;invalidateCompletion();notify()}));
+ document.querySelectorAll('[data-count]').forEach(el=>el.addEventListener('change',()=>{const p=state.parts[el.dataset.count]||(state.parts[el.dataset.count]={count:1});p.count=Math.max(1,Number(el.value)||1);invalidateCompletion();notify()}));
  document.querySelectorAll('[data-step]').forEach(el=>el.onclick=()=>go(Number(el.dataset.step)));
- if($('notes'))$('notes').oninput=()=>{state.notes=$('notes').value;notify()};
+ if($('notes'))$('notes').oninput=()=>{state.notes=$('notes').value;invalidateCompletion();notify()};
  if($('json'))$('json').onclick=downloadJson;
  if($('print'))$('print').onclick=()=>{save();window.print()};
  if(readOnly){document.querySelectorAll('input,select,textarea,button').forEach(el=>{if(el.id!=='print'&&!el.dataset.step)el.disabled=true;});$('reset').disabled=true;}
@@ -49,13 +74,13 @@ function render(){
 window.ProthetikUEX={
  setKontext(d){if(!d||typeof d!=='object')throw new TypeError('Kontext muss Objekt sein');kontext=Object.freeze(Object.fromEntries(allowedContext.filter(k=>d[k]!=null).map(k=>[k,String(d[k]).slice(0,140)])));render()},
  getKonfiguration(){save();return serialize()},
- setKonfiguration(d){if(d!=null && (typeof d!=='object'||d.schema!=='uex-konfiguration-0.2'))throw new TypeError('Unbekannte Konfiguration');state=emptyState();if(d){for(const k of ['bauweise','schaftrand','zweck','besonderheit','grund'])if(d.versorgung&&typeof d.versorgung[k]==='string')state.versorgung[k]=d.versorgung[k].slice(0,2000);for(const [name,p] of Object.entries(d.bauteile||{})){if(!Object.values(groups).some(list=>list.includes(name))||!p||typeof p!=='object')continue;state.parts[name]={enabled:true,article:String(p.artikelnummer||'').slice(0,250),count:Math.max(1,Math.min(1000,Number(p.menge)||1))};}state.notes=String(d.begruendung||'').slice(0,10000)}step=0;render()},
+ setKonfiguration(d){if(d!=null && (typeof d!=='object'||d.schema!=='uex-konfiguration-0.2'))throw new TypeError('Unbekannte Konfiguration');state=emptyState();if(d){for(const k of ['bauweise','schaftrand','zweck','besonderheit','grund'])if(d.versorgung&&typeof d.versorgung[k]==='string')state.versorgung[k]=d.versorgung[k].slice(0,2000);for(const [name,p] of Object.entries(d.bauteile||{})){if(!Object.values(groups).some(list=>list.includes(name))||!p||typeof p!=='object')continue;state.parts[name]={enabled:true,article:String(p.artikelnummer||'').slice(0,250),count:Math.max(1,Math.min(1000,Number(p.menge)||1))};}state.notes=String(d.begruendung||'').slice(0,10000);state.abgeschlossen=d.abgeschlossen===true}step=0;render()},
  onChange(callback){if(typeof callback!=='function')throw new TypeError('Callback erforderlich');listeners.add(callback);return ()=>listeners.delete(callback)},
  setReadOnly(flag){readOnly=!!flag;render()},
  getKontext(){return kontext?{...kontext}:null},
  clearKontext(){kontext=null;render()}
 };
-$('back').onclick=()=>go(step-1);$('next').onclick=()=>go(step+1);
+$('back').onclick=()=>go(step-1);$('next').onclick=()=>{if(step===steps.length-1)finish();else go(step+1);};
 $('reset').onclick=()=>{if(!readOnly && confirm('Technische Konfiguration zurücksetzen?')){state=emptyState();step=0;notify();render();}};
 render();
 </script></body></html>
