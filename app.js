@@ -89,6 +89,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     let activeSupplyId = null
     let draftSaveTimer = null
     let supplyDraftCache = []
+    const careTeamLabels = new Map()
     let archiveCache = []
     let autosaveInFlight = Promise.resolve()
     let lastPersistedSupplyFingerprint = ''
@@ -115,6 +116,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         id:row.id,
         ownerUserId:row.owner_user_id||'',
         lastModifiedBy:row.last_modified_by||'',
+        assignedTechnician:row.assigned_technician||values.assignedTechnician||'',
         createdAt:row.created_at,
         updatedAt:row.updated_at,
         wizardIndex:row.wizard_index,
@@ -133,7 +135,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       for(let from=0;;from+=pageSize){
         const response=await supabase
           .from('care_case_overview')
-          .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,schema_version,patient_first_name,patient_last_name,patient_name,case_number,insured_no,case_kind,owner_user_id,last_modified_by')
+          .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,schema_version,patient_first_name,patient_last_name,patient_name,case_number,insured_no,case_kind,owner_user_id,last_modified_by,assigned_technician')
           .neq('status','Abgeschlossen')
           .order('updated_at',{ascending:false})
           .range(from,from+pageSize-1)
@@ -149,6 +151,24 @@ import { versorgungsziele } from './versorgungsziele.js'
       supplyDraftCache=rows.map(mapCareCaseRow)
       renderSupplyOverview()
       return true
+    }
+
+    async function loadCareTeamLabels(){
+      careTeamLabels.clear()
+      const response=await supabase.rpc('care_team_labels')
+      if(response.error) return false
+      for(const row of response.data||[]){
+        if(row?.user_id && row?.display_name) careTeamLabels.set(String(row.user_id),String(row.display_name))
+      }
+      renderSupplyOverview()
+      return true
+    }
+
+    function supplyEditorDisplayName(record){
+      const userId=record?.lastModifiedBy||record?.ownerUserId
+      if(!userId) return 'Nicht erfasst'
+      return careTeamLabels.get(String(userId))
+        || (userId===currentSession?.user?.id ? friendlyUser(currentSession?.user?.email) : 'Nicht verfügbar')
     }
 
     function normalizedLegacyId(id){
@@ -242,6 +262,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         ...semanticItem,
         ownerUserId:existing?.ownerUserId||currentSession.user.id,
         lastModifiedBy:currentSession.user.id,
+        assignedTechnician:String(values.assignedTechnician||'').trim(),
         createdAt:existing?.createdAt||now,
         updatedAt:now
       }
@@ -435,14 +456,14 @@ import { versorgungsziele } from './versorgungsziele.js'
         if(status && x.status!==status) return false
         if(pg && String(x.pg)!==String(pg)) return false
         if(q){
-          const hay=[x.values?.patientFirstName,x.values?.patientLastName,x.values?.patientName,x.values?.caseNumber,x.kasse,x.pg,x.himi,x.values?.insuredNo].join(' ').toLowerCase()
+          const hay=[x.values?.patientFirstName,x.values?.patientLastName,x.values?.patientName,x.values?.caseNumber,x.kasse,x.pg,x.himi,x.values?.insuredNo,x.assignedTechnician,supplyEditorDisplayName(x)].join(' ').toLowerCase()
           if(!hay.includes(q)) return false
         }
         return true
       })
 
       if(!filtered.length){
-        body.innerHTML='<tr><td colspan="7" class="supply-empty"><strong>Keine passenden Versorgungen.</strong><small>Filter anpassen oder eine neue Versorgung beginnen. Änderungen werden automatisch zwischengespeichert.</small></td></tr>'
+        body.innerHTML='<tr><td colspan="9" class="supply-empty"><strong>Keine passenden Versorgungen.</strong><small>Filter anpassen oder eine neue Versorgung beginnen. Änderungen werden automatisch zwischengespeichert.</small></td></tr>'
         return
       }
 
@@ -453,6 +474,8 @@ import { versorgungsziele } from './versorgungsziele.js'
         const caseKind=x.values?.caseKind||''
         const caseKindClass=caseKind==='Reparatur'?'warning':caseKind==='Neuversorgung'?'blue':''
         const caseKindText=caseKind||'Nicht erfasst'
+        const assignedTechnician=String(x.assignedTechnician||x.values?.assignedTechnician||'').trim()||'Nicht zugewiesen'
+        const lastEditor=supplyEditorDisplayName(x)
         return '<tr class="supply-row" data-supply-id="'+escapeHtml(x.id)+'" tabindex="0" title="Versorgung öffnen">'+
           '<td><strong>'+escapeHtml(name)+'</strong><br><small>'+escapeHtml(caseNo)+'</small></td>'+
           '<td><span class="pill '+caseKindClass+'">'+escapeHtml(caseKindText)+'</span></td>'+
@@ -460,6 +483,8 @@ import { versorgungsziele } from './versorgungsziele.js'
           '<td>'+pgText+(x.himi?'<br><small>'+escapeHtml(x.himi)+'</small>':'')+'</td>'+
           '<td>'+escapeHtml(supplyStepLabel(x))+'</td>'+
           '<td><span class="pill '+(x.status==='Rückfrage / offen'?'warning':x.status==='Warten / Genehmigung'?'blue':'')+'">'+escapeHtml(x.status)+'</span></td>'+
+          '<td>'+escapeHtml(lastEditor)+'</td>'+
+          '<td>'+escapeHtml(assignedTechnician)+'</td>'+
           '<td>'+escapeHtml(formatDraftTime(x.updatedAt))+'</td>'+
         '</tr>'
       }).join('')
@@ -546,6 +571,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       draftSaveTimer=null
       activeSupplyId=null
       supplyDraftCache=[]
+      careTeamLabels.clear()
       lastPersistedSupplyFingerprint=''
       Object.keys(values).forEach(key=>delete values[key])
       try{ repairPhotoUrlCache.clear() }catch(_){}
@@ -931,6 +957,9 @@ import { versorgungsziele } from './versorgungsziele.js'
         await failClosedStartup('Die Versorgungsübersicht konnte nicht sicher geladen werden. Die Anwendung wurde nicht geöffnet.')
         return
       }
+      // Staff aliases are read-only, restricted to approved team members.
+      // Failure leaves an explicit "Nicht verfügbar" instead of a false attribution.
+      await loadCareTeamLabels()
       // Load the archive only when the archive view is requested.
 
       $('currentUser').textContent=friendlyUser(session.user.email)
