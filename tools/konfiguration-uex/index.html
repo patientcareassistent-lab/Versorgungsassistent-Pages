@@ -1,86 +1,358 @@
-<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Konfiguration Prothetik uEx · UKB</title>
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light">
+<title>Konfiguration Prothetik uEx · UKB · 0.4</title>
 <style>
-:root{--navy:#17366b;--cyan:#e9f4fa;--line:#c9d9e5;--bg:#f3f7fb;--text:#183048}*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text)}header{background:#fff;border-bottom:3px solid var(--navy);padding:16px 22px;display:flex;justify-content:space-between;gap:14px;align-items:center}.brand{font-size:21px;color:var(--navy);font-weight:750}.brand small{display:block;font-size:12px;font-weight:500;color:#567}.pill{border:1px solid #bfcedb;border-radius:20px;padding:6px 12px;font-size:12px}main{display:grid;grid-template-columns:205px minmax(0,1fr);gap:14px;margin:16px auto;padding:0 10px;max-width:1220px}nav,.panel{background:white;border:1px solid var(--line);border-radius:12px;box-shadow:0 3px 12px #17366b0a}nav{padding:12px;align-self:start}nav button{width:100%;text-align:left;background:transparent;border:0;padding:12px 9px;color:var(--text);cursor:pointer;border-radius:8px;font-size:13px}nav button.active{background:#e7f0fa;color:var(--navy);font-weight:750}nav button:hover{background:#f2f6fa}nav .muted{font-size:12px;color:#718397;padding:9px}.panel{padding:21px;min-height:490px}h1{font-size:22px;margin:0 0 6px;color:var(--navy)}h2{font-size:17px;margin:0 0 12px;color:var(--navy)}.sub{color:#5f7288;margin:0 0 22px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}label{display:block;font-size:13px;font-weight:600;margin:0 0 6px}input,select,textarea{width:100%;min-width:0;border:1px solid #b9cbdc;border-radius:7px;padding:10px;background:#fff;font:inherit;color:inherit}textarea{min-height:75px}.field{margin-bottom:14px}.section{background:#f8fbfe;border:1px solid var(--line);border-radius:9px;padding:15px;margin-bottom:17px}.item{display:grid;grid-template-columns:30px minmax(0,1fr) minmax(120px,.75fr) 82px;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid #e2ebf0}.item:last-child{border:0}.item input[type=checkbox]{width:18px;height:18px}.item .name{font-weight:600;font-size:14px}.item .details{font-size:11px;color:#667e92}.item input[type=text],.item input[type=number]{padding:8px}.warning{border-left:4px solid #bc7612;padding:10px 13px;background:#fff8e7;margin:12px 0;font-size:13px}.info{border-left:4px solid #28719a;padding:10px 13px;background:#eef7fd;margin:12px 0;font-size:13px}.context-line{display:flex;flex-wrap:wrap;gap:12px 22px;font-size:13px}.context-line span{color:#5f7288;margin-right:5px}.readonly{color:#193c67}.toolbar{display:flex;justify-content:space-between;gap:12px;margin-top:25px;padding-top:20px;border-top:1px solid var(--line)}button.action{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:11px 16px;cursor:pointer}button.secondary{background:#fff;color:var(--navy);border:1px solid #9eafc1;border-radius:8px;padding:10px 15px;cursor:pointer}.summary{width:100%;border-collapse:collapse;font-size:13px}.summary th,.summary td{text-align:left;border-bottom:1px solid var(--line);padding:9px}.summary th{background:#edf4fa}footer{padding:0 18px 16px;color:#738496;font-size:12px}@media(max-width:780px){main{display:block}nav{display:flex;overflow:auto;gap:4px;margin-bottom:12px}nav button{min-width:max-content;width:auto}.panel{padding:15px}.grid{grid-template-columns:1fr}.item{grid-template-columns:26px 1fr}.item input[type=text],.item input[type=number]{grid-column:2}}@media print{header,nav,.toolbar,footer,.no-print{display:none!important}main{display:block;margin:0;padding:0}.panel{border:0;box-shadow:none;padding:0}.section{break-inside:avoid}body{background:white}}
-</style></head><body><header><div class="brand">◯ Prothetik uEx <small>UKB · Konfiguration nach Maßblatt · Version 0.2</small></div><span class="pill">Datenübernahme nur im Browser</span></header><main><nav id="nav"></nav><section class="panel"><div id="view"></div><div class="toolbar"><button type="button" class="secondary" id="back">Zurück</button><div><button type="button" class="secondary" id="reset">Zurücksetzen</button> <button type="button" class="action" id="next">Weiter</button></div></div></section></main><footer>Vorläufige technische Planung nach UKB-Konfigurationsbogen (18.08.2026). Keine automatische Vertragsfreigabe. Grunddaten werden hier nicht gespeichert.</footer>
+:root{--navy:#17366b;--mid:#22518c;--cyan:#e9f4fa;--line:#c9d9e5;--bg:#f3f7fb;--text:#183048;--muted:#5f7288;--warn:#996015;--red:#a52c3b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font:15px system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--text)}
+header{background:#fff;border-bottom:3px solid var(--navy);padding:16px max(22px,calc((100vw - 1220px)/2));display:flex;justify-content:space-between;align-items:center;gap:16px}
+.brand{font-size:23px;color:var(--navy);font-weight:750}.brand small{display:block;font-size:12px;font-weight:500;color:#567}
+.pill{border:1px solid #bfcedb;border-radius:20px;padding:6px 12px;font-size:12px;background:#fff}
+main{max-width:1220px;margin:22px auto;padding:0 18px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:18px}
+nav,.panel{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 3px 12px #17366b0a}
+nav{padding:15px;align-self:start;position:sticky;top:15px}
+nav button{width:100%;text-align:left;background:none;border:0;padding:12px 10px;color:var(--text);cursor:pointer;border-radius:8px;font-size:14px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+nav button.active{background:#e7f0fa;color:var(--navy);font-weight:750}nav button:hover:not(:disabled){background:#f2f6fa}nav button:disabled{color:#91a0ad;cursor:not-allowed}
+nav .muted{font-size:12px;color:#718397;padding:10px}
+.step-state{font-size:11px;min-width:14px;text-align:right}.step-state.ok{color:#1f715a}.step-state.err{color:var(--red)}
+.panel{padding:25px;min-height:510px}h1{font-size:24px;margin:0 0 6px;color:var(--navy)}h2{font-size:17px;color:var(--navy);margin:0 0 12px}h3{font-size:15px;color:var(--navy);margin:12px 0 10px}
+.sub{color:var(--muted);margin:0 0 20px;line-height:1.5}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+label{display:block;font-size:13px;font-weight:600;margin:0 0 6px}
+input:not([type=checkbox]):not([type=radio]),select,textarea{width:100%;min-width:0;border:1px solid #b9cbdc;border-radius:7px;background:#fff;padding:10px;font:inherit;color:inherit}
+textarea{min-height:80px;resize:vertical}input[type=checkbox],input[type=radio]{width:17px;height:17px;flex:none;accent-color:var(--navy)}
+:focus-visible{outline:3px solid #71a6d0;outline-offset:2px}
+.field{margin:0 0 14px}.field small{display:block;font-weight:400;color:var(--muted);margin-top:5px;line-height:1.45}
+.field label{display:flex;gap:5px}.required:after{content:'*';color:var(--red);font-weight:700}
+.section{background:#f8fbfe;border:1px solid var(--line);border-radius:9px;padding:16px;margin-bottom:17px}.section.lead-section{background:white}
+.checks{display:flex;flex-wrap:wrap;gap:10px}.check-tile{display:flex;gap:9px;align-items:flex-start;padding:11px 12px;border:1px solid #b9cbdc;border-radius:8px;background:#fff;font-size:13px;cursor:pointer;min-width:170px;flex:1 1 180px;line-height:1.4}
+.check-tile:has(input:checked){background:#eaf2fb;border-color:#638bad}.check-tile strong{display:block;color:var(--navy)}.check-tile small{display:block;color:var(--muted);font-weight:400;margin-top:3px}.check-tile:has(input:disabled){color:#8b9caa;opacity:.66;cursor:not-allowed}
+.item{display:grid;grid-template-columns:26px minmax(0,1fr) minmax(145px,.85fr) 76px;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #e2ebf0}.item:last-child{border-bottom:0}.item .name{font-weight:600;font-size:14px}.item .details{font-size:11px;color:#667e92;line-height:1.4}.item .part-checkbox{margin:0}
+.item input[type=text],.item input[type=number]{padding:8px!important}.item.selected{background:#edf5fc;border-radius:6px;padding-left:5px;padding-right:5px}.item.unavailable{color:#899bab;opacity:.67}.item small{font-size:11px}
+.warning,.error,.info,.success{border-left:4px solid;padding:10px 13px;margin:12px 0;font-size:13px;line-height:1.5}
+.warning{border-color:#bc7612;background:#fff8e7}.error{border-color:var(--red);background:#fff0f1;color:#852639}.info{border-color:#28719a;background:#eef7fd}.success{border-color:#277b61;background:#eaf8f2}
+.context-line{display:flex;flex-wrap:wrap;gap:12px 22px;font-size:13px}.context-line span{display:inline-block;min-width:104px;color:var(--muted)}.readonly{color:#193c67;font-weight:650}
+.toolbar{display:flex;justify-content:space-between;gap:12px;margin-top:25px;border-top:1px solid var(--line);padding-top:20px;flex-wrap:wrap}
+button.action{background:var(--navy);color:#fff;border:0;border-radius:8px;padding:11px 17px;cursor:pointer}button.secondary{background:#fff;color:var(--navy);border:1px solid #9eafc1;border-radius:8px;padding:10px 16px;cursor:pointer}button:disabled{cursor:not-allowed;opacity:.55}
+.summary{width:100%;border-collapse:collapse;font-size:13px}.summary th,.summary td{text-align:left;border-bottom:1px solid var(--line);padding:9px}.summary th{background:#edf4fa}.hint{font-size:12px;color:var(--muted);margin:6px 0}
+#formErrors ul{margin:6px 0 0;padding-left:20px}#formErrors a{color:#873044}#formErrors[hidden]{display:none}
+.divider{border:0;border-top:1px solid var(--line);margin:15px 0}.hidden{display:none!important}.preview-title{display:flex;justify-content:space-between;gap:14px;align-items:start}.badge{font-size:11px;font-weight:700;border:1px solid #c9d9e5;color:#4d6981;border-radius:20px;padding:3px 8px;white-space:nowrap}
+footer{max-width:1220px;margin:0 auto 20px;padding:0 18px;color:#738496;font-size:12px;line-height:1.5}
+@media(max-width:800px){main{grid-template-columns:1fr}nav{position:static;display:flex;overflow:auto;gap:5px}nav button{min-width:max-content;width:auto}.panel{padding:18px}.grid{grid-template-columns:1fr}.item{grid-template-columns:26px minmax(0,1fr) 70px}.item input[data-article]{grid-column:2;grid-row:auto}.item input[data-count]{grid-column:3;grid-row:auto}}
+@media print{header,nav,.toolbar,footer,.no-print,.error{display:none!important}main{display:block;max-width:none;margin:0;padding:0}.panel{box-shadow:none;border:0;padding:0}.section{break-inside:avoid}body{background:#fff}.summary{font-size:11px}}
+
+/* 0.4: Bauteil-Auswahl in ruhigen, benannten Gruppen statt Endlosliste */
+.component-shell{background:#fff;padding:20px;border-color:#bdcede}
+.component-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin-bottom:16px}
+.component-heading h2{font-size:19px;margin:0 0 5px}
+.component-heading p{color:var(--muted);font-size:13px;line-height:1.5;margin:0}
+.component-selected-count{font-size:12px;white-space:nowrap;border:1px solid #a9c8dd;color:#163d66;background:#edf6fc;border-radius:30px;padding:7px 12px;font-weight:700}
+.component-tools{display:grid;grid-template-columns:minmax(160px,1fr) minmax(300px,1.75fr) auto;gap:13px;align-items:end;background:#f6f9fc;border:1px solid var(--line);padding:15px;border-radius:10px;margin-bottom:16px}
+.component-search label,.filter-label{font-size:12px;color:#3b536d;font-weight:650;display:block;margin-bottom:7px}
+.component-search input{margin:0}
+.filter-buttons{display:flex;gap:5px;flex-wrap:wrap}
+.category-choice{padding:9px 11px;border:1px solid #b7c9d9;background:#fff;border-radius:8px;color:var(--text);font-size:12px;font-weight:550;cursor:pointer}
+.category-choice.active,.category-choice[aria-pressed=true]{background:var(--navy);color:white;border-color:var(--navy)}
+.selected-filter{display:flex;gap:8px;align-items:center;white-space:nowrap;padding:9px 0;font-size:12px;cursor:pointer}
+.component-head-row{display:grid;grid-template-columns:minmax(220px,1.2fr) minmax(170px,1fr) 80px;gap:10px;margin:14px 0 2px;padding:0 16px;font-size:11px;text-transform:uppercase;letter-spacing:.035em;font-weight:750;color:#59718b}
+.component-head-row span:nth-child(2){padding-left:4px}
+.component-group{border:1px solid #d7e4ee;border-radius:10px;overflow:hidden;margin:0 0 17px;background:#fff}
+.component-group-heading{background:#edf4fb;border-bottom:1px solid #d7e4ee;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 16px}
+.component-group-heading h3{font-size:15px;margin:0 0 3px;color:#193e71}
+.component-group-heading p{color:#617990;font-size:12px;margin:0;line-height:1.35}
+.component-group-heading>span{white-space:nowrap;font-size:12px;font-weight:650;color:#3d6586}
+.component-card{display:grid;grid-template-columns:minmax(220px,1.2fr) minmax(255px,1.4fr);gap:14px;padding:12px 16px;border-bottom:1px solid #e5edf3;align-items:center}
+.component-card:last-child{border-bottom:0}
+.component-card.selected{background:#f2f8fe;box-shadow:inset 3px 0 #3d7eaa}
+.component-card.needs-review.selected{box-shadow:inset 3px 0 #bd8544}
+.component-choice{min-width:0}
+.part-switch{display:flex;align-items:flex-start;gap:10px;margin:0;font-weight:500;cursor:pointer}
+.part-switch input{margin-top:3px}
+.part-switch strong{display:block;color:#253d55;font-size:14px}
+.part-switch small{display:block;color:#6a8398;font-size:11px;font-weight:400;margin:3px 0 0}
+.component-fields{display:grid;grid-template-columns:minmax(130px,1fr) 75px;gap:9px;align-items:end}
+.component-fields label{font-size:11px;font-weight:600;color:#496681;min-width:0;margin:0}
+.component-fields input{display:block;margin-top:5px;padding:8px!important;font-size:13px!important}
+.component-unneeded{align-self:center;color:#7d90a0;font-size:12px}
+.component-message{grid-column:1/-1;font-size:12px;color:#895a15;background:#fff9ec;border:1px solid #ead6aa;border-radius:6px;padding:7px 10px;margin:0}
+.component-empty{font-size:13px;color:#6b7887;background:#f6f9fc;padding:22px;text-align:center;border-radius:9px}
+.required-mark{color:#aa2c38}
+.component-card[hidden],.component-group[hidden]{display:none}
+.error-jump{font:inherit;font-size:12px;font-weight:650;color:#17366b;background:transparent;border:0;text-decoration:underline;cursor:pointer;padding:2px 5px}
+@media(max-width:1100px){.component-tools{grid-template-columns:1fr}.component-head-row{display:none}}
+@media(max-width:670px){.component-card{grid-template-columns:1fr;gap:8px}.component-heading{flex-wrap:wrap}.component-fields{padding-left:28px}.component-group-heading{align-items:flex-start}.component-tools{padding:10px}}
+@media print{.component-card{break-inside:avoid}.component-tools,.component-head-row{display:none}}
+</style>
+</head>
+<body>
+<main><nav id="nav" aria-label="Konfigurationsschritte"></nav><section class="panel" id="panel"><div id="view"></div><div id="formErrors" class="error" role="alert" aria-live="polite" hidden></div><div class="toolbar no-print"><button type="button" class="secondary" id="back">← Zurück</button><div><button type="button" class="secondary" id="reset">Zurücksetzen</button> <button type="button" class="action" id="next">Weiter →</button></div></div></section></main>
+<footer>Prototyp UKB · Grundlage: PG24-Konfigurationsbogen vom 18.08.2026. Grunddaten werden ausschließlich im Versorgungsassistenten erfasst. Alle Regeln sind als fachliche Vorprüfung gekennzeichnet; keine automatische Kosten- oder Vertragsfreigabe. Technische Konfiguration ersetzt keine vertragliche oder technische Freigabe.</footer>
 <script>
 'use strict';
-const steps=['Versorgung & Aufbau','Schaft','Haltesysteme','Fußpassteile','Bauteile','Kosmetik & Zubehör','Zusammenfassung'];
-const descriptions=['Bauweise, Schaftrand und Einsatzbereich bestimmen. Grunddaten werden nicht erneut erfasst.','Schaftausführung und Schaftrand.','Schaftanbindung, Halte- und Verschlusssysteme.','Fußpassteile auswählen.','Adapter und weitere Bauteile erfassen.','Kosmetik und Zubehör ergänzen.','Technische Konfiguration und Prüfhinweise.'];
-const groups={
- Schaft:['Verstellbarer Schaft','Weichwandschaft','Silikon-Kontaktschaft','Flexible Randgestaltung','Flexibler Innenschaft'],
- Haltesysteme:['Liner individuell','Liner konfektioniert','Pin-/Lock','Klett-/Gurt','Seilzug-/Kordel','Einhand-Seilzug','Sonstiger Verschluss','Oberschenkelhülse Leder','Oberschenkelhülse Kunststoff','Adaptive Schienen'],
- Fußpassteile:['Monoaxial','Multiaxial','Autoadaptiv','Mechatronisch','Keine Dynamik','Mittlere Dynamik','Hohe Dynamik'],
- Bauteile:['Ventil','Schaftansatz/-platte','Eingussanker','Schraub-Adapter','Rohr-Adapter','Fuß-Adapter','Doppel-Adapter','Anschluss-Adapter','Extender-Adapter','Exzenter-Adapter','Anprobe-Adapter','Schalen-Adapter','Dreh-Adapter','Rotations-Adapter','Knöchel-Adapter','Sonstiger Adapter','Stoßdämpfer'],
- Kosmetik:['Schaftgestaltung','Verkleidung Strumpf','Verkleidung individuell','Individueller Formausgleich','Superskin einteilig'],
- Zubehör:['Kniekappe','Stumpfstrumpf','Stumpfkissen konfektioniert','Stumpfkissen individuell','Anziehhilfe']
+const STEPS=['Versorgung & Aufbau','Schaft','Haltesysteme','Fußpassteile','Bauteile','Kosmetik & Zubehör','Zusammenfassung'];
+const SUB=[
+ 'Die Auswahl wird aus Versorgungsphase und Bauweise gesteuert. Auftrags- und Patientendaten werden hier nicht eingegeben.',
+ 'Schaftausführung auswählen. Die zulässigen Varianten orientieren sich an der UKB-Matrix.',
+ 'Halteprinzip und zugehörige Komponenten festlegen. Hersteller-Artikelnummern sind bei hinzugefügten Passteilen verpflichtend.',
+ 'Fußklassifikation wird als Einzelauswahl geführt; dadurch werden Mehrfachzuordnungen vermieden.',
+ 'Nur tatsächlich benötigte Adapter und Bauteile ergänzen.',
+ 'Kombinationen und Ausnahmen nach Kostenträger und Versorgungsart berücksichtigen.',
+ 'Alle Angaben und offenen Prüfungen im Überblick. Ein Abschluss ist erst bei erfüllten Pflichtfeldern möglich.'
+];
+const LIST={
+ Schaft:[{n:'Verstellbarer Schaft',article:false},{n:'Weichwandschaft',article:false},{n:'Silikon-Kontaktschaft',article:false,notInterim:true},{n:'Flexible Randgestaltung',article:false,parent:'Silikon-Kontaktschaft'},{n:'Flexibler Innenschaft',article:false,notInterim:true}],
+ Haltesysteme:[{n:'Liner individuell'},{n:'Liner konfektioniert'},{n:'Ventil'},{n:'Kniekappe'}, {n:'Pin-/Lock'}, {n:'Klett-/Gurt'}, {n:'Seilzug-/Kordel'}, {n:'Einhand-Seilzug'}, {n:'Sonstiger Verschluss'}, {n:'Oberschenkelhülse Leder',article:false}, {n:'Oberschenkelhülse Kunststoff',article:false}, {n:'Adaptive Schienen',parentAny:['Oberschenkelhülse Leder','Oberschenkelhülse Kunststoff']}],
+ Bauteile:[{n:'Ventil'},{n:'Schaftansatz/-platte'},{n:'Eingussanker'},{n:'Schraub-Adapter'},{n:'Rohr-Adapter'},{n:'Fuß-Adapter'},{n:'Doppel-Adapter'},{n:'Anschluss-Adapter'},{n:'Extender-Adapter'},{n:'Exzenter-Adapter'},{n:'Anprobe-Adapter'},{n:'Schalen-Adapter'},{n:'Dreh-Adapter'},{n:'Rotations-Adapter'},{n:'Knöchel-Adapter'},{n:'Sonstiger Adapter'},{n:'Stoßdämpfer'}],
+ Kosmetik:[{n:'Schaftgestaltung',article:false},{n:'Verkleidung Strumpf',article:false},{n:'Verkleidung individuell',article:false},{n:'Individueller Formausgleich',article:false,parent:'Verkleidung individuell'},{n:'Superskin einteilig',article:false}],
+ Zubehör:[{n:'Kniekappe'},{n:'Stumpfstrumpf'},{n:'Stumpfkissen konfektioniert'},{n:'Stumpfkissen individuell'},{n:'Anziehhilfe'}]
 };
-const emptyState=()=>({versorgung:{},parts:{},notes:'',abgeschlossen:false});
+const FOOT_AXIS=['Monoaxial','Multiaxial','Autoadaptiv','Mechatronisch'];
+const FOOT_DYNAMICS=['Keine Dynamik','Mittlere Dynamik','Hohe Dynamik'];
+const EXCEPTION_LIST=['Verlängerung Interimsphase','Zusätzlicher Testschaft','Folgeschaft','Übernahme Bauteile aus Interim'];
+const CONTEXT_KEYS=['versorgungshoehe','seite','phase','kostentraeger','mobilitaetsgrad','gewicht_kg'];
+const CONTEXT_LABELS={versorgungshoehe:'Versorgungshöhe',seite:'Seite',phase:'Versorgungsphase',kostentraeger:'Kostenträger',mobilitaetsgrad:'Mobilitätsgrad',gewicht_kg:'Gewicht (kg)'};
 const $=id=>document.getElementById(id);
-const e=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
-const allowedContext=['versorgungshoehe','seite','phase','kostentraeger','mobilitaetsgrad','gewicht_kg'];
-const labels={versorgungshoehe:'Versorgungshöhe',seite:'Seite',phase:'Versorgungsphase',kostentraeger:'Kostenträger',mobilitaetsgrad:'Mobilitätsgrad',gewicht_kg:'Gewicht (kg)'};
-let state=emptyState(),step=0,kontext=null,readOnly=false;
-const listeners=new Set();
-function serialize(){return {schema:'uex-konfiguration-0.2',versorgung:{...state.versorgung},bauteile:Object.fromEntries(Object.entries(state.parts).filter(([,p])=>p.enabled).map(([name,p])=>[name,{artikelnummer:p.article||'',menge:Math.max(1,Number(p.count)||1)}])),begruendung:state.notes,abgeschlossen:state.abgeschlossen===true};}
-function notify(){if(readOnly)return;const data=serialize();for(const callback of listeners){try{callback(data)}catch(error){console.error('Konfiguration konnte nicht übergeben werden',error)}}}
-function field(key,label,type='text',opts=[]){const val=state.versorgung[key]??'';return '<div class="field"><label for="'+key+'">'+label+'</label>'+(type==='select'?'<select id="'+key+'" data-key="'+key+'"><option value="">Bitte auswählen</option>'+opts.map(o=>'<option value="'+e(o)+'" '+(val===o?'selected':'')+'>'+e(o)+'</option>').join('')+'</select>':'<input id="'+key+'" data-key="'+key+'" type="'+type+'" value="'+e(val)+'">')+'</div>';}
-function contextView(){if(!kontext)return '<div class="info">Standalone ohne Fallzuordnung · UKB. Für die Einbindung werden die notwendigen Angaben aus dem Versorgungsvorgang übergeben.</div>';return '<div class="section"><h2>Versorgungskontext · schreibgeschützt</h2><div class="context-line">'+allowedContext.filter(k=>kontext[k]).map(k=>'<div><span>'+labels[k]+':</span><strong class="readonly">'+e(kontext[k])+'</strong></div>').join('')+'</div></div>';}
-function rows(group){return '<div class="section"><h2>'+group+'</h2>'+groups[group].map(name=>{const p=state.parts[name]||{};return '<div class="item"><input type="checkbox" data-part="'+e(name)+'" '+(p.enabled?'checked':'')+' aria-label="'+e(name)+' auswählen"><div><div class="name">'+e(name)+'</div><div class="details">Artikel / Zusatzposition</div></div><input type="text" placeholder="Artikelnummer / Hersteller" data-article="'+e(name)+'" aria-label="Artikelnummer '+e(name)+'" value="'+e(p.article)+'" '+(p.enabled?'':'disabled')+'><input type="number" data-count="'+e(name)+'" aria-label="Menge '+e(name)+'" min="1" value="'+(p.count||1)+'" '+(p.enabled?'':'disabled')+'></div>';}).join('')+'</div>';}
-function issues(){const out=[],v=state.versorgung,k=kontext||{};if(!v.bauweise)out.push('Bauweise nicht ausgewählt.');if(!v.schaftrand)out.push('Schaftrand nicht ausgewählt.');if(!v.zweck)out.push('Einsatzbereich nicht ausgewählt.');if(k.phase==='Interim'&&v.zweck==='Wasserfest'&&/AOK Baden/i.test(k.kostentraeger||''))out.push('Wasserfeste Interimsversorgung ist für AOK Baden-Württemberg nicht vorgesehen.');if(v.zweck==='Wasserfest'&&state.parts['Mechatronisch']?.enabled)out.push('Mechatronische Fußpassteile bei wasserfester Versorgung fachlich und vertraglich prüfen.');if(k.versorgungshoehe&&!['Unterschenkel','UKB','Unterschenkelprothese'].includes(k.versorgungshoehe))out.push('Dieser Konfigurator gilt nur für UKB.');for(const [name,p] of Object.entries(state.parts))if(p.enabled&&!String(p.article||'').trim())out.push('Artikelnummer bitte prüfen: '+name+'.');return out;}
-function save(){document.querySelectorAll('[data-key]').forEach(el=>{state.versorgung[el.dataset.key]=el.value});if($('notes'))state.notes=$('notes').value;}
-function go(i){save();notify();step=Math.max(0,Math.min(steps.length-1,i));render();}
-function invalidateCompletion(){
- if(!state.abgeschlossen)return;
- state.abgeschlossen=false;
- if(step===steps.length-1){$('next').textContent='Fertig';$('next').disabled=readOnly;}
+const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hasValue=s=>String(s??'').trim().length>0;
+const makeEmpty=()=>({versorgung:{},parts:{},foot:{},exceptions:{},notes:'',done:false});
+let state=makeEmpty(),step=0,context=null,readonly=false,testingNotice='',listeners=new Set(),validationShown=false,adapterFilter='Alle Bauteile',adapterSearch='',adapterSelectedOnly=false;
+function payerAokBW(){return /aok\s*(baden.?württemberg|baden.?wuerttemberg|bw)/i.test(context?.kostentraeger||'')}
+function payerIkk(){return /\bikk\b/i.test(context?.kostentraeger||'')}
+function isInterim(){return context?.phase==='Interim' || state.versorgung.bauweise==='Interim'}
+function noInterimAllowed(){return context && context.phase && context.phase!=='Interim'}
+function footBorrowed(){return !!state.exceptions['Übernahme Bauteile aus Interim']?.enabled}
+function variantOptions(){if(context?.phase==='Interim')return ['Interim']; if(noInterimAllowed())return ['Modularbauweise','Schalenbauweise'];return ['Interim','Modularbauweise','Schalenbauweise'];}
+function isWaterAllowed(){return !isInterim()}
+function documentRestriction(name){
+ if(isInterim() && ['Silikon-Kontaktschaft','Flexible Randgestaltung','Flexibler Innenschaft'].includes(name))return 'Die UKB-Matrix weist diese Schaftausführung nicht als reguläre Interim-Auswahl aus.';
+ if(isInterim() && ['Schaftgestaltung','Verkleidung Strumpf','Verkleidung individuell','Individueller Formausgleich','Superskin einteilig'].includes(name))return 'Kosmetik für Interim ist im UKB-Bogen hier nicht als reguläre Option ausgewiesen.';
+ if(payerAokBW() && ['Verkleidung individuell','Individueller Formausgleich','Superskin einteilig'].includes(name) && !state.versorgung.ausnahmeKosmetik)return 'Bei AOK BW ist regulär nur die vereinbarte UKB-Kosmetik vorgesehen; diese Auswahl erfordert eine begründete Einzelfallprüfung.';
+ return '';
 }
-function finish(){
- if(readOnly||state.abgeschlossen)return;
- save();
- const missing=[];
- if(!state.versorgung.bauweise)missing.push('Bauweise');
- if(!state.versorgung.schaftrand)missing.push('Schaftrand');
- if(!state.versorgung.zweck)missing.push('Einsatzbereich');
- if(!Object.values(state.parts).some(part=>part.enabled))missing.push('mindestens eine Komponente');
- if(missing.length){
-   const notice=$('finishNotice');
-   if(notice){notice.hidden=false;notice.textContent='Konfiguration noch nicht abschließbar: '+missing.join(' · ');}
-   return;
+function inScope(item){if(item.parent&&!state.parts[item.parent]?.enabled)return false;if(item.parentAny&&!item.parentAny.some(n=>state.parts[n]?.enabled))return false;return true}
+function field(id,label,value,opts=[],required=false,help=''){
+ const req=required?' required aria-required="true"':'';
+ return `<div class="field"><label for="${id}" class="${required?'required':''}">${escapeHtml(label)}</label><select data-main="${id}" id="${id}"${req}><option value="">Bitte wählen</option>${opts.map(x=>`<option value="${escapeHtml(x)}" ${value===x?'selected':''}>${escapeHtml(x)}</option>`).join('')}</select>${help?`<small>${escapeHtml(help)}</small>`:''}</div>`;
+}
+function textfield(id,label,value,required=false,help='',isLong=false){return `<div class="field"><label for="${id}" class="${required?'required':''}">${escapeHtml(label)}</label>${isLong?`<textarea data-main="${id}" id="${id}" ${required?'required':''}>${escapeHtml(value)}</textarea>`:`<input type="text" id="${id}" data-main="${id}" value="${escapeHtml(value)}" ${required?'required':''}>`}${help?`<small>${escapeHtml(help)}</small>`:''}</div>`}
+function contextView(){return context?`<div class="section"><h2>Übernommener Versorgungskontext · nicht bearbeitbar</h2><div class="context-line">${CONTEXT_KEYS.filter(k=>hasValue(context[k])).map(k=>`<div><span>${CONTEXT_LABELS[k]}:</span><strong class="readonly">${escapeHtml(context[k])}</strong></div>`).join('')||'<div>Keine passenden Angaben vorhanden</div>'}</div></div>`:'<div class="info">Standalone-Test ohne verknüpften Versorgungsvorgang. Die Pflichtfelder beziehen sich ausschließlich auf die technische UKB-Konfiguration. Kostenträgerbezogene Regeln können erst mit übernommenem Kontext geprüft werden.</div>'}
+function tile(name,checked,disabled=false,help=''){return `<label class="check-tile"><input type="checkbox" data-exception="${escapeHtml(name)}" ${checked?'checked':''} ${disabled&&!checked?'disabled':''}><span><strong>${escapeHtml(name)}</strong>${help?`<small>${escapeHtml(help)}${disabled&&checked?' · Bestehende Auswahl ist nicht mehr zulässig; zum Entfernen anklickbar.':''}</small>`:''}</span></label>`}
+function exceptionalFields(){
+ let html='<div class="section"><h2>Besondere Versorgungssituationen <span class="badge">bedingt erforderlich</span></h2><div class="checks">';
+ for(const x of EXCEPTION_LIST){const d=x==='Verlängerung Interimsphase'&&(payerIkk() || (!!state.versorgung.bauweise&&!isInterim()) || (context?.phase && context.phase!=='Interim')) || x==='Übernahme Bauteile aus Interim'&&isInterim();let hint='';if(x==='Verlängerung Interimsphase')hint=d?'Für diesen Kontext nicht auswählbar.':'Nur Interim, nicht bei IKK.';if(x==='Übernahme Bauteile aus Interim')hint='Vorhandene Bauteile übernehmen statt neu auswählen.';if(d&&state.exceptions[x]?.enabled)hint+=' Diese frühere Auswahl muss geprüft oder abgewählt werden.';html+=tile(x,!!state.exceptions[x]?.enabled,d,hint)}
+ html+='</div>';
+ if(state.exceptions['Verlängerung Interimsphase']?.enabled){const x=state.exceptions['Verlängerung Interimsphase'];html+='<hr class="divider">'+field('excExtensionCause','Begründung für die Verlängerung',x.cause,['Unterbrechung aus gesundheitlichen Gründen','Stumpfrevision mit Unterbrechung'],true)+textfield('excExtensionReason','Fachliche Begründung',x.reason,true,'Für die Verlängerung um 3 Monate erforderlich.',true)}
+ if(state.exceptions['Zusätzlicher Testschaft']?.enabled){const x=state.exceptions['Zusätzlicher Testschaft'];html+='<hr class="divider">'+textfield('excTestReason','Begründung zusätzlicher Testschaft',x.reason,true,'Der Bogen fordert ausdrücklich eine Begründung.',true)+`<label class="check-tile"><input type="checkbox" data-option="testSilicone" ${x.silicone?'checked':''}><span>Silikon-Kontaktschaft für zusätzlichen Testschaft</span></label>`}
+ if(state.exceptions['Folgeschaft']?.enabled){const x=state.exceptions['Folgeschaft'];html+='<hr class="divider">'+field('excFollowCause','Anlass des Folgeschafts',x.cause,['Stumpfrevision','Mindestens 5 % Stumpfumfangsänderung','Verschleiß oder Defekt','Neuversorgung nach Nutzungsdauer'],true)+textfield('excFollowReason','Fachliche Begründung',x.reason,true,'Der Konfigurationsbogen fordert eine Begründung.',true);if(x.cause==='Mindestens 5 % Stumpfumfangsänderung')html+=`<label class="check-tile"><input type="checkbox" data-option="followMeasureProof" ${x.comparisonMeasures?'checked':''}><span>Vergleichende Maßblätter liegen vor <small>(Pflichtnachweis laut Vorlage)</small></span></label>`}
+ html+='</div>';return html;
+}
+function adapterCategory(name){
+ if(['Ventil','Schaftansatz/-platte','Eingussanker'].includes(name))return 'Schaft / Grundbauteile';
+ if(['Schraub-Adapter','Rohr-Adapter','Fuß-Adapter','Doppel-Adapter','Anschluss-Adapter'].includes(name))return 'Verbindungsadapter';
+ return 'Spezialadapter / Weitere';
+}
+function partStatus(item){
+ const missingParent=!inScope(item);
+ const restriction=documentRestriction(item.n);
+ if(missingParent)return 'Die zugehörige übergeordnete Option ist nicht mehr ausgewählt. Bitte dieses Bauteil abwählen oder die Abhängigkeit wiederherstellen.';
+ return restriction;
+}
+function partRow(item,group,design='standard'){
+ const p=state.parts[item.n]||{},selected=!!p.enabled,problem=partStatus(item);
+ // An already selected item must always be editable, including invalid legacy selections.
+ const blocked=!!problem&&!selected;
+ const article=item.article!==false;
+ if(design==='component'){
+   return `<article class="component-card ${selected?'selected':''} ${problem?'needs-review':''}" data-component-name="${escapeHtml(item.n)}" data-category="${escapeHtml(adapterCategory(item.n))}">
+     <div class="component-choice"><label class="part-switch"><input type="checkbox" data-part="${escapeHtml(item.n)}" ${selected?'checked':''} ${blocked?'disabled':''} aria-label="${escapeHtml(item.n)} auswählen"><span><strong>${escapeHtml(item.n)}</strong><small>${selected?'Ausgewählt · Angaben rechts vervollständigen':blocked?'Derzeit nicht auswählbar':'Optionales Bauteil'}</small></span></label></div>
+     <div class="component-fields">${article?`<label>Hersteller-Artikelnummer ${selected?'<b class="required-mark">*</b>':''}<input type="text" data-article="${escapeHtml(item.n)}" aria-label="Artikelnummer ${escapeHtml(item.n)}" placeholder="Hersteller-Art.-Nr." value="${escapeHtml(p.article||'')}" ${!selected?'disabled':''}></label>`:'<div class="component-unneeded">Keine Artikelnummer erforderlich</div>'}
+       <label class="component-count">Menge<input type="number" data-count="${escapeHtml(item.n)}" aria-label="Menge ${escapeHtml(item.n)}" min="1" max="1000" value="${escapeHtml(p.count??1)}" ${!selected?'disabled':''}></label>
+     </div>
+     ${problem?`<p class="component-message">${escapeHtml(problem)} ${selected?'Die Auswahl kann hier wieder entfernt werden.':''}</p>`:''}
+   </article>`;
  }
- state.abgeschlossen=true;
- notify();
- render();
+ return `<div class="item ${selected?'selected':''} ${problem?'unavailable':''}"><input class="part-checkbox" type="checkbox" data-part="${escapeHtml(item.n)}" ${selected?'checked':''} ${blocked?'disabled':''} aria-label="${escapeHtml(item.n)} auswählen"><div><div class="name">${escapeHtml(item.n)}</div><div class="details">${problem?escapeHtml(problem):article?'Hersteller-Artikelnummer bei Auswahl erforderlich.':'Keine Hersteller-Artikelnummer erforderlich.'}${selected&&problem?' Zum Korrigieren weiterhin auswählbar.':''}</div></div>${article?`<input type="text" data-article="${escapeHtml(item.n)}" aria-label="Artikelnummer ${escapeHtml(item.n)}" placeholder="Hersteller-Artikelnummer *" value="${escapeHtml(p.article||'')}" ${!selected?'disabled':''}>`:'<div></div>'}<input type="number" data-count="${escapeHtml(item.n)}" aria-label="Menge ${escapeHtml(item.n)}" min="1" max="1000" value="${escapeHtml(p.count??1)}" ${!selected?'disabled':''}></div>`;
 }
-function downloadJson(){save();const blob=new Blob([JSON.stringify(serialize(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='prothesenkonfiguration-uex.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
-function render(){
- let html='<h1>'+steps[step]+'</h1><p class="sub">'+descriptions[step]+'</p>';
- if(step===0)html+=contextView()+'<div class="grid">'+field('bauweise','Bauweise','select',['Modularbauweise','Schalenbauweise'])+field('schaftrand','Schaftrand','select',['Kniespaltübergreifend','Kondylenübergreifend'])+field('zweck','Einsatzbereich','select',['Alltag','Wasserfest'])+'</div><div class="section"><h2>Besondere Versorgungssituationen</h2><div class="grid">'+field('besonderheit','Konfigurationsanlass','select',['Regelversorgung','Verlängerung Interimsphase','Zusätzlicher Testschaft','Folgeschaft','Übernahme Bauteile aus Interim'])+field('grund','Fachliche Begründung')+'</div></div>';
- if(step===1)html+=rows('Schaft');if(step===2)html+=rows('Haltesysteme');if(step===3)html+=rows('Fußpassteile');if(step===4)html+=rows('Bauteile');if(step===5)html+=rows('Kosmetik')+rows('Zubehör');
- if(step===6){const entries=Object.entries(state.parts).filter(([,p])=>p.enabled);html+=contextView()+'<div class="section"><h2>Technische Konfiguration</h2><div class="grid">'+Object.entries(state.versorgung).filter(([,v])=>v).map(([k,v])=>'<div><strong>'+e(k)+'</strong>: '+e(v)+'</div>').join('')+'</div></div>';html+='<div class="section"><h2>Konfigurierte Komponenten ('+entries.length+')</h2><table class="summary"><thead><tr><th>Komponente</th><th>Artikelnummer</th><th>Menge</th></tr></thead><tbody>'+entries.map(([name,p])=>'<tr><td>'+e(name)+'</td><td>'+e(p.article||'–')+'</td><td>'+e(p.count||1)+'</td></tr>').join('')+'</tbody></table></div>';html+='<div class="section"><h2>Prüfhinweise</h2>'+(issues().map(msg=>'<div class="warning">'+e(msg)+'</div>').join('')||'<div class="info">Grundangaben vorhanden; technische und vertragliche Freigabe erfolgt weiterhin fachlich.</div>')+'<div class="info">SIC-Musternummern werden noch nicht automatisch vergeben. Diese Fassung enthält keine bestätigte Vertragsmatrix.</div></div><div class="field"><label for="notes">Freitext / fachliche Begründung</label><textarea id="notes">'+e(state.notes)+'</textarea></div><button type="button" class="action no-print" id="print">Als PDF drucken</button> <button type="button" class="secondary no-print" id="json">Technischen JSON-Export erstellen</button>';}
- if(step===steps.length-1)html+='<div id="finishNotice" class="warning" role="alert" hidden></div>';
- $('view').innerHTML=html;$('nav').innerHTML='<div class="muted">Konfigurationsschritte</div>'+steps.map((x,i)=>'<button type="button" data-step="'+i+'" class="'+(step===i?'active':'')+'">'+(i+1)+'. '+x+'</button>').join('');$('back').style.visibility=step===0?'hidden':'visible';$('next').textContent=step===steps.length-1?(state.abgeschlossen?'Abgeschlossen':'Fertig'):'Weiter';
- $('next').disabled=readOnly||(step===steps.length-1&&state.abgeschlossen);
- $('next').setAttribute('aria-label',step===steps.length-1&&state.abgeschlossen?'Konfiguration abgeschlossen':$('next').textContent);
- document.querySelectorAll('[data-key]').forEach(el=>el.addEventListener('input',()=>{invalidateCompletion();state.versorgung[el.dataset.key]=el.value;notify()}));
- document.querySelectorAll('[data-part]').forEach(el=>el.addEventListener('change',()=>{const p=state.parts[el.dataset.part]||(state.parts[el.dataset.part]={count:1});p.enabled=el.checked;invalidateCompletion();notify();render()}));
- document.querySelectorAll('[data-article]').forEach(el=>el.addEventListener('input',()=>{const p=state.parts[el.dataset.article]||(state.parts[el.dataset.article]={count:1});p.article=el.value;invalidateCompletion();notify()}));
- document.querySelectorAll('[data-count]').forEach(el=>el.addEventListener('change',()=>{const p=state.parts[el.dataset.count]||(state.parts[el.dataset.count]={count:1});p.count=Math.max(1,Number(el.value)||1);invalidateCompletion();notify()}));
- document.querySelectorAll('[data-step]').forEach(el=>el.onclick=()=>go(Number(el.dataset.step)));
- if($('notes'))$('notes').oninput=()=>{state.notes=$('notes').value;invalidateCompletion();notify()};
- if($('json'))$('json').onclick=downloadJson;
- if($('print'))$('print').onclick=()=>{save();window.print()};
- if(readOnly){document.querySelectorAll('input,select,textarea,button').forEach(el=>{if(el.id!=='print'&&!el.dataset.step)el.disabled=true;});$('reset').disabled=true;}
+function parts(group){
+ if(group==='Bauteile')return bauteileView();
+ let html=`<div class="section" id="parts-${escapeHtml(group)}"><h2>${escapeHtml(group)}</h2>`;
+ for(const item of LIST[group]){
+   // Keep selected dependent options visible even if their parent is removed.
+   if(!inScope(item)&&!state.parts[item.n]?.enabled)continue;
+   if(group==='Kosmetik'&&isInterim()&&!state.parts[item.n]?.enabled)continue;
+   html+=partRow(item,group);
+ }
+ return html+'</div>';
+}
+const BAUTEIL_CATEGORIES=[
+ {id:'Schaft / Grundbauteile',title:'Schaftanschluss & Grundbauteile',hint:'Ventile, Schaftansätze und Eingussanker.'},
+ {id:'Verbindungsadapter',title:'Verbindungsadapter',hint:'Mechanische Verbindungselemente im Prothesenaufbau.'},
+ {id:'Spezialadapter / Weitere',title:'Spezialadapter & weitere Bauteile',hint:'Positionierung, Rotation, Anpassung und Dämpfung.'}
+];
+function bauteileView(){
+ const count=LIST.Bauteile.filter(item=>state.parts[item.n]?.enabled).length;
+ let html=`<section class="section component-shell" id="parts-Bauteile"><div class="component-heading"><div><h2>Bauteile & Adapter</h2><p>Passende Bauteile nach Funktion auswählen. Artikelnummer und Menge werden erst nach Auswahl bearbeitbar.</p></div><span class="component-selected-count">${count} ausgewählt</span></div>
+ <div class="component-tools no-print"><div class="component-search"><label for="adapterSearch">Bauteil suchen</label><input id="adapterSearch" type="search" value="${escapeHtml(adapterSearch)}" placeholder="z. B. Dreh, Rohr, Ventil"></div><div class="component-filter"><span class="filter-label">Kategorie</span><div class="filter-buttons" role="group" aria-label="Bauteilkategorie">${['Alle Bauteile',...BAUTEIL_CATEGORIES.map(x=>x.id)].map((x,i)=>`<button type="button" class="category-choice ${adapterFilter===x?'active':''}" data-filter="${escapeHtml(x)}" aria-pressed="${adapterFilter===x}">${i===0?'Alle':i===1?'Schaftanschluss':i===2?'Verbindung':'Spezialadapter'}</button>`).join('')}</div></div><label class="selected-filter"><input type="checkbox" id="adapterSelectedOnly" ${adapterSelectedOnly?'checked':''}>Nur ausgewählte</label></div>
+ <div class="component-head-row"><span>Auswahl / Bauteil</span><span>Hersteller-Artikelnummer</span><span>Menge</span></div>`;
+ for(const cat of BAUTEIL_CATEGORIES){const entries=LIST.Bauteile.filter(item=>adapterCategory(item.n)===cat.id);const selected=entries.filter(item=>state.parts[item.n]?.enabled).length;
+ html+=`<section class="component-group" data-group="${escapeHtml(cat.id)}"><div class="component-group-heading"><div><h3>${escapeHtml(cat.title)}</h3><p>${escapeHtml(cat.hint)}</p></div><span>${selected} / ${entries.length} gewählt</span></div><div class="component-list">${entries.map(item=>partRow(item,'Bauteile','component')).join('')}</div></section>`;
+ }
+ html+='<p class="component-empty hidden" id="componentEmpty">Keine passenden Bauteile. Suchbegriff oder Filter ändern.</p><p class="hint">Ausgewählte Bauteile bleiben bei Kategorie- oder Suchwechsel sichtbar. Ungültige frühere Auswahlen können jederzeit abgewählt werden.</p></section>';
+ return html;
+}
+function applyBauteileDisplay(){
+ let visible=0;
+ for(const group of document.querySelectorAll('.component-group')){
+  let shown=0;
+  for(const card of group.querySelectorAll('.component-card')){
+   const checked=!!state.parts[card.dataset.componentName]?.enabled;
+   const categoryMatch=adapterFilter==='Alle Bauteile'||card.dataset.category===adapterFilter;
+   const searchMatch=card.dataset.componentName.toLocaleLowerCase('de').includes(adapterSearch.toLocaleLowerCase('de'));
+   const show=checked||(!adapterSelectedOnly&&categoryMatch&&searchMatch);
+   card.hidden=!show;
+   if(show){shown++;visible++}
+  }
+  group.hidden=shown===0;
+ }
+ const msg=$('componentEmpty');if(msg)msg.classList.toggle('hidden',visible!==0);
+}
+function selectionTiles(type,values,chosen){return '<div class="checks">'+values.map(v=>{const disabled=(type==='axis'&&payerAokBW()&&state.versorgung.zweck==='Wasserfest'&&v==='Mechatronisch')||(type==='dynamik'&&payerAokBW()&&state.versorgung.zweck==='Wasserfest'&&v==='Hohe Dynamik');return `<label class="check-tile"><input type="radio" name="foot-${type}" data-foot="${type}" value="${escapeHtml(v)}" ${chosen===v?'checked':''} ${disabled&&chosen!==v?'disabled':''}><span><strong>${escapeHtml(v)}</strong>${disabled?'<small>AOK BW · wasserfest: regulär nicht vorgesehen.</small>':''}</span></label>`}).join('')+'</div>'}
+function footView(){let html='<div class="section"><h2>Prothesenfuß</h2>';if(footBorrowed()){html+='<div class="info">Bauteile aus Interim werden übernommen. Eine Neu-Auswahl des Prothesenfußes ist in diesem Vorgang nicht zwingend. Die Übernahme ist fachlich zu prüfen.</div>';html+=`<label class="check-tile"><input type="checkbox" id="footAdditionally" ${state.foot.additionally?'checked':''}><span>Zusätzlich neuen Prothesenfuß konfigurieren</span></label>`;}
+ if(!footBorrowed()||state.foot.additionally){html+='<h3>Achsen-/Steuerungsart <span class="badge">Pflichtauswahl</span></h3>'+selectionTiles('axis',FOOT_AXIS,state.foot.axis)+'<h3>Dynamikklassifikation <span class="badge">Pflichtauswahl</span></h3>'+selectionTiles('dynamik',FOOT_DYNAMICS,state.foot.dynamik)+'<hr class="divider"><div class="grid">'+textfield('footArticle','Hersteller-Artikelnummer Prothesenfuß',state.foot.article||'',true)+`<div class="field"><label for="footCount" class="required">Menge</label><input type="number" id="footCount" min="1" max="1000" value="${Number(state.foot.count)||1}"></div></div>`}
+ if(payerAokBW()&&state.versorgung.zweck==='Wasserfest')html+='<div class="info">AOK Baden-Württemberg: Für wasserfeste UKB-Grundpositionen gelten Einschränkungen bei der Fußklasse. In der Auswahl werden mechatronische Füße und hohe Dynamik für den Regelpfad deaktiviert. Einzelfallabweichungen sind separat zu klären.</div>';
+ html+='</div>';return html;}
+function cosmeticView(){let html='';if(isInterim())return '<div class="info">Kosmetik ist in der Interim-Spalte des verwendeten UKB-Konfigurationsbogens nicht als reguläre Auswahl ausgewiesen. Falls zuvor Kosmetik gewählt wurde, können Sie sie hier wieder abwählen.</div>'+(LIST.Kosmetik.some(x=>state.parts[x.n]?.enabled)?parts('Kosmetik'):'')+parts('Zubehör');
+ if(payerAokBW()){html+=`<div class="section"><h2>Kostenträgerspezifischer Ausnahmebedarf</h2><label class="check-tile"><input type="checkbox" id="ausnahmeKosmetik" ${state.versorgung.ausnahmeKosmetik?'checked':''}><span>Medizinisch begründete Einzelfallprüfung für eine nicht regulär vereinbarte UKB-Kosmetik beantragen</span></label>`;if(state.versorgung.ausnahmeKosmetik)html+=textfield('cosmeticExceptionReason','Medizinische/versorgungstechnische Ausnahmebegründung',state.versorgung.cosmeticExceptionReason||'',true,'AOK BW: Antrag nur zur Einzelfallprüfung; keine automatische Genehmigung.',true);html+='</div>'}
+ html+=parts('Kosmetik')+parts('Zubehör');return html;}
+function hasHalteSystem(){return Object.entries(state.parts).some(([n,p])=>p.enabled&&(LIST.Haltesysteme.some(x=>x.n===n)||n==='Ventil'||n==='Kniekappe'))}
+function countSelections(){return Object.values(state.parts).filter(p=>p.enabled).length+((state.foot.axis&&!footBorrowed()||state.foot.additionally)?1:0)}
+function validation(index){const v=state.versorgung,ex=state.exceptions,r=[],add=(m,id)=>r.push({message:m,id});if(index===0){
+ if(!hasValue(v.bauweise))add('Versorgungsbauweise auswählen.','bauweise');else if(!variantOptions().includes(v.bauweise))add('Bauweise passt nicht zur übernommenen Versorgungsphase.','bauweise');
+ if(!hasValue(v.schaftrand))add('Schaftrand auswählen.','schaftrand');if(!hasValue(v.zweck))add('Einsatzbereich auswählen.','zweck');if(v.zweck==='Wasserfest'&&!isWaterAllowed())add('Interim ist in der UKB-Matrix nicht wasserfest vorgesehen.','zweck');
+ if(ex['Verlängerung Interimsphase']?.enabled){let x=ex['Verlängerung Interimsphase'];if(payerIkk() || !isInterim())add('Verlängerung der Interimsphase ist hier nicht als Regeloption vorgesehen.','besondere');if(!x.cause)add('Grund der Interimsverlängerung auswählen.','excExtensionCause');if(!hasValue(x.reason))add('Verlängerung der Interimsphase begründen.','excExtensionReason')}
+ if(ex['Zusätzlicher Testschaft']?.enabled&&!hasValue(ex['Zusätzlicher Testschaft'].reason))add('Zusätzlichen Testschaft begründen.','excTestReason');
+ if(ex['Übernahme Bauteile aus Interim']?.enabled&&isInterim())add('Bei einer Interimsversorgung können Bauteile nicht aus derselben Interimsphase übernommen werden. Auswahl prüfen.','besondere');
+ if(ex['Folgeschaft']?.enabled){let x=ex['Folgeschaft'];if(!x.cause)add('Folgeschaft-Anlass auswählen.','excFollowCause');if(!hasValue(x.reason))add('Folgeschaft begründen.','excFollowReason');if(x.cause==='Mindestens 5 % Stumpfumfangsänderung'&&!x.comparisonMeasures)add('Vergleichende Maßblätter bei mindestens 5 % Umfangsänderung bestätigen.','besondere')}
+ if(context?.versorgungshoehe&&!['Unterschenkel','UKB','Unterschenkelprothese'].includes(context.versorgungshoehe))add('Diese Tool-Version gilt ausschließlich für UKB.','besondere');
+ }
+ if(index===1){if(!LIST.Schaft.some(x=>x.n!=='Flexible Randgestaltung'&&state.parts[x.n]?.enabled))add('Mindestens eine Schaftausführung wählen.','parts-Schaft');for(const item of LIST.Schaft)if(state.parts[item.n]?.enabled&&(item.notInterim&&isInterim()||item.parent&&!state.parts[item.parent]?.enabled))add('Schaftoption ist in der ausgewählten Variante nicht verwendbar: '+item.n,'parts-Schaft')}
+ if(index===2){if(!hasHalteSystem())add('Haltesystem festlegen (Liner, Verschluss, Oberschenkelhülse, Ventil oder Kniekappe).','parts-Haltesysteme');if(state.parts['Oberschenkelhülse Leder']?.enabled&&state.parts['Oberschenkelhülse Kunststoff']?.enabled)add('Material der Oberschenkelhülse nur einmal wählen.','parts-Haltesysteme');}
+ if(index===3){if(!footBorrowed()||state.foot.additionally){if(!state.foot.axis)add('Achsen-/Steuerungsart des Fußes auswählen.','parts-Fußpassteile');if(!state.foot.dynamik)add('Dynamikklassifikation des Fußes auswählen.','parts-Fußpassteile');if(!hasValue(state.foot.article))add('Hersteller-Artikelnummer des Prothesenfußes eintragen.','footArticle');if(!Number.isInteger(+state.foot.count)||+state.foot.count<1||+state.foot.count>1000)add('Gültige Menge für Prothesenfuß eintragen.','footCount');if(payerAokBW()&&v.zweck==='Wasserfest'&&['Mechatronisch'].includes(state.foot.axis))add('AOK BW: mechatronischer Prothesenfuß bei wasserfester UKB-Regelversorgung nicht vorgesehen.','parts-Fußpassteile');if(payerAokBW()&&v.zweck==='Wasserfest'&&state.foot.dynamik==='Hohe Dynamik')add('AOK BW: hohe Dynamik bei wasserfester UKB-Regelversorgung nicht vorgesehen.','parts-Fußpassteile')}}
+ if(index===5&&payerAokBW()&&v.ausnahmeKosmetik&&!hasValue(v.cosmeticExceptionReason))add('Nicht vereinbarte UKB-Kosmetik benötigt eine Begründung für die Einzelfallprüfung.','cosmeticExceptionReason');
+ if([1,2,4,5].includes(index)){for(const group of Object.keys(LIST)){if((index===1&&group!=='Schaft')||(index===2&&group!=='Haltesysteme')||(index===4&&group!=='Bauteile')||(index===5&&group!=='Kosmetik'&&group!=='Zubehör'))continue;
+ for(const item of LIST[group]){const p=state.parts[item.n];if(!p?.enabled)continue;if(item.article!==false&&!hasValue(p.article))add('Hersteller-Artikelnummer fehlt: '+item.n+'.','article:'+item.n);if(!Number.isInteger(Number(p.count))||Number(p.count)<1||Number(p.count)>1000)add('Ungültige Menge: '+item.n+'.','count:'+item.n);if(documentRestriction(item.n))add('Auswahl außerhalb der Regelvariante: '+item.n+'.','parts-'+group);if(!inScope(item))add('Abhängige Option ohne übergeordnete Auswahl: '+item.n+'.','parts-'+group)}}}
+ return r;}
+function allIssues(){return STEPS.slice(0,-1).flatMap((_,i)=>validation(i).map(x=>({...x,step:i})));}
+function focusMissingField(id){
+ let element=null;
+ if(id.startsWith('article:'))element=[...document.querySelectorAll('[data-article]')].find(el=>el.dataset.article===id.slice(8));
+ else if(id.startsWith('count:'))element=[...document.querySelectorAll('[data-count]')].find(el=>el.dataset.count===id.slice(6));
+ else if(id.startsWith('parts-'))element=$(id)?.querySelector('input:not(:disabled),select:not(:disabled)')||$(id);
+ else if(id==='parts-Fußpassteile')element=document.querySelector('[data-foot]:not(:disabled)');
+ else if(id==='besondere')element=document.querySelector('[data-exception]:not(:disabled)');
+ else element=$(id);
+ if(element){element.scrollIntoView({behavior:'smooth',block:'center'});if(typeof element.focus==='function')element.focus();}
+}
+function showValidation(problems){
+ const host=$('formErrors');validationShown=problems.length>0;
+ if(!problems.length){host.hidden=true;host.innerHTML='';return}
+ host.hidden=false;
+ host.innerHTML='<strong>Noch '+problems.length+' erforderliche Angabe'+(problems.length===1?'':'n')+' offen</strong><ul>'+problems.map(p=>`<li>${escapeHtml(p.message)} <button type="button" class="error-jump" data-error-target="${escapeHtml(p.id||'')}">Zum Feld</button></li>`).join('')+'</ul>';
+ host.querySelectorAll('[data-error-target]').forEach(button=>button.onclick=()=>focusMissingField(button.dataset.errorTarget));
+}
+
+function saveTextData(){
+ document.querySelectorAll('[data-main]').forEach(el=>{state.versorgung[el.dataset.main]=el.value});
+ for(const [id,name,key] of [['excExtensionCause','Verlängerung Interimsphase','cause'],['excExtensionReason','Verlängerung Interimsphase','reason'],['excTestReason','Zusätzlicher Testschaft','reason'],['excFollowCause','Folgeschaft','cause'],['excFollowReason','Folgeschaft','reason']]){
+  const el=$(id);if(el){const record=state.exceptions[name]||(state.exceptions[name]={});record[key]=el.value;}
+ }
+ const foot=$('footArticle');if(foot)state.foot.article=foot.value;
+ const qty=$('footCount');if(qty)state.foot.count=qty.value;
+ const notes=$('notes');if(notes)state.notes=notes.value;
+ for(const el of document.querySelectorAll('[data-article]')){const p=state.parts[el.dataset.article]||(state.parts[el.dataset.article]={count:1});p.article=el.value;}
+ for(const el of document.querySelectorAll('[data-count]')){const p=state.parts[el.dataset.count]||(state.parts[el.dataset.count]={count:1});p.count=el.value;}
+}
+function normalizeForContext(){const opts=variantOptions();if(context?.phase==='Interim'&&state.versorgung.bauweise!=='Interim'){state.versorgung.bauweise='Interim';testingNotice='Interim-Bauweise wurde aus dem Versorgungskontext übernommen.'}if(opts.length===2&&state.versorgung.bauweise==='Interim'){state.versorgung.bauweise='';testingNotice='Interim-Bauweise ist nach Änderung des Versorgungskontexts erneut auszuwählen.'}}
+function move(target){saveTextData();const dest=Math.max(0,Math.min(STEPS.length-1,target));if(dest>step){for(let i=0;i<dest;i++){const errors=validation(i);if(errors.length){step=i;render();showValidation(errors);return false}}}step=dest;render();return true;}
+function next(){saveTextData();if(step===STEPS.length-1){const issues=allIssues();if(issues.length){step=issues[0].step;render();showValidation(validation(step));return false}state.done=true;render();notify();return true}return move(step+1)}
+function serialize(){saveTextData();const bauteile=Object.fromEntries(Object.entries(state.parts).filter(([,p])=>p.enabled).map(([n,p])=>[n,{artikelnummer:String(p.article||'').trim(),menge:Math.max(1,Number(p.count)||1)}]));if(state.foot.axis&&(!footBorrowed()||state.foot.additionally))bauteile['Prothesenfuß']={artikelnummer:String(state.foot.article||'').trim(),menge:Math.max(1,Number(state.foot.count)||1)};
+ const extras=Object.fromEntries(Object.entries(state.exceptions).filter(([,p])=>p.enabled).map(([n,p])=>[n,{...p}]));return {schema:'uex-konfiguration-0.4',versorgung:{...state.versorgung},bauteile,fußklassifikation:{...state.foot},sonderfälle:extras,begruendung:state.notes,abgeschlossen:state.done&&allIssues().length===0};}
+function notify(){if(readonly)return;const data=serialize();if(validationShown)showValidation(validation(step));else if($('formErrors')){$('formErrors').hidden=true;$('formErrors').innerHTML=''}for(const fn of listeners){try{fn(data)}catch(err){console.error('Konfigurationsänderung konnte nicht verarbeitet werden',err)}}}
+function download(){const data=serialize();const b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='prothesenkonfiguration-ukb-v04.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);}
+function summary(){const selected=Object.entries(state.parts).filter(([,p])=>p.enabled),issues=allIssues(),s=state.versorgung,showFoot=!!state.foot.axis&&(!footBorrowed()||state.foot.additionally);let html=contextView()+'<div class="section"><h2>Aufbau</h2><div class="grid">'+[['Bauweise',s.bauweise],['Schaftrand',s.schaftrand],['Einsatzbereich',s.zweck],['Fußtechnik',showFoot?state.foot.axis:(footBorrowed()?'Übernommen aus Interim':'—')],['Fußdynamik',showFoot?state.foot.dynamik:'—']].map(([k,v])=>`<div><small>${k}</small><div><strong>${escapeHtml(v||'—')}</strong></div></div>`).join('')+'</div></div>';
+ const x=Object.entries(state.exceptions).filter(([,p])=>p.enabled);if(x.length)html+='<div class="section"><h2>Sonderfälle</h2>'+x.map(([n,p])=>`<p><strong>${escapeHtml(n)}</strong>${p.cause?' · '+escapeHtml(p.cause):''}${p.reason?' · '+escapeHtml(p.reason):''}</p>`).join('')+'</div>';
+ html+=`<div class="section"><h2>Ausgewählte Komponenten (${selected.length+(showFoot?1:0)})</h2><table class="summary"><thead><tr><th>Komponente</th><th>Hersteller-Artikelnummer</th><th>Menge</th></tr></thead><tbody>${selected.map(([n,p])=>`<tr><td>${escapeHtml(n)}</td><td>${escapeHtml(p.article||'—')}</td><td>${escapeHtml(p.count||1)}</td></tr>`).join('')}${showFoot?`<tr><td>Prothesenfuß · ${escapeHtml(state.foot.axis)} · ${escapeHtml(state.foot.dynamik||'—')}</td><td>${escapeHtml(state.foot.article||'—')}</td><td>${escapeHtml(state.foot.count||1)}</td></tr>`:''}</tbody></table></div>`;
+ html+=`<div class="section"><h2>Vollständigkeit / fachliche Prüfung</h2>${issues.length?`<div class="warning"><strong>${issues.length} offene Punkte</strong><ul>${issues.map(p=>`<li>${escapeHtml(p.message)}</li>`).join('')}</ul></div>`:'<div class="success">Alle prototypischen Pflichtfeldregeln sind erfüllt. Das ist keine technische oder vertragliche Freigabe.</div>'}<div class="info">SIC-Musternummern / HMV / GPOS werden nicht geschätzt oder automatisch vergeben. Für AOK Baden-Württemberg gelten Vertragsbesonderheiten, die vor Antragstellung fachlich zu prüfen sind.</div></div>`;
+ html+=`<div class="field"><label for="notes">Weitere technische Hinweise / Begründung</label><textarea id="notes">${escapeHtml(state.notes)}</textarea></div>`;
+ if(state.done&&!issues.length)html='<div class="success"><strong>Konfiguration abgeschlossen.</strong> Technische Angaben sind zur fachlichen Prüfung vorbereitet. Eine Integration in den Versorgungsassistenten wurde nicht vorgenommen.</div>'+html;return html;}
+function view(){let html=`<div class="preview-title"><div><h1>${STEPS[step]}</h1><p class="sub">${SUB[step]}</p></div><span class="badge">Schritt ${step+1} / ${STEPS.length}</span></div>`;if(testingNotice)html+=`<div class="info">${escapeHtml(testingNotice)}</div>`;
+ if(step===0){const v=state.versorgung,opts=variantOptions();
+ if(!context)html+=`<details class="section no-print"><summary><strong>Synthetische Testfälle für die Auswahlsteuerung</strong> <small>(optional)</small></summary><p class="hint">Nur technische Testkontexte, keine Patienten- oder Stammdaten. Für die spätere Integration wird ausschließlich der Versorgungskontext übernommen.</p><div class="checks"><button type="button" class="secondary" data-demo="definitiv">Definitiv · Testkasse</button><button type="button" class="secondary" data-demo="aokwasser">AOK BW · Wasserfest</button><button type="button" class="secondary" data-demo="ikkinterim">IKK · Interim</button></div></details>`;
+ html+=contextView()+'<div class="section lead-section"><h2>Technische Grundkonfiguration</h2><div class="grid">'+field('bauweise','Versorgungsbauweise',v.bauweise,opts,true,context?.phase==='Interim'?'Interim aus dem Versorgungskontext übernommen.':'Nur Varianten aus der UKB-Matrix.')+field('schaftrand','Schaftrand',v.schaftrand,['Kniespaltübergreifend','Kondylenübergreifend'],true)+field('zweck','Einsatzbereich',v.zweck,isWaterAllowed()?['Alltag','Wasserfest']:['Alltag'],true,isInterim()?'Interim ist im UKB-Konfigurationsbogen nicht als wasserfeste Variante vorgesehen.':'Bei Wasserfestigkeit gelten zusätzliche Vertragsregeln.')+'</div></div>'+exceptionalFields();}
+ if(step===1)html+=parts('Schaft');
+ if(step===2)html+=parts('Haltesysteme')+'<div class="info">Ein Haltesystem ist erforderlich. Für alternative Konzepte können Ventil oder Kniekappe in späteren Schritten ergänzt werden. Die Abschlussprüfung berücksichtigt beide.</div>';
+ if(step===3)html+=footView();
+ if(step===4)html+=parts('Bauteile');
+ if(step===5)html+=cosmeticView();
+ if(step===6)html+=summary();
+ return html;}
+function refreshStepStates(){
+ document.querySelectorAll('#nav [data-step]').forEach(button=>{
+  const index=Number(button.dataset.step);if(index===STEPS.length-1)return;
+  const errs=validation(index),status=button.querySelector('.step-state');if(!status)return;
+  status.className='step-state '+(errs.length?'err':'ok');status.textContent=errs.length?'•':'✓';
+  status.title=errs.length?'Noch Angaben erforderlich':'Pflichtfelder erfüllt';
+ });
+}
+function render(){if(readonly)testingNotice='';$('view').innerHTML=view();$('nav').innerHTML='<div class="muted">Konfigurationsschritte</div>'+STEPS.map((name,i)=>{const valid=i<6?validation(i):allIssues();const s=i<6?(valid.length?'err':'ok'):'';return `<button type="button" data-step="${i}" class="${i===step?'active':''}" aria-current="${i===step?'step':'false'}"><span>${i+1}. ${escapeHtml(name)}</span><span class="step-state ${s}" title="${i<6?(valid.length?'Noch Angaben erforderlich':'Pflichtfelder erfüllt'):''}">${i<6?(valid.length?'•':'✓'):''}</span></button>`}).join('');$('back').disabled=step===0;$('next').textContent=step===6?(state.done?'Abgeschlossen':'Abschließen'):'Weiter →';$('next').disabled=readonly||state.done&&step===6; if(!validationShown){$('formErrors').hidden=true;$('formErrors').innerHTML=''}
+ document.querySelectorAll('[data-step]').forEach(el=>el.onclick=()=>move(Number(el.dataset.step)));
+ const demos={definitiv:{phase:'Definitiv',versorgungshoehe:'Unterschenkel',kostentraeger:'Testkasse'},aokwasser:{phase:'Definitiv',versorgungshoehe:'Unterschenkel',kostentraeger:'AOK Baden-Württemberg'},ikkinterim:{phase:'Interim',versorgungshoehe:'Unterschenkel',kostentraeger:'IKK'}};
+ document.querySelectorAll('[data-demo]').forEach(el=>el.onclick=()=>{window.ProthetikUEX.setKontext(demos[el.dataset.demo]);if(el.dataset.demo==='aokwasser'){state.versorgung.zweck='Wasserfest';render()}});
+
+ document.querySelectorAll('[data-main]').forEach(el=>{
+   const save=()=>{state.versorgung[el.dataset.main]=el.value;state.done=false;validationShown=false;refreshStepStates();notify()};
+   el.addEventListener('input',()=>{if(el.tagName==='SELECT')return;save()});
+   el.addEventListener('change',()=>{save();if(['bauweise','zweck'].includes(el.dataset.main))render()});
+ });
+ document.querySelectorAll('[data-exception]').forEach(el=>el.addEventListener('change',()=>{const obj=state.exceptions[el.dataset.exception]||(state.exceptions[el.dataset.exception]={});obj.enabled=el.checked;state.done=false;validationShown=false;render();notify()}));
+ document.querySelectorAll('[data-option]').forEach(el=>el.addEventListener('change',()=>{const name=el.dataset.option;if(name==='testSilicone')state.exceptions['Zusätzlicher Testschaft'].silicone=el.checked;if(name==='followMeasureProof')state.exceptions['Folgeschaft'].comparisonMeasures=el.checked;state.done=false;notify()}));
+ for(const [id,name,key] of [['excExtensionCause','Verlängerung Interimsphase','cause'],['excExtensionReason','Verlängerung Interimsphase','reason'],['excTestReason','Zusätzlicher Testschaft','reason'],['excFollowCause','Folgeschaft','cause'],['excFollowReason','Folgeschaft','reason']]){const el=$(id);if(el){const update=()=>{state.exceptions[name][key]=el.value;state.done=false;validationShown=false;refreshStepStates();notify()};el.addEventListener('input',()=>{if(el.tagName!=='SELECT')update()});el.addEventListener('change',()=>{update();if(id==='excFollowCause')render()})}}
+ document.querySelectorAll('[data-part]').forEach(el=>el.addEventListener('change',()=>{const p=state.parts[el.dataset.part]||(state.parts[el.dataset.part]={count:1});p.enabled=el.checked;
+ if(!el.checked){for(const item of Object.values(LIST).flat()){if((item.parent===el.dataset.part||item.parentAny?.includes(el.dataset.part))&&state.parts[item.n]?.enabled){if(!item.parentAny||!item.parentAny.some(n=>n!==el.dataset.part&&state.parts[n]?.enabled)){state.parts[item.n].enabled=false;testingNotice='Die abhängige Option „'+item.n+'“ wurde ebenfalls abgewählt.'}}}}
+ if(el.dataset.part==='Oberschenkelhülse Leder'&&el.checked&&state.parts['Oberschenkelhülse Kunststoff'])state.parts['Oberschenkelhülse Kunststoff'].enabled=false;if(el.dataset.part==='Oberschenkelhülse Kunststoff'&&el.checked&&state.parts['Oberschenkelhülse Leder'])state.parts['Oberschenkelhülse Leder'].enabled=false;state.done=false;validationShown=false;render();notify()}));
+ document.querySelectorAll('[data-article]').forEach(el=>el.addEventListener('input',()=>{const p=state.parts[el.dataset.article]||(state.parts[el.dataset.article]={count:1});p.article=el.value;state.done=false;refreshStepStates();notify()}));
+ document.querySelectorAll('[data-count]').forEach(el=>{const save=()=>{const p=state.parts[el.dataset.count]||(state.parts[el.dataset.count]={count:1});p.count=el.value;state.done=false;refreshStepStates();notify()};el.addEventListener('input',save);el.addEventListener('change',save)});
+ document.querySelectorAll('[data-foot]').forEach(el=>el.addEventListener('change',()=>{state.foot[el.dataset.foot]=el.value;state.done=false;refreshStepStates();notify()}));
+ document.querySelectorAll('[data-filter]').forEach(el=>el.onclick=()=>{adapterFilter=el.dataset.filter;document.querySelectorAll('[data-filter]').forEach(btn=>{btn.classList.toggle('active',btn.dataset.filter===adapterFilter);btn.setAttribute('aria-pressed',String(btn.dataset.filter===adapterFilter))});applyBauteileDisplay()});
+ if($('adapterSearch'))$('adapterSearch').oninput=ev=>{adapterSearch=ev.target.value;applyBauteileDisplay()};
+ if($('adapterSelectedOnly'))$('adapterSelectedOnly').onchange=ev=>{adapterSelectedOnly=ev.target.checked;applyBauteileDisplay()};
+ applyBauteileDisplay();
+ if($('footAdditionally'))$('footAdditionally').onchange=ev=>{state.foot.additionally=ev.target.checked;state.done=false;render();notify()};
+ if($('footArticle'))$('footArticle').oninput=ev=>{state.foot.article=ev.target.value;state.done=false;refreshStepStates();notify()};if($('footCount')){const save=ev=>{state.foot.count=ev.target.value;state.done=false;refreshStepStates();notify()};$('footCount').addEventListener('input',save);$('footCount').addEventListener('change',save)}
+ if($('ausnahmeKosmetik'))$('ausnahmeKosmetik').onchange=ev=>{state.versorgung.ausnahmeKosmetik=ev.target.checked;state.done=false;render();notify()};
+ if($('cosmeticExceptionReason'))$('cosmeticExceptionReason').oninput=ev=>{state.versorgung.cosmeticExceptionReason=ev.target.value;state.done=false;notify()};
+ if($('notes'))$('notes').oninput=ev=>{state.notes=ev.target.value;state.done=false;notify()};
+ if($('json'))$('json').onclick=download;if($('print'))$('print').onclick=()=>window.print();
+ if(readonly)document.querySelectorAll('#panel input,#panel select,#panel textarea').forEach(el=>el.disabled=true);
 }
 window.ProthetikUEX={
- setKontext(d){if(!d||typeof d!=='object')throw new TypeError('Kontext muss Objekt sein');kontext=Object.freeze(Object.fromEntries(allowedContext.filter(k=>d[k]!=null).map(k=>[k,String(d[k]).slice(0,140)])));render()},
- getKonfiguration(){save();return serialize()},
- setKonfiguration(d){if(d!=null && (typeof d!=='object'||d.schema!=='uex-konfiguration-0.2'))throw new TypeError('Unbekannte Konfiguration');state=emptyState();if(d){for(const k of ['bauweise','schaftrand','zweck','besonderheit','grund'])if(d.versorgung&&typeof d.versorgung[k]==='string')state.versorgung[k]=d.versorgung[k].slice(0,2000);for(const [name,p] of Object.entries(d.bauteile||{})){if(!Object.values(groups).some(list=>list.includes(name))||!p||typeof p!=='object')continue;state.parts[name]={enabled:true,article:String(p.artikelnummer||'').slice(0,250),count:Math.max(1,Math.min(1000,Number(p.menge)||1))};}state.notes=String(d.begruendung||'').slice(0,10000);state.abgeschlossen=d.abgeschlossen===true}step=0;render()},
- onChange(callback){if(typeof callback!=='function')throw new TypeError('Callback erforderlich');listeners.add(callback);return ()=>listeners.delete(callback)},
- setReadOnly(flag){readOnly=!!flag;render()},
- getKontext(){return kontext?{...kontext}:null},
- clearKontext(){kontext=null;render()}
+ setKontext(d){if(!d||typeof d!=='object')throw new TypeError('Versorgungskontext muss ein Objekt sein');const next={};for(const k of CONTEXT_KEYS)if(Object.prototype.hasOwnProperty.call(d,k))next[k]=String(d[k]??'').slice(0,140);const wasLinked=!!context;const changed=JSON.stringify(context)!==JSON.stringify(next);context=Object.freeze(next);normalizeForContext();if(wasLinked&&changed)state.done=false;render()},
+ getKonfiguration(){return serialize()},
+ getKontext(){return context?{...context}:null},
+ clearKontext(){context=null;state.done=false;render()},
+ setReadOnly(flag){readonly=!!flag;render()},
+ onChange(fn){if(typeof fn!=='function')throw new TypeError('Callback erforderlich');listeners.add(fn);return ()=>listeners.delete(fn)},
+ setKonfiguration(data){if(data!=null&&(typeof data!=='object'||!['uex-konfiguration-0.4','uex-konfiguration-0.3','uex-konfiguration-0.2'].includes(data.schema)))throw new TypeError('Unbekanntes Konfigurationsformat');state=makeEmpty();if(data){for(const [k,v] of Object.entries(data.versorgung||{}))if(typeof v==='string'||typeof v==='boolean')state.versorgung[k]=v;for(const [name,p] of Object.entries(data.bauteile||{})){if(name==='Prothesenfuß')continue;const known=Object.values(LIST).flat().some(x=>x.n===name);if(known&&p&&typeof p==='object')state.parts[name]={enabled:true,article:String(p.artikelnummer||'').slice(0,250),count:Math.max(1,Number(p.menge)||1)}}if(data.schema==='uex-konfiguration-0.3'||data.schema==='uex-konfiguration-0.4'){state.foot={...data.fußklassifikation};state.exceptions={...data.sonderfälle};state.notes=String(data.begruendung||'').slice(0,10000)}else{const mapping={'Monoaxial':'Monoaxial','Multiaxial':'Multiaxial','Autoadaptiv':'Autoadaptiv','Mechatronisch':'Mechatronisch'};for(const [n] of Object.entries(mapping))if(data.bauteile?.[n])state.foot.axis=n;state.foot.article=data.bauteile?.[state.foot.axis]?.artikelnummer||'';state.notes=String(data.begruendung||'').slice(0,10000)}}state.done=false;step=0;normalizeForContext();state.done=!!data?.abgeschlossen&&allIssues().length===0;render()},
+ getValidierung(){return {ok:allIssues().length===0,offen:allIssues().map(p=>({schritt:p.step+1,hinweis:p.message}))}},
+ exportJSON:download,
+ version:'0.4'
 };
-$('back').onclick=()=>go(step-1);$('next').onclick=()=>{if(step===steps.length-1)finish();else go(step+1);};
-$('reset').onclick=()=>{if(!readOnly && confirm('Technische Konfiguration zurücksetzen?')){state=emptyState();step=0;notify();render();}};
+$('back').onclick=()=>move(step-1);$('next').onclick=next;$('reset').onclick=()=>{if(!readonly&&confirm('Technische Konfiguration vollständig zurücksetzen?')){state=makeEmpty();step=0;normalizeForContext();validationShown=false;render();notify()}};
 render();
-</script></body></html>
+</script>
+</body>
+</html>
