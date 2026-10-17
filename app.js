@@ -4180,7 +4180,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         values.uexConfigurationScope===uexConfigurationScope()
     }
     function uexConfigurationCompleted(){
-      return uexConfigurationMatchesCase() && values.uexConfigurationV02?.abgeschlossen===true
+      return uexConfigurationMatchesCase() && values.uexConfigurationV02?.schema==='uex-konfiguration-0.4' && values.uexConfigurationV02?.abgeschlossen===true
     }
     function updateUexNextVisibility(){
       const next=$('wizardNext')
