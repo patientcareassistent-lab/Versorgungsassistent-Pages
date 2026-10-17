@@ -1044,37 +1044,42 @@ test('UKB tool is a separate wizard step after the original measure sheet, persi
   await expect(inner.locator('.context-line')).toContainText('rechts')
   await expect(inner.locator('input[name="patientFirstName"]')).toHaveCount(0)
   await expect(page.locator('#wizardNext')).toBeHidden()
-  // Attempting to finish an incomplete configuration does not unlock the wizard.
-  await inner.locator('[data-step="6"]').click()
+  // The embedded tool has no duplicate top-level header or document exports.
+  await expect(inner.locator('body > header')).toHaveCount(0)
+  await expect(inner.locator('#print')).toHaveCount(0)
+  await expect(inner.locator('#json')).toHaveCount(0)
+  await expect(inner.locator('[data-demo]')).toHaveCount(0)
+
+  // Incomplete input must not unlock the outer wizard.
   await inner.locator('#next').click()
-  await expect(inner.locator('#finishNotice')).toContainText('Konfiguration noch nicht abschließbar')
+  await expect(inner.locator('#formErrors')).toBeVisible()
   await expect(page.locator('#wizardNext')).toBeHidden()
-  await inner.locator('[data-step="0"]').click()
   await inner.locator('#bauweise').selectOption('Modularbauweise')
   await inner.locator('#schaftrand').selectOption('Kondylenübergreifend')
   await inner.locator('#zweck').selectOption('Alltag')
   await inner.locator('[data-step="1"]').click()
   await inner.locator('[data-part="Weichwandschaft"]').check()
-  await inner.locator('[data-article="Weichwandschaft"]').fill('TEST-UKB-1')
+  await inner.locator('[data-step="2"]').click()
+  await inner.locator('[data-part="Liner konfektioniert"]').check()
+  await inner.locator('[data-article="Liner konfektioniert"]').fill('TEST-LINER-1')
+  await inner.locator('[data-step="3"]').click()
+  await inner.locator('[data-foot="axis"][value="Multiaxial"]').check()
+  await inner.locator('[data-foot="dynamik"][value="Mittlere Dynamik"]').check()
+  await inner.locator('#footArticle').fill('TEST-FOOT-123')
 
   await expect.poll(async () => page.evaluate(() => {
     const rows=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
-    return rows[0]?.payload?.uexConfigurationV02?.bauteile?.Weichwandschaft?.artikelnummer || ''
-  }), {timeout:10000}).toBe('TEST-UKB-1')
-  await expect(page.locator('.wizard-step[data-step="4"]')).not.toHaveClass(/skipped/)
-  await page.reload()
-  await page.locator('#supplyOverviewBody [data-supply-id]').first().click()
-  await expect(page.locator('.wizard-panel[data-panel="4"]')).toBeVisible()
-  await expect(inner.locator('#bauweise')).toHaveValue('Modularbauweise')
-  await inner.locator('[data-step="1"]').click()
-  await expect(inner.locator('[data-part="Weichwandschaft"]')).toBeChecked()
-  await expect(inner.locator('[data-article="Weichwandschaft"]')).toHaveValue('TEST-UKB-1')
+    const cfg=rows[0]?.payload?.uexConfigurationV02
+    return [cfg?.schema,cfg?.bauteile?.['Liner konfektioniert']?.artikelnummer,cfg?.fußklassifikation?.axis]
+  }),{timeout:10000}).toEqual(['uex-konfiguration-0.4','TEST-LINER-1','Multiaxial'])
 
-  // "Weiter" belongs to the outer workflow and is NEVER shown solely because
-  // the technical configuration has data. Only explicit "Fertig" unlocks it.
-  await expect(page.locator('#wizardNext')).toBeHidden()
+  await inner.locator('[data-step="4"]').click()
+  await expect(inner.locator('h1')).toHaveText('Bauteile')
+  await expect(inner.locator('.component-shell')).toHaveCount(1)
+  await inner.locator('[data-step="5"]').click()
   await inner.locator('[data-step="6"]').click()
-  await expect(inner.locator('#next')).toHaveText('Fertig')
+  await expect(inner.locator('h1')).toHaveText('Zusammenfassung')
+  await expect(inner.locator('#next')).toHaveText('Abschließen')
   await expect(page.locator('#wizardNext')).toBeHidden()
   await inner.locator('#next').click()
   await expect(inner.locator('#next')).toHaveText('Abgeschlossen')
@@ -1083,20 +1088,21 @@ test('UKB tool is a separate wizard step after the original measure sheet, persi
   await expect.poll(async () => page.evaluate(() => {
     const rows=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
     return rows[0]?.payload?.uexConfigurationV02?.abgeschlossen===true
-  }), {timeout:10000}).toBe(true)
-  // The status is durable across reloads and doesn't require a second click.
+  }),{timeout:10000}).toBe(true)
+
   await page.reload()
   await page.locator('#supplyOverviewBody [data-supply-id]').first().click()
   await expect(page.locator('.wizard-panel[data-panel="4"]')).toBeVisible()
   await expect(page.locator('#wizardNext')).toBeVisible()
+  await inner.locator('[data-step="3"]').click()
+  await expect(inner.locator('#footArticle')).toHaveValue('TEST-FOOT-123')
   await inner.locator('[data-step="6"]').click()
   await expect(inner.locator('#next')).toHaveText('Abgeschlossen')
-  // Later edits revoke completion and lock the outer wizard again.
-  await inner.locator('[data-step="1"]').click()
-  await inner.locator('[data-article="Weichwandschaft"]').fill('TEST-UKB-2')
+  await inner.locator('[data-step="2"]').click()
+  await inner.locator('[data-article="Liner konfektioniert"]').fill('TEST-LINER-2')
   await expect(page.locator('#wizardNext')).toBeHidden()
   await inner.locator('[data-step="6"]').click()
-  await expect(inner.locator('#next')).toHaveText('Fertig')
+  await expect(inner.locator('#next')).toHaveText('Abschließen')
   await inner.locator('#next').click()
   await expect(inner.locator('#next')).toHaveText('Abgeschlossen')
   await expect(page.locator('#wizardNext')).toBeVisible()

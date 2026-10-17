@@ -4173,7 +4173,7 @@ import { versorgungsziele } from './versorgungsziele.js'
 
 
 
-    // Eigenständiges UKB-Tool (0.2) als eigener Arbeitsschritt nach der Maßaufnahme.
+    // Eigenständiges UKB-Tool (0.4) als eigener Arbeitsschritt nach der Maßaufnahme.
     // Nur technische Daten werden im bestehenden, authentifizierten Versorgungsvorgang abgelegt.
     // Keine postMessage-, URL-Parameter- oder localStorage-Übertragung.
     let uexBoundWindow=null
@@ -4186,11 +4186,11 @@ import { versorgungsziele } from './versorgungsziele.js'
         payer:$('careKasse')?.value||'',side:values.side||'',type:supplyType()})
     }
     function uexConfigurationMatchesCase(){
-      return values.uexConfigurationV02?.schema==='uex-konfiguration-0.2' &&
+      return ['uex-konfiguration-0.2','uex-konfiguration-0.3','uex-konfiguration-0.4'].includes(values.uexConfigurationV02?.schema) &&
         values.uexConfigurationScope===uexConfigurationScope()
     }
     function uexConfigurationCompleted(){
-      return uexConfigurationMatchesCase() && values.uexConfigurationV02?.abgeschlossen===true
+      return uexConfigurationMatchesCase() && values.uexConfigurationV02?.schema==='uex-konfiguration-0.4' && values.uexConfigurationV02?.abgeschlossen===true
     }
     function updateUexNextVisibility(){
       const next=$('wizardNext')
@@ -4223,7 +4223,7 @@ import { versorgungsziele } from './versorgungsziele.js'
           if(wizardIndex!==4 || !activeSupplyId || !stepApplicable(4) ||
             uexBoundWindow!==frame.contentWindow || activeSupplyId!==uexBoundCase ||
             !supplyHasEditableContext()) return
-          if(!cfg || cfg.schema!=='uex-konfiguration-0.2')return
+          if(!cfg || cfg.schema!=='uex-konfiguration-0.4')return
           values.uexConfigurationV02=cfg
           values.uexConfigurationScope=uexConfigurationScope()
           updateUexNextVisibility()
@@ -4595,6 +4595,7 @@ import { versorgungsziele } from './versorgungsziele.js'
           if(!cfg?.versorgung?.schaftrand) missing.push('Konfiguration: Schaftrand')
           if(!cfg?.versorgung?.zweck) missing.push('Konfiguration: Einsatzbereich')
           if(!cfg?.bauteile || Object.keys(cfg.bauteile).length===0) missing.push('Konfiguration: mindestens eine Komponente')
+          if(cfg?.schema==='uex-konfiguration-0.4' && cfg?.abgeschlossen!==true) missing.push('Konfiguration: noch nicht abgeschlossen')
         }
       } else if(i===5){
         missing=missingValues(['planGoal'])
