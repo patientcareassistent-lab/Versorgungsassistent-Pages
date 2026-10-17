@@ -806,3 +806,60 @@ test('PG24 shared FMB measure sheet inherits order fields and omits redundant ad
   await expectCommonPrefill()
   await expect(page.locator('#fieldInfo')).toContainText('AOK Baden-Württemberg · PG24 · Anlage 4 Profilerhebungsbogen')
 })
+
+
+test('UKB PG24 configurator appears after the unchanged FMB sheet, prefills order values and persists technical selections', async ({ page }) => {
+  await installSupabaseMock(page, {
+    mode:'signed-in',
+    rpcOverrides:{
+      care_reference_bootstrap:{
+        kassen:[{Kasse_Kanonisch:'AOK Baden-Württemberg'},{Kasse_Kanonisch:'Testkasse'}],
+        produktgruppen:[{PG:'24',Generisches_Blatt:'PG24 Prothesen',Reifegrad:'TEST'}],
+        sourceCount:1,formCount:1
+      },
+      himi_logic_for_pg:[{
+        Himi_ID:'PG24_UKB',PG:'24',Bezeichnung:'Unterschenkelprothese',
+        Generisches_Formular_ID:'PG24_PROTHESEN',
+        Versorgungsarten:['Post-OP','Interim','Definitiv','Folge'],
+        Profil_erforderlich:true,Mass_erforderlich:true,
+        Erprobung_erforderlich:false,Verlauf_erforderlich:true,Aktiv:true
+      }],
+      forms_for_pg:[],form_fields_for_pg:[],himi_form_rules_for_himi:[]
+    }
+  })
+  await page.goto('/index.html')
+  await page.locator('#newSupplyOverviewButton').click()
+  await page.locator('#careKasse').selectOption({label:'AOK Baden-Württemberg'})
+  await page.locator('#carePg').selectOption('24')
+  await page.locator('#careHimi').selectOption('PG24_UKB')
+  const config=page.locator('#ukbConfigurationSection')
+  await expect(config).not.toHaveClass(/hidden/)
+  await expect(config.locator('h3')).toHaveText('Prothesenkonfiguration · Unterschenkel')
+  await expect(page.locator('#measureFieldList .source-measure-sheet')).toHaveCount(1)
+  const documentOrder=await page.evaluate(()=>{
+    const a=document.getElementById('measureFieldList')
+    const b=document.getElementById('ukbConfigurationSection')
+    return !!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+  expect(documentOrder).toBe(true)
+  const variant=config.locator('[data-ukb-config-field-id="SRC_PG24_UKB_CONFIG_20261008:variant"]')
+  await expect(variant.locator('option')).toHaveCount(11)
+  await variant.evaluate(el=>{el.value='modular_kond_day';el.dispatchEvent(new Event('change',{bubbles:true}))})
+  const socket=config.locator('[data-ukb-config-field-id="SRC_PG24_UKB_CONFIG_20261008:socket:softWall"]')
+  await socket.evaluate(el=>{el.checked=true;el.dispatchEvent(new Event('change',{bubbles:true}))})
+  const article=config.locator('[data-ukb-config-field-id="SRC_PG24_UKB_CONFIG_20261008:foot:prostheticFoot:article"]')
+  await article.evaluate(el=>{el.value='TEST-FOOT-123';el.dispatchEvent(new Event('input',{bubbles:true}))})
+  await page.locator('[data-case-field="patientFirstName"]').fill('Test')
+  await page.locator('[data-case-field="patientLastName"]').fill('Muster')
+  await page.locator('#careKasse').selectOption({label:'Testkasse'})
+  await expect(variant).toHaveValue('modular_kond_day')
+  await expect(socket).toBeChecked()
+  await expect(article).toHaveValue('TEST-FOOT-123')
+  await expect(config.locator('.ukb-config-prefill').filter({hasText:'Kostenträger'})).toContainText('Testkasse')
+  // AOK-specific TT2 is available only for AOK BW, never for other payers.
+  await expect(config.locator('[data-ukb-config-field-id="SRC_PG24_UKB_CONFIG_20261008:exceptions:tt2"]')).toHaveCount(0)
+  await page.locator('#careKasse').selectOption({label:'AOK Baden-Württemberg'})
+  await expect(config.locator('[data-ukb-config-field-id="SRC_PG24_UKB_CONFIG_20261008:exceptions:tt2"]')).toHaveCount(1)
+  await expect(variant).toHaveValue('modular_kond_day')
+  await expect(config.locator('.ukb-config-prefill').filter({hasText:'Name, Vorname'})).toContainText('Muster, Test')
+});
