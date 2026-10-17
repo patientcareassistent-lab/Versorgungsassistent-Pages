@@ -159,6 +159,32 @@ test('dashboard filters status and PG with smartbuttons and keeps every case acc
 })
 
 
+
+test('dashboard and embedded UKB configurator always load release-versioned runtime assets',async({page})=>{
+  await installSupabaseMock(page,{mode:'signed-in'})
+  const mainScripts=[]
+  page.on('request',request=>{
+    if(/\/app\.js(?:\?|$)/.test(request.url()))mainScripts.push(request.url())
+  })
+  await page.goto('/index.html')
+  await expect(page.locator('#supplyOverviewView')).toBeVisible()
+  const assetVersions=await page.evaluate(()=>{
+    const app=document.querySelector('script[type="module"][src*="/app.js"]')
+    const css=document.querySelector('#appStyles')
+    const tool=document.querySelector('#uexConfigFrame')
+    return {app:app?.src,css:css?.href,tool:tool?.src}
+  })
+  for(const [name,url] of Object.entries(assetVersions)){
+    expect(url,name+' is missing').toBeTruthy()
+    expect(new URL(url).searchParams.get('v'),name+' must include release version').toBe('RELEASESHA')
+  }
+  expect(mainScripts.length).toBeGreaterThanOrEqual(1)
+  expect(mainScripts.every(url=>new URL(url).searchParams.get('v')==='RELEASESHA')).toBe(true)
+  // The stage buttons prove app.js functionality, not just static placeholder HTML.
+  await expect(page.locator('#supplyStageButtons [data-supply-stage=""]')).toHaveCount(1)
+  await expect(page.locator('#supplyStageButtons [data-supply-stage=""]')).toContainText('0')
+})
+
 test('Auftragsstand smartbuttons distinguish profile vs repair, legacy step mapping and combine all dashboard filters', async ({page}) => {
   await installSupabaseMock(page, {mode:'signed-in'})
   await page.addInitScript(() => {
