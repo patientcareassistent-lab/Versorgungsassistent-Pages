@@ -189,7 +189,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     function currentSupplyStatus(snapshotValues=values,stepIndex=wizardIndex){
       if(snapshotValues.approvalState==='Rückfrage' || snapshotValues.approvalState==='Abgelehnt') return 'Rückfrage / offen'
       if(snapshotValues.approvalState==='Eingereicht') return 'Warten / Genehmigung'
-      if(snapshotValues.deliveryDate || stepIndex>=9) return 'Abschluss offen'
+      if(snapshotValues.deliveryDate || stepIndex>=10) return 'Abschluss offen'
       return 'Laufend'
     }
 
@@ -223,6 +223,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(!supplyHasEditableContext()) return true
       const id=activeSupplyId
       const existing=supplyDraftCache.find(x=>x.id===id)
+      values.uexWizardSchema='2026-10-17'
       const semanticItem={
         id,
         wizardIndex,
@@ -404,7 +405,9 @@ import { versorgungsziele } from './versorgungsziele.js'
     }
 
     function supplyStepLabel(item){
-      const i=Math.max(0,Math.min(Number(item.wizardIndex)||0,wizardSteps.length-1))
+      const oldIndex=Number(item.wizardIndex)||0
+      const migrated=item.values?.uexWizardSchema==='2026-10-17'?oldIndex:(oldIndex>=4?oldIndex+1:oldIndex)
+      const i=Math.max(0,Math.min(migrated,wizardSteps.length-1))
       return (i+1)+'. '+wizardSteps[i].name
     }
 
@@ -477,6 +480,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
       item=mapCareCaseRow(detail.data)
       supplyDraftCache=[item,...supplyDraftCache.filter(x=>x.id!==id)].slice(0,250)
+      resetUexConfigurationFrame()
       activeSupplyId=item.id
       lastPersistedSupplyFingerprint=supplyPersistenceFingerprint(item)
       Object.keys(values).forEach(k=>delete values[k])
@@ -485,7 +489,9 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(values.patientName && !values.patientFirstName && !values.patientLastName){
         values.patientLastName=values.patientName
       }
-      wizardIndex=Math.max(0,Math.min(Number(item.wizardIndex)||0,wizardSteps.length-1))
+      const oldIndex=Number(item.wizardIndex)||0
+      const migratedIndex=item.values?.uexWizardSchema==='2026-10-17'?oldIndex:(oldIndex>=4?oldIndex+1:oldIndex)
+      wizardIndex=Math.max(0,Math.min(migratedIndex,wizardSteps.length-1))
       $('careKasse').value=item.kasse||''
       $('carePg').value=item.pg||''
       values.himiId=item.himiId||values.himiId||''
@@ -4127,9 +4133,90 @@ import { versorgungsziele } from './versorgungsziele.js'
 
 
 
+
+    // Eigenständiges UKB-Tool (0.2) als eigener Arbeitsschritt nach der Maßaufnahme.
+    // Nur technische Daten werden im bestehenden, authentifizierten Versorgungsvorgang abgelegt.
+    // Keine postMessage-, URL-Parameter- oder localStorage-Übertragung.
+    let uexBoundWindow=null
+    let uexBoundCase=null
+    let uexBoundScope=null
+    let uexBoundContext=null
+    let uexFrameResizeObserver=null
+    function uexConfigurationScope(){
+      return JSON.stringify({pg:$('carePg')?.value||'',himi:selectedHimiId()||'',
+        payer:$('careKasse')?.value||'',side:values.side||'',type:supplyType()})
+    }
+    function uexConfigurationMatchesCase(){
+      return values.uexConfigurationV02?.schema==='uex-konfiguration-0.2' &&
+        values.uexConfigurationScope===uexConfigurationScope()
+    }
+    function uexConfigurationContext(){
+      return {versorgungshoehe:'Unterschenkel',seite:values.side||'',phase:supplyType(),
+        kostentraeger:$('careKasse')?.value||'',mobilitaetsgrad:values['tech:mobilityGrade']||'',
+        gewicht_kg:recordedMeasurement('weight')||''}
+    }
+    function resetUexConfigurationFrame(){
+      const api=$('uexConfigFrame')?.contentWindow?.ProthetikUEX
+      try{api?.setKonfiguration(null);api?.clearKontext()}catch(_){}
+      uexBoundCase=null;uexBoundScope=null;uexBoundContext=null
+    }
+    function mountUexConfigurationFrame(){
+      if(wizardIndex!==4 || !stepApplicable(4)) return
+      const frame=$('uexConfigFrame')
+      if(!frame || !activeSupplyId) return
+      let api
+      try{api=frame.contentWindow?.ProthetikUEX}catch(_){return}
+      if(!api || typeof api.getKonfiguration!=='function')return
+      if(uexBoundWindow!==frame.contentWindow){
+        uexBoundWindow=frame.contentWindow
+        uexBoundCase=null
+        api.onChange(cfg=>{
+          if(wizardIndex!==4 || !activeSupplyId || !stepApplicable(4) ||
+            uexBoundWindow!==frame.contentWindow || activeSupplyId!==uexBoundCase ||
+            !supplyHasEditableContext()) return
+          if(!cfg || cfg.schema!=='uex-konfiguration-0.2')return
+          values.uexConfigurationV02=cfg
+          values.uexConfigurationScope=uexConfigurationScope()
+          queueAutosaveSupply()
+          updateWizardStatus()
+        })
+        if(uexFrameResizeObserver)uexFrameResizeObserver.disconnect()
+        const doc=frame.contentDocument
+        if(doc?.body && typeof ResizeObserver==='function'){
+          uexFrameResizeObserver=new ResizeObserver(()=>{
+            if(frame.contentDocument!==doc)return
+            frame.style.height=Math.max(750,Math.ceil(doc.body.scrollHeight)+24)+'px'
+          })
+          uexFrameResizeObserver.observe(doc.body)
+        }
+      }
+      const scope=uexConfigurationScope()
+      if(uexBoundCase!==activeSupplyId || uexBoundScope!==scope){
+        uexBoundCase=activeSupplyId
+        uexBoundScope=scope
+        uexBoundContext=null
+        api.setKonfiguration(uexConfigurationMatchesCase()?values.uexConfigurationV02:null)
+      }
+      const context=uexConfigurationContext()
+      const contextKey=JSON.stringify(context)
+      if(uexBoundContext!==contextKey){
+        uexBoundContext=contextKey
+        api.setKontext(context)
+      }
+      api.setReadOnly(!supplyHasEditableContext())
+      const note=$('uexConfigNotice')
+      if(note){
+        const old=Object.keys(values).some(key=>key.startsWith(UKB_CONFIG_PREFIX))
+        note.className='status-card '+(uexConfigurationMatchesCase()?'ready':'open')
+        note.textContent=(uexConfigurationMatchesCase()?'Konfiguration im Vorgang vorhanden.':'Bitte technische Konfiguration ausfüllen.')+
+          (old?' Frühere UKB-Konfigurationswerte bleiben im Vorgang gespeichert; neue Auswahl fachlich abgleichen.':'')+
+          ' Keine erneute Grunddatenerfassung.'
+      }
+    }
+
     const wizardSteps=[
       {name:'Auftragserfassung'}, {name:'Rezepterfassung'}, {name:'Profilerhebung / Reparaturprotokoll'},
-      {name:'Maßblatt'}, {name:'Versorgungsplanung'}, {name:'Vertrag & Kostenvoranschlag'},
+      {name:'Maßblatt'}, {name:'Prothesenkonfiguration'}, {name:'Versorgungsplanung'}, {name:'Vertrag & Kostenvoranschlag'},
       {name:'Genehmigung / Voraussetzungen'}, {name:'Versorgungsverlauf'}, {name:'Erprobung / Bild / Video'},
       {name:'Abgabe'}, {name:'Abrechnung & Abschluss'}
     ]
@@ -4311,9 +4398,10 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(V09_ANAMNESIS_SCOPE && i===10) return false
       if(i===2) return selectedCaseKind()==='Neuversorgung' || selectedCaseKind()==='Reparatur'
       if(i===3) return !isRepairCase() && requiresMeasure()
-      if(i===4) return !isRepairCase()
-      if(i===7) return !isRepairCase() && requiresCourse()
-      if(i===8) return !isRepairCase() && requiresEvidence()
+      if(i===4) return selectedCaseKind()==='Neuversorgung' && ukbConfigurationApplicable()
+      if(i===5) return !isRepairCase()
+      if(i===8) return !isRepairCase() && requiresCourse()
+      if(i===9) return !isRepairCase() && requiresEvidence()
       return true
     }
 
@@ -4449,11 +4537,20 @@ import { versorgungsziele } from './versorgungsziele.js'
         required.forEach(x=>{if(!String(x.value||'').trim()) missing.push(x.closest('label')?.querySelector('span')?.childNodes?.[0]?.textContent?.trim()||'Maßfeld')})
         if(!measureControls.length && !String(values.measureValues||'').trim()) missing.push('Maßangaben')
       } else if(i===4){
+        if(!uexConfigurationMatchesCase()) missing.push('Prothesenkonfiguration für diesen Vorgang erfassen / überprüfen')
+        else{
+          const cfg=values.uexConfigurationV02
+          if(!cfg?.versorgung?.bauweise) missing.push('Konfiguration: Bauweise')
+          if(!cfg?.versorgung?.schaftrand) missing.push('Konfiguration: Schaftrand')
+          if(!cfg?.versorgung?.zweck) missing.push('Konfiguration: Einsatzbereich')
+          if(!cfg?.bauteile || Object.keys(cfg.bauteile).length===0) missing.push('Konfiguration: mindestens eine Komponente')
+        }
+      } else if(i===5){
         missing=missingValues(['planGoal'])
         if(!String(values.planShaft||'').trim() && !String(values.planParts||'').trim()) missing.push('Schaft-/Bettungskonzept oder geplante Komponenten')
-      } else if(i===5){
-        missing=missingValues(['quotePositions'])
       } else if(i===6){
+        missing=missingValues(['quotePositions'])
+      } else if(i===7){
         missing=missingValues(['approvalState'])
         if(values.approvalState && values.approvalState!=='Nicht genehmigungspflichtig'){
           if(!values.docQuote) missing.push('Kostenvoranschlag vollständig')
@@ -4462,18 +4559,18 @@ import { versorgungsziele } from './versorgungsziele.js'
           if(requiresMeasure() && !values.docMeasure) missing.push('Maßdokumentation vorhanden')
           if(values.approvalState==='Genehmigt' && !values.approvalDate) missing.push('Genehmigungsdatum')
         }
-      } else if(i===7){
+      } else if(i===8){
         if(!values.courseFormDate) missing.push('Datum Formerfassung')
         if(!values.courseStaticDate && !values.courseDynamicDate) missing.push('mindestens eine statische oder dynamische Anprobe')
-      } else if(i===8){
+      } else if(i===9){
         if(!values.consentPresent) missing.push('Einwilligung vorhanden')
         missing.push(...missingValues(['trialPeriod','functionalBenefit']))
-      } else if(i===9){
+      } else if(i===10){
         missing=missingValues(['deliveryDate'])
         if(!values.deliveryUsable) missing.push('gebrauchsfähige Abgabe bestätigt')
         if(!values.deliveryInstruction) missing.push('Gebrauchseinweisung bestätigt')
         if(!values.deliveryReceipt) missing.push('Empfang bestätigt')
-      } else if(i===10){
+      } else if(i===11){
         missing=missingValues(['billingState'])
         if(isAokCase() && values.billingState){
           if(!values.billingPosition) missing.push('Abrechnungsposition')
@@ -4867,6 +4964,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       }))
       $('wizardBack').addEventListener('click',()=>goWizard(previousApplicableIndex(wizardIndex)))
       $('wizardNext').addEventListener('click',advanceWizard)
+      $('uexConfigFrame')?.addEventListener('load',mountUexConfigurationFrame)
       $('newSupplyOverviewButton').addEventListener('click',startNewSupply)
       $('newSupplyNavButton').addEventListener('click',startNewSupply)
       $('rxFile').addEventListener('change',handleRxFile)
@@ -5259,6 +5357,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       $('wizardBack').disabled=previousApplicableIndex(wizardIndex)===wizardIndex
       const next=nextApplicableIndex(wizardIndex)
       $('wizardNext').textContent=next===wizardIndex?'Status prüfen':'Weiter →'
+      if(wizardIndex===4) mountUexConfigurationFrame()
       updateWizardStatus(false)
     }
 
@@ -5368,9 +5467,9 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(!owner) return {
         ok:false,reason:'Der Vorgang muss vor der Archivierung zunächst erfolgreich gespeichert werden. Bitte die Auftragserfassung prüfen.'
       }
-      // The server additionally requires "Abschluss offen" and wizard_index >= 9.
+      // Der Server verlangt weiterhin „Abschluss offen“ und wizard_index >= 9; die UI prüft ab dem neuen Abgabeschritt 10.
       // Explain those requirements BEFORE the irreversible archive request.
-      if(wizardIndex<9 || currentSupplyStatus(values,wizardIndex)!=='Abschluss offen') return {
+      if(wizardIndex<10 || currentSupplyStatus(values,wizardIndex)!=='Abschluss offen') return {
         ok:false,reason:'Bitte den Versorgungsablauf bis zur Abgabe abschließen, bevor extern archiviert wird.'
       }
       return {ok:true,reason:''}
@@ -5404,6 +5503,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       if($('clearButton')) $('clearButton').disabled=!editable
       document.querySelectorAll('#careView .signature-pad-clear').forEach(el=>{el.disabled=!editable})
       document.querySelectorAll('#careView .signature-pad canvas').forEach(el=>{el.setAttribute('aria-disabled',editable?'false':'true')})
+      try{$('uexConfigFrame')?.contentWindow?.ProthetikUEX?.setReadOnly(!editable)}catch(_){}
       updateArchiveButtonState()
       if($('printButton')) $('printButton').disabled=!hasContext
       if($('readOnlyBanner')) $('readOnlyBanner').classList.toggle('hidden',!activeSupplyIsReadOnly())
@@ -5511,6 +5611,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     function startNewSupply(){
       showArchiveActionNotice('')
       if(activeSupplyId) void autosaveSupplyDraft()
+      resetUexConfigurationFrame()
       activeSupplyId=(crypto.randomUUID?crypto.randomUUID():'versorgung-'+Date.now()+'-'+Math.random().toString(16).slice(2))
       Object.keys(values).forEach(k=>delete values[k])
       document.querySelectorAll('[data-case-field]').forEach(el=>{if(el.type==='checkbox'||el.type==='radio')el.checked=false;else el.value=''})
@@ -5547,6 +5648,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     }
 
     function resetWizard(){
+      resetUexConfigurationFrame()
       void autosaveSupplyDraft()
       activeSupplyId=null
       Object.keys(values).forEach(k=>delete values[k])
