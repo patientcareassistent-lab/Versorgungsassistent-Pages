@@ -487,15 +487,15 @@ import { versorgungsziele } from './versorgungsziele.js'
         const caseKindClass=caseKind==='Reparatur'?'warning':caseKind==='Neuversorgung'?'blue':''
         const assignedTechnician=String(x.assignedTechnician||x.values?.assignedTechnician||'').trim()||'Nicht zugewiesen'
         return '<tr class="supply-row" data-supply-id="'+escapeHtml(x.id)+'" tabindex="0" title="Versorgung öffnen">'+
-          '<td><strong class="supply-row-name">'+escapeHtml(name)+'</strong><small class="supply-row-sub">'+escapeHtml(caseNo)+'</small></td>'+
-          '<td><span class="pill '+caseKindClass+'">'+escapeHtml(caseKind)+'</span>'+
+          '<td data-label="Person / Vorgang"><strong class="supply-row-name">'+escapeHtml(name)+'</strong><small class="supply-row-sub">'+escapeHtml(caseNo)+'</small></td>'+
+          '<td data-label="Versorgung"><span class="pill '+caseKindClass+'">'+escapeHtml(caseKind)+'</span>'+
              '<strong class="supply-row-aux">'+escapeHtml(x.pg?'PG '+x.pg:'PG offen')+(x.himi?' · '+escapeHtml(x.himi):'')+'</strong>'+
              '<small class="supply-row-sub">'+escapeHtml(x.kasse||'Kostenträger offen')+'</small></td>'+
-          '<td><strong class="supply-row-aux">'+escapeHtml(supplyStepLabel(x))+'</strong>'+
+          '<td data-label="Arbeitsstand"><strong class="supply-row-aux">'+escapeHtml(supplyStepLabel(x))+'</strong>'+
              '<span class="supply-row-status"><span class="pill '+(x.status==='Rückfrage / offen'?'warning':x.status==='Warten / Genehmigung'?'blue':'')+'">'+escapeHtml(x.status)+'</span></span></td>'+
-          '<td>'+escapeHtml(supplyEditorDisplayName(x))+'</td>'+
-          '<td>'+escapeHtml(assignedTechnician)+'</td>'+
-          '<td class="supply-row-date">'+escapeHtml(formatDraftTime(x.updatedAt))+'</td>'+
+          '<td data-label="Zuletzt bearbeitet von">'+escapeHtml(supplyEditorDisplayName(x))+'</td>'+
+          '<td data-label="Zuständiger Techniker">'+escapeHtml(assignedTechnician)+'</td>'+
+          '<td data-label="Geändert" class="supply-row-date">'+escapeHtml(formatDraftTime(x.updatedAt))+'</td>'+
         '</tr>'
       }).join('')
     }
