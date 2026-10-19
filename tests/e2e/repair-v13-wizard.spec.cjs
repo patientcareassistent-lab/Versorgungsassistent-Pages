@@ -53,6 +53,8 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await expect(page.locator('#orderRepairSicIdField')).not.toHaveClass(/hidden/)
   await expect(page.locator('#orderRepairSicIdField input')).toHaveValue('SIC-TEST-1')
   await expect(frame.locator('.stepbtn')).toHaveCount(6)
+  // An unfinished repair never exposes the outer navigation button.
+  await expect(page.locator('#wizardNext')).toBeHidden()
   await expect(page.locator('#repairV13SecurePhotos #repairPhotoFiles')).toHaveCount(1)
   await expect(page.locator('#repairV13SecurePhotos #repairLabelFiles')).toHaveCount(1)
 
@@ -76,6 +78,15 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
     return rows.find(r => r.id.endsWith('661'))?.payload?.repairUexV13?.completed
   })).toBe(true)
   await expect(frame.locator('#vaRepairFinish')).toContainText('abgeschlossen')
+  await expect(page.locator('#wizardNext')).toBeVisible()
+  // The completed button is aligned with the right edge of the summary card.
+  const buttonLayout=await frame.locator('#vaRepairFinish').evaluate(button=>{
+    const row=button.closest('.va-repair-finish-row')
+    if(!row)return null
+    return {buttonRight:button.getBoundingClientRect().right,rowRight:row.getBoundingClientRect().right}
+  })
+  expect(buttonLayout).not.toBeNull()
+  expect(Math.abs(buttonLayout.rowRight-buttonLayout.buttonRight)).toBeLessThan(2)
 
   // Both photos must be stored privately as metadata, not embedded into the care-case JSON.
   const jpeg = await page.evaluate(() => {
@@ -121,6 +132,7 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
 
   await page.reload()
   await page.locator('#supplyOverviewBody '+first).click()
+  await expect(page.locator('#wizardNext')).toBeVisible()
   const reopened = page.frameLocator('#repairV13Frame')
   await expect(reopened.locator('#baseStatus')).toHaveText('verbunden')
   await expect(reopened.locator('#f_Datum')).toHaveValue('14.10.2026')
@@ -130,16 +142,27 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await expect(reopened.locator('[data-photo-kind="prothese"] .va-photo-card')).toHaveCount(1)
   await reopened.locator('.stepbtn').nth(5).click()
   await expect(reopened.locator('#vaRepairFinish')).toContainText('abgeschlossen')
+  await expect(page.locator('#wizardNext')).toBeVisible()
+  // Edits after completion revoke the finish confirmation until it is repeated.
+  await reopened.locator('.stepbtn').nth(3).click()
+  await reopened.locator('input[aria-label="Hersteller-Artikelnummer 1"]').fill('TEST-ART-988')
+  await expect(page.locator('#wizardNext')).toBeHidden()
+  await reopened.locator('.stepbtn').nth(5).click()
+  await expect(reopened.locator('#vaRepairFinish')).toContainText('fertigstellen')
+  await reopened.locator('#vaRepairFinish').click()
+  await expect(reopened.locator('#vaRepairFinish')).toContainText('abgeschlossen')
+  await expect(page.locator('#wizardNext')).toBeVisible()
 
   // Check original two pages and article labels in the printed overlay.
   await reopened.getByRole('button',{name:/Originalbogen als PDF speichern/}).click()
   await expect(reopened.locator('#printArea .printpage')).toHaveCount(3)
-  await expect(reopened.locator('#printArea')).toContainText('TEST-ART-987')
+  await expect(reopened.locator('#printArea')).toContainText('TEST-ART-988')
   await expect(reopened.locator('#printArea img[alt="Bauteilkleber"]')).toHaveCount(1)
   await expect(reopened.locator('#printArea .annex img')).toHaveCount(1)
 
   await page.reload()
   await page.locator('#supplyOverviewBody '+second).click()
+  await expect(page.locator('#wizardNext')).toBeHidden()
   const other = page.frameLocator('#repairV13Frame')
   await expect(other.locator('#baseStatus')).toHaveText('verbunden')
   await other.locator('.stepbtn').nth(3).click()
