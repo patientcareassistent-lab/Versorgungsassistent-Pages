@@ -336,6 +336,31 @@ jobs:
           test -s tools/reparatur-uex/index.html || { echo 'PG24 Reparaturtool V13 fehlt: Upload vor Deploy erforderlich.'; exit 1; }
           cp tools/reparatur-uex/index.html dist/tools/reparatur-uex/index.html
 
+          # Per-release URL versioning: GitHub Pages and browsers may cache JS
+          # separately from HTML. Never serve an old app.js with a new interface.
+          # This only changes the deployed HTML; original sources stay testable.
+          python3 - <<'PY'
+          from pathlib import Path
+          import os, re
+          html = Path('dist/index.html')
+          raw = html.read_text(encoding='utf-8')
+          if raw.count('v=RELEASESHA') != 3:
+              raise SystemExit('Expected three cache-key placeholders (app, CSS, UKB iframe).')
+          sha = os.environ['GITHUB_SHA']
+          if not re.fullmatch(r'[0-9a-f]{40}', sha):
+              raise SystemExit('Invalid GitHub commit SHA for cache keys')
+          raw = raw.replace('v=RELEASESHA', 'v='+sha)
+          html.write_text(raw, encoding='utf-8')
+          for expected in (
+              f'<script type="module" src="./app.js?v={sha}"></script>',
+              f'<link id="appStyles" rel="stylesheet" href="./styles.css?v={sha}"',
+              f'tools/konfiguration-uex/index.html?v={sha}"',
+          ):
+              if expected not in raw:
+                  raise SystemExit('Deployed asset cache key missing: '+expected)
+          print('Production asset URLs updated for commit', sha[:12])
+          PY
+
           required=(
             dist/index.html
             dist/app.js
