@@ -4363,6 +4363,7 @@ import { versorgungsziele } from './versorgungsziele.js'
     function syncWizardBranchLabels(){
       const repair=isRepairCase()
       $('orderRepairSicIdField')?.classList.toggle('hidden',!repair||String($('carePg')?.value||'')!=='24')
+      syncRxPresence()
       wizardSteps[2].name=repair?'Reparaturprotokoll':'Profilerhebung'
       const step=document.querySelector('.wizard-step[data-step="2"] .step-label')
       if(step) step.textContent=wizardSteps[2].name
@@ -5029,7 +5030,7 @@ import { versorgungsziele } from './versorgungsziele.js'
           }
           if(key==='caseKind') syncCaseKind()
           if(key==='supplyType'){syncSituationFields();renderMeasureFields();updateCareFields()}
-          if(key==='rxPresent') syncRxPresence()
+          if(key==='rxPresent'||key==='rxFollowOn') syncRxPresence()
           if(['patientFirstName','patientLastName','patientBirthDate','insuredNo','side'].includes(key) && event?.type==='change') updateCareFields()
           showWizardError('');updateWizardStatus()
         }
@@ -5078,6 +5079,18 @@ import { versorgungsziele } from './versorgungsziele.js'
       const no=present==='Nein'
       $('rxYesPanel')?.classList.toggle('hidden',!yes)
       $('rxNoPanel')?.classList.toggle('hidden',!no)
+      const repairFollowApplicable=no && isRepairCase() && $('carePg')?.value==='24'
+      $('rxRepairFollowPanel')?.classList.toggle('hidden',!repairFollowApplicable)
+      if(!repairFollowApplicable){
+        values.rxFollowOn=false;values.rxFollowFrom=''
+      }
+      if($('rxFollowOn')) $('rxFollowOn').checked=repairFollowApplicable&&!!values.rxFollowOn
+      const followSourceVisible=repairFollowApplicable&&!!values.rxFollowOn
+      $('rxRepairFollowFrom')?.classList.toggle('hidden',!followSourceVisible)
+      if(!followSourceVisible)values.rxFollowFrom=''
+      const followSource=$('rxRepairFollowFrom')?.querySelector('input')
+      if(followSource)followSource.value=followSourceVisible?String(values.rxFollowFrom||''):''
+
       if($('rxNeededHint')) $('rxNeededHint').textContent=isRepairCase()
         ?'Bei Reparaturen ist dieser Text optional, wenn keine Verordnung vorliegt.'
         :'Pflichtangabe, solange keine Verordnung vorhanden ist.'
