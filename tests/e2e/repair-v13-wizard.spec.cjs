@@ -28,7 +28,8 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
         ampLevel: 'Unterschenkel', uexWizardSchema: '2026-10-17',
         rxPresent: 'Nein', assignedTechnician: 'Technik Test',
         repairSicHimiId: 'SIC-TEST-'+(i+1),
-        repairDate: i===0 ? '2026-10-14' : '2026-10-19'
+        repairDate: i===0 ? '2026-10-14' : '2026-10-19',
+        ...(i===0 ? {repairComplaint:'Synthetischer Altbefund',repairWork:'Alte Reparatur'} : {})
       }
     }))
     localStorage.setItem('va:e2e:mock-care-cases',JSON.stringify(records))
@@ -43,6 +44,9 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await expect(page.locator('#repairV13Mount')).toBeVisible()
   await expect(page.locator('#repairStepContent .repair-protocol')).toBeHidden()
   await expect(page.locator('#repairV13SecurePhotos')).toBeVisible()
+  await expect(page.locator('#repairV13LegacySummary')).toBeVisible()
+  await page.locator('#repairV13LegacySummary summary').click()
+  await expect(page.locator('#repairV13LegacySummaryBody')).toContainText('Synthetischer Altbefund')
   const frame = page.frameLocator('#repairV13Frame')
   await expect(frame.locator('#baseStatus')).toHaveText('verbunden')
   await expect(frame.locator('#f_Datum')).toHaveValue('14.10.2026')
