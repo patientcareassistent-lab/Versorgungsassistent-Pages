@@ -5524,7 +5524,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(repairV13SupplyId!==id){
         repairV13Token=crypto.randomUUID();repairV13SupplyId=id;repairV13Ready=false;
         frame.dataset.ready='0';
-        frame.src='./tools/reparatur-uex/index.html?v=13-passteile-foto-20261019';
+        frame.src='./tools/reparatur-uex/index.html?v=13-finish-gate-20261019';
       }
       renderRepairV13LegacySummary();
       const ready=repairV13ReadyForCase();
