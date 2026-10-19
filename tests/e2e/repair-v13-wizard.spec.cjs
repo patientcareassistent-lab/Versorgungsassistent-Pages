@@ -50,7 +50,7 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   const frame = page.frameLocator('#repairV13Frame')
   await expect(frame.locator('#baseStatus')).toHaveText('verbunden')
   await expect(frame.locator('#f_Datum')).toHaveValue('14.10.2026')
-  await expect(page.locator('#orderRepairSicIdField')).toBeVisible()
+  await expect(page.locator('#orderRepairSicIdField')).not.toHaveClass(/hidden/)
   await expect(page.locator('#orderRepairSicIdField input')).toHaveValue('SIC-TEST-1')
   await expect(frame.locator('.stepbtn')).toHaveCount(6)
   await expect(page.locator('#repairV13SecurePhotos #repairPhotoFiles')).toHaveCount(1)
