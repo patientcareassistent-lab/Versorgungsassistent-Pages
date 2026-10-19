@@ -10,25 +10,12 @@ async function openSignedInApp(page) {
 
 test('login surface and strict CSP render without inline styles', async ({ page }) => {
   const cspErrors = []
-  const runtimeErrors = []
-  page.on('pageerror', err => runtimeErrors.push(String(err.message || err)))
-  page.on('console', msg => {if(msg.type()==='error')runtimeErrors.push(msg.text())})
   page.on('console', msg => {
     const text = msg.text()
     if (/content security policy|refused to (apply|execute|load)/i.test(text)) cspErrors.push(text)
   })
 
   await page.goto('/index.html')
-  await page.waitForTimeout(1000)
-  const snapshot=await page.evaluate(()=>({
-    authClass:document.getElementById('auth')?.className,
-    shellClass:document.getElementById('app')?.className,
-    loaderClass:document.getElementById('loading')?.className,
-    title:document.title,
-    visibleText:(document.body?.innerText||'').slice(0,500),
-    state:document.readyState
-  }))
-  console.log('AUTH-DIAGNOSTIC',JSON.stringify({snapshot,runtimeErrors}))
   await expect(page.getByRole('heading', { name: 'Anmelden' })).toBeVisible()
   await expect(page.locator('#app')).toBeHidden()
 
