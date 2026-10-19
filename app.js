@@ -4230,9 +4230,16 @@ import { versorgungsziele } from './versorgungsziele.js'
     function updateUexNextVisibility(){
       const next=$('wizardNext')
       if(!next) return
-      // Only the explicit "Fertig" action inside the configuration unlocks
-      // navigation to Versorgungplanung, never partial/unsaved input.
-      next.classList.toggle('hidden',wizardIndex===4&&stepApplicable(4)&&!uexConfigurationCompleted())
+      // The wizard's outer "Weiter" is gated by the explicit completion
+      // signal from the embedded technical modules. Merely visiting a step or
+      // entering partial data does not release navigation.
+      const configPending=wizardIndex===4&&stepApplicable(4)&&!uexConfigurationCompleted()
+      const repairPending=wizardIndex===2&&isRepairCase()&&(
+        isRepairV13Case()
+          ? !(repairV13ReadyForCase()&&values.repairUexV13?.completed===true)
+          : !(values.repairCompleted==='Ja'&&validateStep(2).ok)
+      )
+      next.classList.toggle('hidden',configPending||repairPending)
     }
     function uexConfigurationContext(){
       return {versorgungshoehe:'Unterschenkel',seite:values.side||'',phase:supplyType(),
