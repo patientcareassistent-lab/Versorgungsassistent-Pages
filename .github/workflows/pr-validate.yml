@@ -81,6 +81,7 @@ jobs:
           npx playwright test --retries=0 --max-failures=1 \
             tests/e2e/auth.spec.cjs \
             tests/e2e/repair-v13.spec.cjs \
+            tests/e2e/repair-v13-wizard.spec.cjs \
             tests/e2e/workflow.spec.cjs \
             tests/e2e/live-security.spec.cjs \
             tests/e2e/ocr.spec.cjs \
