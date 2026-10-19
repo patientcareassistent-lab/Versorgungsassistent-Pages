@@ -79,6 +79,16 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   })).toBe(true)
   await expect(frame.locator('#vaRepairFinish')).toContainText('abgeschlossen')
   await expect(page.locator('#wizardNext')).toBeVisible()
+  // A stored "completed" flag cannot reveal Weiter if the protocol itself is hidden.
+  // The visibility guard responds immediately when the protocol reappears.
+  await page.locator('#repairV13Mount').evaluate(el=>el.classList.add('hidden'))
+  await expect(page.locator('#wizardNext')).toBeHidden()
+  await page.locator('#repairV13Mount').evaluate(el=>el.classList.remove('hidden'))
+  await expect(page.locator('#wizardNext')).toBeVisible()
+  await page.locator('#repairStepContent').evaluate(el=>el.classList.add('hidden'))
+  await expect(page.locator('#wizardNext')).toBeHidden()
+  await page.locator('#repairStepContent').evaluate(el=>el.classList.remove('hidden'))
+  await expect(page.locator('#wizardNext')).toBeVisible()
   // The completed button is aligned with the right edge of the summary card.
   const buttonLayout=await frame.locator('#vaRepairFinish').evaluate(button=>{
     const row=button.closest('.va-repair-finish-row')
@@ -132,6 +142,9 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
 
   await page.reload()
   await page.locator('#supplyOverviewBody '+first).click()
+  // Restored completion only becomes actionable when the iframe has loaded
+  // and the actual repair document is visible again.
+  await expect(page.locator('#repairV13Mount')).toBeVisible()
   await expect(page.locator('#wizardNext')).toBeVisible()
   const reopened = page.frameLocator('#repairV13Frame')
   await expect(reopened.locator('#baseStatus')).toHaveText('verbunden')
