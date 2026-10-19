@@ -322,7 +322,7 @@ function embeddedPhotoSubgroup(kind,title,max,caption){
 }
 function renderEmbeddedPhotoGroup(){
  return `<div class="group" id="vaPhotoPanel"><h3>Fotodokumentation</h3>
-  <p class="smallhint">Bilder werden im Versorgungsassistenten verschlüsselt übertragen, privat und vorgangsbezogen gespeichert. Kamera und Datei-Upload sind hier im Schritt „Passteile“ verfügbar.</p>
+  <p class="smallhint">Bilder werden über den Versorgungsassistenten privat und vorgangsbezogen gespeichert. Kamera und Datei-Upload sind hier im Schritt „Passteile“ verfügbar.</p>
   ${embeddedPhotoSubgroup('label','Bauteil-/Zubehörkleber',10,'Herstelleretiketten, Typenschilder und Artikelnummern.')}
   ${embeddedPhotoSubgroup('prothese','Gesamte Prothese',4,'Gesamtaufnahme und Reparaturzustand.')}
   <p id="vaPhotoNotice" class="va-photo-status" role="status" aria-live="polite">${esc(embeddedPhotoStatus||'Upload und Löschung erfolgen ausschließlich über den Versorgungsassistenten.')}</p>
