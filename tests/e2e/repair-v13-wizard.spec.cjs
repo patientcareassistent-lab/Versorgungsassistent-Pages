@@ -28,7 +28,7 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
         ampLevel: 'Unterschenkel', uexWizardSchema: '2026-10-17',
         rxPresent: 'Nein', assignedTechnician: 'Technik Test',
         repairSicHimiId: 'SIC-TEST-'+(i+1),
-        repairDate: '2026-10-19'
+        repairDate: i===0 ? '2026-10-14' : '2026-10-19'
       }
     }))
     localStorage.setItem('va:e2e:mock-care-cases',JSON.stringify(records))
@@ -45,6 +45,9 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await expect(page.locator('#repairV13SecurePhotos')).toBeVisible()
   const frame = page.frameLocator('#repairV13Frame')
   await expect(frame.locator('#baseStatus')).toHaveText('verbunden')
+  await expect(frame.locator('#f_Datum')).toHaveValue('14.10.2026')
+  await expect(page.locator('#orderRepairSicIdField')).toBeVisible()
+  await expect(page.locator('#orderRepairSicIdField input')).toHaveValue('SIC-TEST-1')
   await expect(frame.locator('.stepbtn')).toHaveCount(6)
   await expect(page.locator('#repairV13SecurePhotos #repairPhotoFiles')).toHaveCount(1)
   await expect(page.locator('#repairV13SecurePhotos #repairLabelFiles')).toHaveCount(1)
@@ -100,6 +103,7 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await page.locator('#supplyOverviewBody '+first).click()
   const reopened = page.frameLocator('#repairV13Frame')
   await expect(reopened.locator('#baseStatus')).toHaveText('verbunden')
+  await expect(reopened.locator('#f_Datum')).toHaveValue('14.10.2026')
   await reopened.locator('.stepbtn').nth(3).click()
   await expect(reopened.locator('input[aria-label="Hersteller-Artikelnummer 1"]')).toHaveValue('TEST-ART-987')
   await reopened.locator('.stepbtn').nth(5).click()
