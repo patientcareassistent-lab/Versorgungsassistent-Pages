@@ -361,3 +361,9 @@
 .repair-v13-banner{padding:12px 14px;border-left:4px solid #20abc2;background:#eff8fa;color:#12285e;margin:14px 0;border-radius:5px}
 .repair-v13-photos{margin-top:16px;display:grid;gap:14px}
 .repair-v13-photos .repair-protocol-card{display:block}
+
+.repair-v13-legacy{border:1px solid #d7e1ed;border-radius:12px;padding:14px 16px;background:#fff;margin-top:16px}
+.repair-v13-legacy summary{font-weight:650;color:#12285e;cursor:pointer}
+.repair-v13-legacy-entry{padding:12px 0;border-bottom:1px solid #e4ebf1;overflow-wrap:anywhere}
+.repair-v13-legacy-entry:last-child{border-bottom:0}
+.repair-v13-legacy-entry p{margin:5px 0 0;white-space:normal}
