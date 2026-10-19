@@ -5486,6 +5486,25 @@ import { versorgungsziele } from './versorgungsziele.js'
       })));
       if(repairV13ReadyForCase())repairV13Post({action:'photos',photos:photos.filter(p=>p.src)});
     }
+    function renderRepairV13LegacySummary(){
+      const pane=$('repairV13LegacySummary'),body=$('repairV13LegacySummaryBody')
+      if(!pane||!body)return
+      const details=[
+        ['Beanstandung / Schaden','repairComplaint'],
+        ['Befund / Fehlerursache','repairFinding'],
+        ['Durchgeführte Arbeiten','repairWork'],
+        ['Ersatzteile / Komponenten','repairParts'],
+        ['Besonderheiten / Abweichungen','repairNotes'],
+        ['Funktionsprüfung','repairFunctionTest'],
+        ['Gebrauchsfähigkeit','repairUsable'],
+        ['Reparatur abgeschlossen','repairCompleted'],
+        ['Ergebnis / weitere Maßnahmen','repairResult']
+      ].filter(([,key])=>String(values[key]??'').trim()!=='')
+      pane.classList.toggle('hidden',!details.length)
+      body.innerHTML=details.map(([label,key])=>
+        '<div class="repair-v13-legacy-entry"><strong>'+escapeHtml(label)+'</strong><p>'+escapeHtml(String(values[key])).replace(/\n/g,'<br>')+'</p></div>'
+      ).join('')
+    }
     function mountRepairV13(){
       const host=$('repairV13Mount'),frame=$('repairV13Frame');
       if(!host||!frame)return;
@@ -5499,6 +5518,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         frame.dataset.ready='0';
         frame.src='./tools/reparatur-uex/index.html?v=13';
       }
+      renderRepairV13LegacySummary();
       const ready=repairV13ReadyForCase();
       host.classList.toggle('hidden',!ready);
       repairV13PhotoPanels(ready);
