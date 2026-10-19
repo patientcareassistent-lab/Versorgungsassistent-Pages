@@ -65,6 +65,37 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   })).toBe(true)
   await expect(frame.locator('#vaRepairFinish')).toContainText('abgeschlossen')
 
+  // Both photos must be stored privately as metadata, not embedded into the care-case JSON.
+  const jpeg = await page.evaluate(() => {
+    const canvas=document.createElement('canvas')
+    canvas.width=40;canvas.height=40
+    const ctx=canvas.getContext('2d')
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,40,40)
+    ctx.fillStyle='#000';ctx.fillRect(10,10,20,20)
+    return canvas.toDataURL('image/jpeg',0.8).split(',')[1]
+  })
+  const photoBuffer=Buffer.from(jpeg,'base64')
+  await page.locator('#repairPhotoFiles').setInputFiles({
+    name:'prothese-test.jpg',mimeType:'image/jpeg',buffer:photoBuffer
+  })
+  await expect.poll(() => page.evaluate(() => {
+    const r=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases') || '[]')
+    return r.find(x=>x.id.endsWith('661'))?.payload?.repairPhotos?.length || 0
+  })).toBe(1)
+  await page.locator('#repairLabelFiles').setInputFiles({
+    name:'bauteiletikett-test.jpg',mimeType:'image/jpeg',buffer:photoBuffer
+  })
+  await expect.poll(() => page.evaluate(() => {
+    const r=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases') || '[]')
+    return r.find(x=>x.id.endsWith('661'))?.payload?.repairLabelPhotos?.length || 0
+  })).toBe(1)
+  await expect.poll(() => page.evaluate(() => {
+    const r=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases') || '[]')
+    const a=r.find(x=>x.id.endsWith('661'))?.payload
+    if(!a || !a.repairPhotos?.[0]?.path || !a.repairLabelPhotos?.[0]?.path)return false
+    return !JSON.stringify(a.repairUexV13||{}).includes('data:image')
+  })).toBe(true)
+
   await page.reload()
   await page.locator('#supplyOverviewBody '+first).click()
   const reopened = page.frameLocator('#repairV13Frame')
@@ -76,8 +107,10 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
 
   // Check original two pages and article labels in the printed overlay.
   await reopened.getByRole('button',{name:/Originalbogen als PDF speichern/}).click()
-  await expect(reopened.locator('#printArea .printpage')).toHaveCount(2)
+  await expect(reopened.locator('#printArea .printpage')).toHaveCount(3)
   await expect(reopened.locator('#printArea')).toContainText('TEST-ART-987')
+  await expect(reopened.locator('#printArea img[alt="Bauteilkleber"]')).toHaveCount(1)
+  await expect(reopened.locator('#printArea .annex img')).toHaveCount(1)
 
   await page.reload()
   await page.locator('#supplyOverviewBody '+second).click()
