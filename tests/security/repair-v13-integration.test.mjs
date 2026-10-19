@@ -27,6 +27,7 @@ test('PG24 Reparaturtool V13: release asset, data bridge and private sandbox', (
   const app = readFileSync('app.js', 'utf8');
   assert.match(app, /isRepairCase\(\).*carePg/);
   assert.match(app, /values\.repairUexV13/);
+  assert.doesNotMatch(app, /reparatur-uex\/index\.html\?v=13['\"]/, 'Unversioned iframe URL would show stale Passteile photos from cache');
   assert.match(app, /handleRepairLabelPhotos\(files\)/, 'Labels must persist in authenticated private storage');
   assert.match(app, /handleRepairPhotos\(files\)/, 'Prosthesis photos must persist in authenticated private storage');
   assert.match(app, /newHost\.classList\.add\('hidden'\)/, 'Headless photo controls may not be duplicated below embedded tool');
