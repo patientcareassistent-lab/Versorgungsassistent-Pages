@@ -245,6 +245,11 @@
                           <label class="order-field order-field-aid"><span class="order-field-title">Hilfsmittel / Versorgungsbereich <span class="order-required" aria-label="Pflichtfeld">*</span></span>
                             <select id="careHimi"><option value="">Bitte zuerst PG wählen</option></select>
                           </label>
+                          <label class="order-field order-field-case hidden" id="orderRepairSicIdField">
+                            <span class="order-field-title">Hilfsmittel-ID aus SIC <span class="order-required" aria-label="Pflichtfeld">*</span></span>
+                            <input data-case-field="repairSicHimiId" autocomplete="off" maxlength="100" placeholder="SIC-Hilfsmittel-ID" />
+                            <small>Identifikation der vorhandenen Prothese aus SIC. Nicht die SIC-Vorgangsnummer oder die SIC-Musternummer zur Kalkulation.</small>
+                          </label>
                         </div>
                         <div class="order-help"><span>ℹ</span><span><strong>Reihenfolge:</strong> zuerst Kostenträger und Produktgruppe wählen, danach wird der passende Hilfsmittel-/Versorgungsbereich eingegrenzt.</span></div>
                       </div>
