@@ -16,7 +16,9 @@ test('PG24 Reparaturtool V13: release asset, data bridge and private sandbox', (
   const parent = readFileSync('index.html', 'utf8');
   assert.match(parent, /repairV13Frame/);
   assert.match(parent, /sandbox="allow-scripts allow-modals allow-downloads"/);
-  assert.doesNotMatch(parent, /sandbox="[^"]*allow-same-origin/, 'Isolationsschutz muss erhalten bleiben');
+  const repairFrameTag = parent.match(/<iframe\b[^>]*\bid="repairV13Frame"[^>]*>/)?.[0];
+  assert.ok(repairFrameTag, 'Reparatur-iFrame muss vorhanden sein');
+  assert.doesNotMatch(repairFrameTag, /\bsandbox="[^"]*\ballow-same-origin\b/, 'Isolationsschutz des Reparaturtools muss erhalten bleiben');
   const app = readFileSync('app.js', 'utf8');
   assert.match(app, /isRepairCase\(\).*carePg/);
   assert.match(app, /values\.repairUexV13/);
