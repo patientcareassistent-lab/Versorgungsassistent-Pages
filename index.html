@@ -327,6 +327,12 @@
                       <textarea id="rxNeededText" data-case-field="rxNeededText" rows="6" placeholder="Benötigten Rezepttext vollständig erfassen."></textarea>
                       <small id="rxNeededHint" class="muted">Pflichtangabe, solange keine Verordnung vorhanden ist.</small>
                     </label>
+                    <div id="rxRepairFollowPanel" class="hidden mt-14">
+                      <label class="case-kind-option"><input type="checkbox" data-case-field="rxFollowOn" id="rxFollowOn"><span><b>Rezept folgt</b><small>Nur markieren, wenn eine Verordnung tatsächlich nachgereicht werden soll.</small></span></label>
+                      <label id="rxRepairFollowFrom" class="hidden mt-12">Verordner / Rezept folgt von <span class="order-optional">optional</span>
+                        <input data-case-field="rxFollowFrom" autocomplete="off" maxlength="120" placeholder="Verordnende Praxis / Stelle" />
+                      </label>
+                    </div>
                   </div>
                 </div></section>
 
