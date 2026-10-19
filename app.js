@@ -5533,7 +5533,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         }
       }
     }
-    window.addEventListener('message',event=>{
+    window.addEventListener('message',async event=>{
       const frame=$('repairV13Frame'),d=event.data;
       if(!frame||event.source!==frame.contentWindow||event.origin!=='null'||!d
         ||d.type!=='VA_REPAIR_V13'||!isRepairV13Case())return;
