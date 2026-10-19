@@ -43,7 +43,7 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await expect(page.locator('#careView')).toBeVisible()
   await expect(page.locator('#repairV13Mount')).toBeVisible()
   await expect(page.locator('#repairStepContent .repair-protocol')).toBeHidden()
-  await expect(page.locator('#repairV13SecurePhotos')).toBeVisible()
+  await expect(page.locator('#repairV13SecurePhotos')).toBeHidden() // Storage controls remain headless in the parent.
   await expect(page.locator('#repairV13LegacySummary')).toBeVisible()
   await page.locator('#repairV13LegacySummary summary').click()
   await expect(page.locator('#repairV13LegacySummaryBody')).toContainText('Synthetischer Altbefund')
@@ -57,6 +57,11 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await expect(page.locator('#repairV13SecurePhotos #repairLabelFiles')).toHaveCount(1)
 
   await frame.locator('.stepbtn').nth(3).click()
+  await expect(frame.locator('#vaPhotoPanel')).toBeVisible()
+  await expect(frame.locator('#va-label-camera')).toHaveCount(1)
+  await expect(frame.locator('#va-label-files')).toHaveCount(1)
+  await expect(frame.locator('#va-prothese-camera')).toHaveCount(1)
+  await expect(frame.locator('#va-prothese-files')).toHaveCount(1)
   await frame.getByRole('button', { name: '+ Passteil / Zubehör' }).click()
   await frame.locator('input[aria-label="Passteil 1"]').fill('Liner, Test')
   await frame.locator('input[aria-label="Hersteller-Artikelnummer 1"]').fill('TEST-ART-987')
@@ -82,20 +87,31 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
     return canvas.toDataURL('image/jpeg',0.8).split(',')[1]
   })
   const photoBuffer=Buffer.from(jpeg,'base64')
-  await page.locator('#repairPhotoFiles').setInputFiles({
+  await frame.locator('.stepbtn').nth(3).click()
+  await frame.locator('#va-prothese-files').setInputFiles({
     name:'prothese-test.jpg',mimeType:'image/jpeg',buffer:photoBuffer
   })
   await expect.poll(() => page.evaluate(() => {
     const r=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases') || '[]')
     return r.find(x=>x.id.endsWith('661'))?.payload?.repairPhotos?.length || 0
   })).toBe(1)
-  await page.locator('#repairLabelFiles').setInputFiles({
+  await frame.locator('#va-label-files').setInputFiles([{
     name:'bauteiletikett-test.jpg',mimeType:'image/jpeg',buffer:photoBuffer
-  })
+  },{
+    name:'bauteiletikett-2-test.jpg',mimeType:'image/jpeg',buffer:photoBuffer
+  }])
   await expect.poll(() => page.evaluate(() => {
     const r=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases') || '[]')
     return r.find(x=>x.id.endsWith('661'))?.payload?.repairLabelPhotos?.length || 0
+  })).toBe(2)
+  await expect(frame.locator('[data-photo-kind="label"] .va-photo-card')).toHaveCount(2)
+  await expect(frame.locator('[data-photo-kind="prothese"] .va-photo-card')).toHaveCount(1)
+  await frame.locator('[data-photo-kind="label"] .va-photo-remove').first().click()
+  await expect.poll(() => page.evaluate(() => {
+    const rows=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
+    return rows.find(row=>row.id.endsWith('661'))?.payload?.repairLabelPhotos?.length||0
   })).toBe(1)
+  await expect(frame.locator('[data-photo-kind="label"] .va-photo-card')).toHaveCount(1)
   await expect.poll(() => page.evaluate(() => {
     const r=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases') || '[]')
     const a=r.find(x=>x.id.endsWith('661'))?.payload
@@ -110,6 +126,8 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await expect(reopened.locator('#f_Datum')).toHaveValue('14.10.2026')
   await reopened.locator('.stepbtn').nth(3).click()
   await expect(reopened.locator('input[aria-label="Hersteller-Artikelnummer 1"]')).toHaveValue('TEST-ART-987')
+  await expect(reopened.locator('[data-photo-kind="label"] .va-photo-card')).toHaveCount(1)
+  await expect(reopened.locator('[data-photo-kind="prothese"] .va-photo-card')).toHaveCount(1)
   await reopened.locator('.stepbtn').nth(5).click()
   await expect(reopened.locator('#vaRepairFinish')).toContainText('abgeschlossen')
 
@@ -126,5 +144,7 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await expect(other.locator('#baseStatus')).toHaveText('verbunden')
   await other.locator('.stepbtn').nth(3).click()
   await expect(other.locator('input[aria-label^="Hersteller-Artikelnummer"]')).toHaveCount(0)
+  await expect(other.locator('[data-photo-kind="label"] .va-photo-card')).toHaveCount(0)
+  await expect(other.locator('[data-photo-kind="prothese"] .va-photo-card')).toHaveCount(0)
   await expect(page.locator('#repairStepContent .repair-protocol')).toBeHidden()
 })
