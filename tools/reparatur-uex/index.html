@@ -6,6 +6,8 @@
 body.va-embedded header,body.va-embedded footer,body.va-embedded .stamp{display:none!important}body.va-embedded main{max-width:100%;padding:8px 12px 28px}body.va-embedded .intro{display:none!important}body.va-embedded .layout{grid-template-columns:minmax(0,1fr) 240px}body.va-embedded .field input[type=file]{display:none!important}body.va-embedded .field input[type=file]::before{content:""}
 /* V13 embedded: photo controls remain directly with Passteile, while the parent persists originals privately. */
 .va-photo-type{min-width:0;border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:12px;background:#fbfdff}
+.va-repair-finish-row{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:16px;width:100%}
+.va-repair-finish-row #vaRepairFinish{flex:0 1 auto;min-height:43px}
 .va-photo-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .va-photo-head h4{margin:0;color:var(--navy);font-size:14px}
 .va-photo-head small{color:var(--muted);font-size:12px}
@@ -433,7 +435,11 @@ if(window.__VA_EMBEDDED__){
       if((data.flags.verengen||data.flags.weiten)&&percentDiff()>5){alert('Umfangsänderung über 5 %: Maßnahme bitte prüfen.');setStep(2);return}
       if(!Object.values(data.flags).some(Boolean)&&!data.parts.length&&!data.rows.length){alert('Mindestens eine Reparaturposition, ein Passteil oder ein Arbeitsschritt erforderlich.');return}
       completedFingerprint=fingerprint();lastFingerprint='';update();render();
-    });host.appendChild(btn)
+    });
+    const finishRow=document.createElement('div');
+    finishRow.className='va-repair-finish-row';
+    finishRow.appendChild(btn);
+    host.appendChild(finishRow)
    }
   }
   if(readOnly){document.querySelectorAll('#stepBody input,#stepBody select,#stepBody textarea,#stepBody button').forEach(el=>{if(!el.classList.contains('previewbtn')&&!/PDF|Seite 1|Seite 2/.test(el.textContent||''))el.disabled=true});}
