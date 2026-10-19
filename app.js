@@ -5469,6 +5469,18 @@ import { versorgungsziele } from './versorgungsziele.js'
     let repairV13Token='',repairV13SupplyId='',repairV13SaveTimer=0,repairV13Ready=false,repairV13Observer=null,repairV13PhotoBusy=false;
     const isRepairV13Case=()=>isRepairCase()&&String($('carePg')?.value||'')==='24';
     const repairV13ReadyForCase=()=>isRepairV13Case()&&repairV13Ready&&repairV13SupplyId===String(activeSupplyId||'');
+    // Recheck navigation when the mounted protocol is shown/hidden, including
+    // delayed iframe initialization and responsive wizard rerenders.
+    const repairProtocolVisibilityObserver=new MutationObserver(()=>{
+      if(wizardIndex===2&&isRepairCase()) updateUexNextVisibility()
+    })
+    for(const node of [
+      document.querySelector('.wizard-panel[data-panel="2"]'),
+      $('repairStepContent'),$('repairV13Mount'),
+      $('repairStepContent')?.querySelector('.repair-protocol')
+    ]){
+      if(node) repairProtocolVisibilityObserver.observe(node,{attributes:true,attributeFilter:['class','style']})
+    }
     function repairV13Context(){
       const side=String(values.side||'').toLowerCase();
       const level=String(values.ampLevel||'').toLowerCase();
