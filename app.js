@@ -5442,7 +5442,7 @@ import { versorgungsziele } from './versorgungsziele.js'
 
 
     // VA_REPAIR_V13: PG24 repair module. Legacy form remains available until handshake succeeds.
-    let repairV13Token='',repairV13SupplyId='',repairV13SaveTimer=0,repairV13Ready=false,repairV13Observer=null;
+    let repairV13Token='',repairV13SupplyId='',repairV13SaveTimer=0,repairV13Ready=false,repairV13Observer=null,repairV13PhotoBusy=false;
     const isRepairV13Case=()=>isRepairCase()&&String($('carePg')?.value||'')==='24';
     const repairV13ReadyForCase=()=>isRepairV13Case()&&repairV13Ready&&repairV13SupplyId===String(activeSupplyId||'');
     function repairV13Context(){
@@ -5473,7 +5473,8 @@ import { versorgungsziele } from './versorgungsziele.js'
         if(panel)(useModule?newHost:old).appendChild(panel);
       }
       old.classList.toggle('hidden',useModule);
-      newHost.classList.toggle('hidden',!useModule);
+      // These are headless storage controls; the visible camera, gallery and buttons live within V13 Passteile.
+      newHost.classList.add('hidden');
     }
     async function repairV13SyncPhotos(){
       if(!repairV13ReadyForCase())return;
@@ -5482,9 +5483,9 @@ import { versorgungsziele } from './versorgungsziele.js'
         ...repairPhotos().map(p=>({p,kind:'prothese'}))
       ];
       const photos=await Promise.all(source.map(async ({p,kind})=>({
-        kind,name:String(p.name||''),src:await repairPhotoDisplayUrl(p).catch(()=>'')
+        id:String(p.id||''),kind,name:String(p.name||''),src:await repairPhotoDisplayUrl(p).catch(()=>'')
       })));
-      if(repairV13ReadyForCase())repairV13Post({action:'photos',photos:photos.filter(p=>p.src)});
+      if(repairV13ReadyForCase())repairV13Post({action:'photos',photos});
     }
     function renderRepairV13LegacySummary(){
       const pane=$('repairV13LegacySummary'),body=$('repairV13LegacySummaryBody')
@@ -5532,7 +5533,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         }
       }
     }
-    window.addEventListener('message',event=>{
+    window.addEventListener('message',async event=>{
       const frame=$('repairV13Frame'),d=event.data;
       if(!frame||event.source!==frame.contentWindow||event.origin!=='null'||!d
         ||d.type!=='VA_REPAIR_V13'||!isRepairV13Case())return;
@@ -5554,6 +5555,55 @@ import { versorgungsziele } from './versorgungsziele.js'
       }
       if(d.action==='error'){
         showWizardError('Das Reparaturtool konnte nicht vollständig geladen werden.',[String(d.message||'')]);
+        return;
+      }
+
+      // Files are structured-cloned inside the browser. Only the authenticated
+      // parent can compress them and write to its existing protected Storage.
+      if(d.action==='photoUpload'){
+        if(activeSupplyIsReadOnly()||!supplyHasEditableContext()||repairV13PhotoBusy)return;
+        const kind=d.kind;
+        const files=d.files;
+        const valid=kind==='label'||kind==='prothese';
+        if(!valid||!Array.isArray(files)||files.length<1||files.length>10
+          ||files.some(file=>!(file instanceof File)||!String(file.type||'').startsWith('image/')
+               ||Number(file.size)>REPAIR_SOURCE_MAX_BYTES)){
+          repairV13Post({action:'photoStatus',message:'Ungültige Fotoauswahl oder Datei zu groß (maximal 20 MB je Bild).'});
+          return;
+        }
+        const expectedSupplyId=String(activeSupplyId);
+        const before=(kind==='label'?repairLabelPhotos():repairPhotos()).length;
+        repairV13PhotoBusy=true;
+        repairV13Post({action:'photoStatus',message:'Fotos werden geschützt gespeichert …'});
+        try{
+          if(kind==='label') await handleRepairLabelPhotos(files);
+          else await handleRepairPhotos(files);
+          if(String(activeSupplyId)!==expectedSupplyId)return;
+          const after=(kind==='label'?repairLabelPhotos():repairPhotos()).length;
+          repairV13Post({action:'photoStatus',message:after>before
+            ?'Fotos sicher im Versorgungsvorgang gespeichert.'
+            :'Foto konnte nicht gespeichert werden. Bitte Hinweis im Assistenten prüfen.'});
+          await repairV13SyncPhotos();
+        }catch(error){
+          showWizardError('Foto konnte nicht sicher gespeichert werden.',[String(error?.message||error)]);
+          if(String(activeSupplyId)===expectedSupplyId)
+            repairV13Post({action:'photoStatus',message:'Foto konnte nicht sicher gespeichert werden.'});
+        }finally{repairV13PhotoBusy=false}
+        return;
+      }
+      if(d.action==='photoRemove'){
+        if(activeSupplyIsReadOnly()||!supplyHasEditableContext()||repairV13PhotoBusy)return;
+        const kind=d.kind;
+        const photos=kind==='label'?repairLabelPhotos():kind==='prothese'?repairPhotos():null;
+        const index=photos?.findIndex(p=>p.id&&p.id===d.id)??-1;
+        if(index<0)return;
+        const attr=kind==='label'?'data-repair-label-remove':'data-repair-photo-remove';
+        const gallery=$(kind==='label'?'repairLabelGallery':'repairPhotoGallery');
+        const button=gallery?.querySelector('['+attr+'="'+index+'"]');
+        if(button){
+          button.click(); // Reuse original safe DB-first delete with storage rollback.
+          repairV13Post({action:'photoStatus',message:'Foto wird aus dem Versorgungsvorgang entfernt …'});
+        }
         return;
       }
       if(d.action==='change'&&d.state&&typeof d.state==='object'&&!Array.isArray(d.state)){

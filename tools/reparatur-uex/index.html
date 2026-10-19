@@ -3,7 +3,22 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob: https://pypljdyqjpdkismbwuag.supabase.co; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'; font-src 'none';">
 <title>Reparaturtool Prothetik uEx · Offline V13</title>
 <style>
-body.va-embedded header,body.va-embedded footer,body.va-embedded .stamp{display:none!important}body.va-embedded main{max-width:100%;padding:8px 12px 28px}body.va-embedded .intro{display:none!important}body.va-embedded .layout{grid-template-columns:minmax(0,1fr) 240px}body.va-embedded .field input[type=file]{display:none!important}body.va-embedded .field input[type=file]::before{content:""}@media(max-width:850px){body.va-embedded .layout{grid-template-columns:1fr}}
+body.va-embedded header,body.va-embedded footer,body.va-embedded .stamp{display:none!important}body.va-embedded main{max-width:100%;padding:8px 12px 28px}body.va-embedded .intro{display:none!important}body.va-embedded .layout{grid-template-columns:minmax(0,1fr) 240px}body.va-embedded .field input[type=file]{display:none!important}body.va-embedded .field input[type=file]::before{content:""}
+/* V13 embedded: photo controls remain directly with Passteile, while the parent persists originals privately. */
+.va-photo-type{min-width:0;border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:12px;background:#fbfdff}
+.va-photo-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.va-photo-head h4{margin:0;color:var(--navy);font-size:14px}
+.va-photo-head small{color:var(--muted);font-size:12px}
+.va-photo-actions{display:flex;gap:9px;flex-wrap:wrap;margin:12px 0}
+.va-photo-actions .va-photo-action{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:9px 13px;white-space:nowrap;cursor:pointer}
+.va-photo-actions input[type=file]{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;opacity:0}
+.va-photo-status{margin:10px 0;color:var(--muted);font-size:13px}
+.va-photo-card{position:relative;min-width:0;overflow:hidden}
+.va-photo-card>img{display:block;width:100%;height:118px;object-fit:contain;background:#fff}
+.va-photo-card .va-photo-name{display:block;overflow-wrap:anywhere;color:var(--muted);font-size:12px;padding:6px 2px 0}
+.va-photo-card .va-photo-remove{position:absolute;top:7px;right:7px;border:1px solid #b63434;border-radius:7px;background:#fff;color:#a32323;font-size:16px;min-width:30px;min-height:30px}
+@media(max-width:560px){.va-photo-actions{display:grid;grid-template-columns:1fr 1fr}.va-photo-actions .va-photo-action{white-space:normal;text-align:center}}
+@media(max-width:850px){body.va-embedded .layout{grid-template-columns:1fr}}
 
 :root{--navy:#12285e;--blue:#17457d;--cyan:#20abc2;--paper:#f4f7fb;--ink:#182a45;--muted:#57677c;--line:#d7e1ed;--warn:#a24d11;--shadow:0 12px 28px rgba(16,34,67,.07)}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.5}
@@ -261,11 +276,63 @@ function selectPartPosition(i,number){
 }
 function togglePartHint(i){if(data.parts[i]){data.parts[i].hintOpen=!data.parts[i].hintOpen;render()}}
 function refreshPartHint(i){const box=qs('#partHint_'+i);if(box)box.innerHTML=partPositionInfo(i)}
+
+let embeddedPhotoDispatcher=null;
+let embeddedPhotoStatus='';
+function embeddedPhotoStatusText(message){
+ embeddedPhotoStatus=String(message||'');
+ const target=qs('#vaPhotoNotice');
+ if(target)target.textContent=embeddedPhotoStatus;
+}
+function sendEmbeddedPhotoFiles(input,kind){
+ const files=Array.from(input.files||[]);
+ input.value='';
+ if(!window.__VA_EMBEDDED__||typeof embeddedPhotoDispatcher!=='function'||!files.length)return;
+ if(!['label','prothese'].includes(kind))return;
+ const selected=files.filter(f=>f instanceof File&&String(f.type||'').startsWith('image/'));
+ if(selected.length!==files.length){embeddedPhotoStatusText('Nur Bilddateien können gespeichert werden.');return}
+ if(selected.some(f=>f.size>20*1024*1024)){embeddedPhotoStatusText('Ein Foto ist größer als 20 MB. Bitte ein kleineres Bild wählen.');return}
+ embeddedPhotoStatusText('Fotos werden im geschützten Versorgungsspeicher gespeichert …');
+ embeddedPhotoDispatcher('photoUpload',{kind,files:selected.slice(0,10)});
+}
+function removeEmbeddedPhoto(kind,id){
+ if(!window.__VA_EMBEDDED__||typeof embeddedPhotoDispatcher!=='function')return;
+ if(!['label','prothese'].includes(kind)||!/^[-_a-zA-Z0-9]{1,120}$/.test(id))return;
+ embeddedPhotoStatusText('Foto wird aus der Versorgung entfernt …');
+ embeddedPhotoDispatcher('photoRemove',{kind,id});
+}
+function embeddedPhotoSubgroup(kind,title,max,caption){
+ const list=data.photos.filter(p=>p.kind===kind);
+ const key=kind==='label'?'label':'prothese';
+ return `<section class="va-photo-type" data-photo-kind="${key}">
+ <div class="va-photo-head"><h4>${esc(title)}</h4><small>${list.length} von ${max} Fotos</small></div>
+ <p class="smallhint">${esc(caption)}</p>
+ <div class="va-photo-actions">
+  <label class="btn secondary va-photo-action" for="va-${key}-camera">Foto aufnehmen</label>
+  <input id="va-${key}-camera" type="file" accept="image/*" capture="environment" onchange="sendEmbeddedPhotoFiles(this,'${key}')">
+  <label class="btn secondary va-photo-action" for="va-${key}-files">Fotos auswählen</label>
+  <input id="va-${key}-files" type="file" accept="image/*" multiple onchange="sendEmbeddedPhotoFiles(this,'${key}')">
+ </div>
+ <div class="photo-grid">${list.map((p,i)=>`<article class="photocard va-photo-card">
+   ${p.src?`<img src="${esc(p.src)}" alt="${esc(title)} Aufnahme ${i+1}">`:'<p class="smallhint">Vorschau nicht verfügbar.</p>'}
+   <span class="va-photo-name" title="${esc(p.name||'')}">${esc(p.name||'Foto')}</span>
+   ${p.id?`<button class="va-photo-remove" type="button" onclick="removeEmbeddedPhoto('${key}','${esc(p.id)}')" aria-label="${esc(title)} Foto ${i+1} löschen" title="Foto löschen">×</button>`:''}
+  </article>`).join('')||'<div class="smallhint">Noch keine Fotos gespeichert.</div>'}</div>
+ </section>`;
+}
+function renderEmbeddedPhotoGroup(){
+ return `<div class="group" id="vaPhotoPanel"><h3>Fotodokumentation</h3>
+  <p class="smallhint">Bilder werden über den Versorgungsassistenten privat und vorgangsbezogen gespeichert. Kamera und Datei-Upload sind hier im Schritt „Passteile“ verfügbar.</p>
+  ${embeddedPhotoSubgroup('label','Bauteil-/Zubehörkleber',10,'Herstelleretiketten, Typenschilder und Artikelnummern.')}
+  ${embeddedPhotoSubgroup('prothese','Gesamte Prothese',4,'Gesamtaufnahme und Reparaturzustand.')}
+  <p id="vaPhotoNotice" class="va-photo-status" role="status" aria-live="polite">${esc(embeddedPhotoStatus||'Upload und Löschung erfolgen ausschließlich über den Versorgungsassistenten.')}</p>
+ </div>`;
+}
 function renderParts(){return `<div class="alert ok">Passteile und Zubehör werden direkt anhand der Artikelbezeichnung und Herstellerartikelnummer erfasst – <strong>ohne vorherige Positionsauswahl</strong>. Die Positionshilfe ist je Passteil optional einblendbar. Ein Klick übernimmt die vorgeschlagene Nummer in das HMV-/GPOS-Feld des betreffenden Passteils; das Feld bleibt editierbar. Die Artikel erscheinen auf Seite 2 bei „Bauteil-/Zubehörkleber“; Gesamtaufnahmen werden als Fotobeilage ausgegeben.</div>
   <div class="section-tools"><button class="btn secondary" onclick="addPart()">+ Passteil / Zubehör</button><span class="counter">Positionshilfe bei Bedarf direkt am Passteil anzeigen</span></div>
   <div class="alert" id="partsMissingAlert" role="alert" ${missingPartArticles().length?'':'hidden'}>${missingPartArticles().length?`Pflichtfeld fehlt: Hersteller-Artikelnummer für Artikel ${missingPartArticles().map(i=>i+1).join(', ')}. Ohne Nummer kein Abschluss/PDF-Export.`:''}</div>
  <div class="tablewrap"><table><thead><tr><th>Passteil / Artikelbeschreibung</th><th>Hersteller-Artikelnummer <span class="part-required-legend" title="Pflichtfeld">*</span></th><th>HMV / GPOS (optional)</th><th>Menge</th><th></th></tr></thead><tbody>${data.parts.map((p,i)=>`<tr><td><input aria-label="Passteil ${i+1}" placeholder="z. B. Silikon-Liner" value="${esc(p.name)}" oninput="partVal(${i},'name',this.value)"><button type="button" class="position-info-toggle" aria-expanded="${!!p.hintOpen}" onclick="togglePartHint(${i})">${p.hintOpen?'▾ Positionshilfe ausblenden':'▸ Positionshilfe (optional)'}</button></td><td class="part-required"><input aria-label="Hersteller-Artikelnummer ${i+1}" required aria-required="true" aria-invalid="${!String(p.article||'').trim()}" placeholder="Hersteller-Art.-Nr. *" value="${esc(p.article)}" oninput="partVal(${i},'article',this.value)">${!String(p.article||'').trim()?'<p class="part-required-note">Pflichtfeld – Hersteller-Art.-Nr. fehlt</p>':''}</td><td><input aria-label="Optionale Hilfsmittelposition ${i+1}" placeholder="bei Bedarf eintragen" value="${esc(p.hmv)}" oninput="partVal(${i},'hmv',this.value)"></td><td><input aria-label="Menge Passteil ${i+1}" type="number" min="1" value="${esc(p.qty)}" oninput="partVal(${i},'qty',this.value)"></td><td><button class="rowbtn" type="button" title="Passteil entfernen" onclick="removePart(${i})">×</button></td></tr>${p.hintOpen?`<tr class="part-hintrow"><td colspan="5"><div id="partHint_${i}">${partPositionInfo(i)}</div></td></tr>`:''}`).join('')}</tbody></table></div>
- <div class="group" ${window.__VA_EMBEDDED__?'style="display:none"':''}><h3>Fotodokumentation (lokal)</h3><p class="smallhint">Smartphone: „Foto aufnehmen“ oder Galerie. Die Bilder werden nur im Arbeitsspeicher gehalten, nicht an einen Server übertragen. Bei großen Bildern kann der PDF-Druck länger dauern.</p><div class="grid"><label class="field">Bauteil-/Zubehörkleber<input type="file" accept="image/*" capture="environment" onchange="addPhoto(this,'label')" multiple></label><label class="field">Gesamte Prothese<input type="file" accept="image/*" capture="environment" onchange="addPhoto(this,'prothese')" multiple></label></div><div class="photo-grid">${data.photos.map((p,i)=>`<div class="photocard"><img src="${p.src}" alt="Aufnahme ${i+1}"><div><small>${p.kind==='label'?'Bauteilkleber':'Gesamtprothese'}</small><button class="rowbtn" onclick="removePhoto(${i})" title="Foto löschen">×</button></div></div>`).join('')}</div></div>`}
+ ${window.__VA_EMBEDDED__?renderEmbeddedPhotoGroup():`<div class="group"><h3>Fotodokumentation (lokal)</h3><p class="smallhint">Smartphone: „Foto aufnehmen“ oder Galerie. Die Bilder werden nur im Arbeitsspeicher gehalten, nicht an einen Server übertragen. Bei großen Bildern kann der PDF-Druck länger dauern.</p><div class="grid"><label class="field">Bauteil-/Zubehörkleber<input type="file" accept="image/*" capture="environment" onchange="addPhoto(this,'label')" multiple></label><label class="field">Gesamte Prothese<input type="file" accept="image/*" capture="environment" onchange="addPhoto(this,'prothese')" multiple></label></div><div class="photo-grid">${data.photos.map((p,i)=>`<div class="photocard"><img src="${p.src}" alt="Aufnahme ${i+1}"><div><small>${p.kind==='label'?'Bauteilkleber':'Gesamtprothese'}</small><button class="rowbtn" onclick="removePhoto(${i})" title="Foto löschen">×</button></div></div>`).join('')}</div></div>`}`}
 function partVal(i,k,v){
  if(!data.parts[i])return;
  data.parts[i][k]=v;
@@ -344,6 +411,7 @@ if(window.__VA_EMBEDDED__){
   try{window.parent.postMessage({type:'VA_REPAIR_V13',action,token:sessionToken,...extra},'*')}
   catch(err){console.error('Reparaturnachricht konnte nicht übermittelt werden',err)}
  };
+ embeddedPhotoDispatcher=(action,payload)=>send(action,payload);
  const update=()=>{
   const snapshot=encodeState(), mark=fingerprint();
   if(mark===lastFingerprint && !restoredComplete)return;
@@ -402,8 +470,11 @@ if(window.__VA_EMBEDDED__){
     render();send('ready',{completed:!!completedFingerprint});
    }catch(e){send('error',{message:String(e.message||e)})}
   }
+  if(event.data.action==='photoStatus'&&initialized&&event.data.token===sessionToken){
+    embeddedPhotoStatusText(event.data.message||'');
+  }
   if(event.data.action==='photos'&&initialized&&event.data.token===sessionToken){
-    data.photos=Array.isArray(event.data.photos)?event.data.photos.filter(p=>p&&typeof p.src==='string').slice(0,14):[];
+    data.photos=Array.isArray(event.data.photos)?event.data.photos.filter(p=>p&&typeof p.src==='string'&&['label','prothese'].includes(p.kind)).slice(0,14):[];
     if(step===3||step===5)render();
   }
  });

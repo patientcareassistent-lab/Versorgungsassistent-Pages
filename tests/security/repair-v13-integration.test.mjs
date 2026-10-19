@@ -13,6 +13,11 @@ test('PG24 Reparaturtool V13: release asset, data bridge and private sandbox', (
   assert.match(html, /Hersteller-Artikelnummer/, 'Pflichtfeld im Reparaturtool fehlt');
   assert.match(html, /connect-src 'none'/, 'Die Sandbox darf keine ausgehenden API-Aufrufe erlauben');
   assert.match(html, /Reparaturdokumentation fertigstellen/, 'Abschlusskontrolle fehlt');
+  assert.match(html, /renderEmbeddedPhotoGroup\(\)/, 'Fotodokumentation in Passteile muss sichtbar sein');
+  assert.match(html, /sendEmbeddedPhotoFiles/, 'Eingebettete Foto-Auswahl muss im Modul vorhanden sein');
+  assert.match(html, /removeEmbeddedPhoto/, 'Eingebettete Foto-Löschfunktion muss vorhanden sein');
+  assert.match(html, /photoUpload/, 'Photo bridge must be present');
+  assert.match(html, /photoRemove/, 'Private photo delete bridge must be present');
   const parent = readFileSync('index.html', 'utf8');
   assert.match(parent, /repairV13Frame/);
   assert.match(parent, /sandbox="allow-scripts allow-modals allow-downloads"/);
@@ -22,6 +27,10 @@ test('PG24 Reparaturtool V13: release asset, data bridge and private sandbox', (
   const app = readFileSync('app.js', 'utf8');
   assert.match(app, /isRepairCase\(\).*carePg/);
   assert.match(app, /values\.repairUexV13/);
+  assert.match(app, /handleRepairLabelPhotos\(files\)/, 'Labels must persist in authenticated private storage');
+  assert.match(app, /handleRepairPhotos\(files\)/, 'Prosthesis photos must persist in authenticated private storage');
+  assert.match(app, /newHost\.classList\.add\('hidden'\)/, 'Headless photo controls may not be duplicated below embedded tool');
+  assert.match(app, /file instanceof File/, 'Photo bridge must reject non-File payloads');
   assert.match(app, /frame\.height=String\(/, 'Resize must use the iframe height attribute, not inline CSS');
   assert.doesNotMatch(app, /frame\.style\./, 'Never bypass strict style-src-attr CSP');
   assert.match(parent, /id="repairV13Frame"[^>]*height="950"/, 'Initial height must be supplied as an HTML attribute');
