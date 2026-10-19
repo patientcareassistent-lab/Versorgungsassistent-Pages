@@ -1,9 +1,7 @@
-# Reparaturtool Prothetik uEx V13
+# Reparaturtool PG24 – Version 13
 
-**Integrationsdatei fehlt derzeit.** Die vollständige, lokal getestete HTML-Datei aus dem Paket `VA_Reparatur_Integration_V13.zip` gehört unter dem Namen `index.html` in diesen Ordner.
+Die vollständige HTML-Datei liegt unter `index.html`. Sie wird von GitHub Pages über `tools/reparatur-uex/index.html` mit ausgeliefert.
 
-Im ZIP lautet ihr Pfad: `VA_Reparatur_Integration_V13/tools/reparatur-uex/index.html`.
+**Zugang:** ausschließlich innerhalb eines authentifizierten Reparaturvorgangs der Produktgruppe 24. Der eingebettete iFrame ist sandboxed ohne `allow-same-origin` und besitzt keine eigene Supabase-Verbindung. Die Web-App übergibt freigegebene Stammdaten, SIC-Hilfsmittel-ID und Rezeptangaben über eine tokengebundene Schnittstelle. Die PDF-Ansicht druckt die Originalseiten und ggf. die Fotobeilage lokal.
 
-Die Elternanwendung kann das Modul erst laden, wenn genau diese Datei vorhanden ist. Der bestehende Reparaturbogen bleibt bis dahin als Fallback sichtbar.
-
-**Sicherheit:** Nicht das allgemeine Offline-V13-HTML hochladen, sondern die für das iframe vorbereitete Integrationsdatei mit der Token-Bridge.
+Vor Produktivfreigabe ist PR #53 vollständig zu testen. Für Bestandsfälle bleiben die bisherigen Reparaturangaben im übergeordneten Assistenten schreibgeschützt einsehbar. Produktivpatientendaten nicht für Tests verwenden.
