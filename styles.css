@@ -357,7 +357,7 @@
 
 /* REPAIR V13 EMBED: styles scoped to dedicated repair path */
 #repairV13Mount{width:100%;min-width:0}
-#repairV13Frame{display:block;width:100%;min-height:600px;height:950px;border:1px solid #d7e1ed;border-radius:12px;background:#f4f7fb}
+#repairV13Frame{display:block;width:100%;min-height:600px;border:1px solid #d7e1ed;border-radius:12px;background:#f4f7fb}
 .repair-v13-banner{padding:12px 14px;border-left:4px solid #20abc2;background:#eff8fa;color:#12285e;margin:14px 0;border-radius:5px}
 .repair-v13-photos{margin-top:16px;display:grid;gap:14px}
 .repair-v13-photos .repair-protocol-card{display:block}
