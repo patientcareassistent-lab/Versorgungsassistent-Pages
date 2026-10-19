@@ -4362,6 +4362,7 @@ import { versorgungsziele } from './versorgungsziele.js'
 
     function syncWizardBranchLabels(){
       const repair=isRepairCase()
+      $('orderRepairSicIdField')?.classList.toggle('hidden',!repair||String($('carePg')?.value||'')!=='24')
       wizardSteps[2].name=repair?'Reparaturprotokoll':'Profilerhebung'
       const step=document.querySelector('.wizard-step[data-step="2"] .step-label')
       if(step) step.textContent=wizardSteps[2].name
@@ -4595,6 +4596,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         missing.push(...missingValues(['patientFirstName','patientLastName','patientBirthDate','supplyType']))
         if(requiresSide()) missing.push(...missingValues(['side']))
         if($('carePg').value==='24') missing.push(...missingValues(['ampLevel']))
+        if(caseKind==='Reparatur' && $('carePg').value==='24') missing.push(...missingValues(['repairSicHimiId']))
       } else if(i===1){
         missing=missingValues(['rxPresent'])
         if(values.rxPresent==='Ja'){
