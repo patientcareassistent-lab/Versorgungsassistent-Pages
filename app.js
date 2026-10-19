@@ -5549,7 +5549,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       if(d.action==='ready'){void repairV13SyncPhotos();return}
       if(d.action==='resize'){
         const h=Number(d.height);
-        if(Number.isFinite(h))frame.style.height=Math.max(500,Math.min(12000,h+20))+'px';
+        if(Number.isFinite(h))frame.height=String(Math.max(600,Math.min(12000,h+20)));
         return;
       }
       if(d.action==='error'){

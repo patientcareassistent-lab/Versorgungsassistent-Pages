@@ -22,6 +22,11 @@ test('PG24 Reparaturtool V13: release asset, data bridge and private sandbox', (
   const app = readFileSync('app.js', 'utf8');
   assert.match(app, /isRepairCase\(\).*carePg/);
   assert.match(app, /values\.repairUexV13/);
+  assert.match(app, /frame\.height=String\(/, 'Resize must use the iframe height attribute, not inline CSS');
+  assert.doesNotMatch(app, /frame\.style\./, 'Never bypass strict style-src-attr CSP');
+  assert.match(parent, /id="repairV13Frame"[^>]*height="950"/, 'Initial height must be supplied as an HTML attribute');
+  const css = readFileSync('styles.css', 'utf8');
+  assert.doesNotMatch(css.match(/#repairV13Frame\{[^}]*\}/)?.[0] || '', /(?:^|[;{])\s*height\s*:/, 'CSS must not override dynamic iframe height attribute');
   const workflow = readFileSync('.github/workflows/pages.yml', 'utf8');
   assert.match(workflow, /cp tools\/reparatur-uex\/index.html dist\/tools\/reparatur-uex\/index.html/);
 });
