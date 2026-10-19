@@ -67,6 +67,9 @@ jobs:
             exit 1
           fi
 
+      - name: Verify complete PG24 Reparaturtool V13 integration
+        run: node --test tests/security/repair-v13-integration.test.mjs
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
@@ -77,6 +80,8 @@ jobs:
           # All tests are still required to pass before the 'validate' check succeeds.
           npx playwright test --retries=0 --max-failures=1 \
             tests/e2e/auth.spec.cjs \
+            tests/e2e/repair-v13.spec.cjs \
+            tests/e2e/repair-v13-wizard.spec.cjs \
             tests/e2e/workflow.spec.cjs \
             tests/e2e/live-security.spec.cjs \
             tests/e2e/ocr.spec.cjs \

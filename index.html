@@ -245,6 +245,11 @@
                           <label class="order-field order-field-aid"><span class="order-field-title">Hilfsmittel / Versorgungsbereich <span class="order-required" aria-label="Pflichtfeld">*</span></span>
                             <select id="careHimi"><option value="">Bitte zuerst PG wählen</option></select>
                           </label>
+                          <label class="order-field order-field-case hidden" id="orderRepairSicIdField">
+                            <span class="order-field-title">Hilfsmittel-ID aus SIC <span class="order-required" aria-label="Pflichtfeld">*</span></span>
+                            <input data-case-field="repairSicHimiId" autocomplete="off" maxlength="100" placeholder="SIC-Hilfsmittel-ID" />
+                            <small>Identifikation der vorhandenen Prothese aus SIC. Nicht die SIC-Vorgangsnummer oder die SIC-Musternummer zur Kalkulation.</small>
+                          </label>
                         </div>
                         <div class="order-help"><span>ℹ</span><span><strong>Reihenfolge:</strong> zuerst Kostenträger und Produktgruppe wählen, danach wird der passende Hilfsmittel-/Versorgungsbereich eingegrenzt.</span></div>
                       </div>
@@ -322,6 +327,12 @@
                       <textarea id="rxNeededText" data-case-field="rxNeededText" rows="6" placeholder="Benötigten Rezepttext vollständig erfassen."></textarea>
                       <small id="rxNeededHint" class="muted">Pflichtangabe, solange keine Verordnung vorhanden ist.</small>
                     </label>
+                    <div id="rxRepairFollowPanel" class="hidden mt-14">
+                      <label class="case-kind-option"><input type="checkbox" data-case-field="rxFollowOn" id="rxFollowOn"><span><b>Rezept folgt</b><small>Nur markieren, wenn eine Verordnung tatsächlich nachgereicht werden soll.</small></span></label>
+                      <label id="rxRepairFollowFrom" class="hidden mt-12">Verordner / Rezept folgt von <span class="order-optional">optional</span>
+                        <input data-case-field="rxFollowFrom" autocomplete="off" maxlength="120" placeholder="Verordnende Praxis / Stelle" />
+                      </label>
+                    </div>
                   </div>
                 </div></section>
 
@@ -362,7 +373,13 @@
                     <p class="lead">Reparaturauftrag, Schaden, durchgeführte Arbeiten, Fotodokumentation und Funktionsprüfung strukturiert dokumentieren.</p>
                     <div class="repair-protocol-note"><strong>Reparaturvorgang</strong> Die Angaben aus Auftrag und Rezept bleiben dem Vorgang zugeordnet. Die Hilfsmittel-ID aus SIC dient der eindeutigen Zuordnung zum vorhandenen Hilfsmittel.</div>
 
-                    <div class="repair-protocol mt-14">
+                    <div id="repairV13Mount" class="hidden" aria-label="Reparaturtool Prothetik uEx">
+  <div class="repair-v13-banner">Reparaturtool · Prothetik uEx (PG24). Stammdaten werden aus Auftrag und Rezept übernommen.</div>
+  <iframe id="repairV13Frame" title="Reparaturtool Prothetik uEx" sandbox="allow-scripts allow-modals allow-downloads" referrerpolicy="no-referrer" loading="eager"></iframe>
+  <section id="repairV13SecurePhotos" class="repair-v13-photos hidden"><h3>Fotodokumentation</h3><p>Fotos und Bauteiletiketten werden im privaten Speicher des Versorgungsassistenten abgelegt.</p></section>
+  <details id="repairV13LegacySummary" class="repair-v13-legacy hidden"><summary>Bisherige Reparaturdokumentation anzeigen (schreibgeschützt)</summary><div id="repairV13LegacySummaryBody"></div></details>
+</div>
+<div class="repair-protocol mt-14">
                       <section class="repair-protocol-card">
                         <div class="repair-protocol-head"><span class="order-section-no">1</span><div><h4>Auftrag & Hilfsmittel</h4><p>Vorgang, Hilfsmittel und Reparaturstatus eindeutig zuordnen.</p></div></div>
                         <div class="repair-protocol-body">
