@@ -4227,17 +4227,34 @@ import { versorgungsziele } from './versorgungsziele.js'
     function uexConfigurationCompleted(){
       return uexConfigurationMatchesCase() && values.uexConfigurationV02?.schema==='uex-konfiguration-0.4' && values.uexConfigurationV02?.abgeschlossen===true
     }
+    function repairProtocolIsVisible(){
+      if(wizardIndex!==2||!isRepairCase()) return false
+      const panel=document.querySelector('.wizard-panel[data-panel="2"]')
+      const repair=$('repairStepContent')
+      if(!panel?.classList.contains('active') || !repair || repair.classList.contains('hidden')) return false
+      if(isRepairV13Case()){
+        const mount=$('repairV13Mount')
+        const frame=$('repairV13Frame')
+        // A restored completion flag alone cannot unlock navigation if the
+        // actual PDF-based repair protocol has not yet loaded or is hidden.
+        return repairV13ReadyForCase() && !!mount && !mount.classList.contains('hidden') &&
+          !!frame && frame.dataset.ready==='1' && !!frame.getClientRects().length
+      }
+      // Legacy repair paths must show their own editable protocol.
+      const legacy=repair.querySelector('.repair-protocol')
+      return !!legacy && !legacy.classList.contains('hidden') && !!legacy.getClientRects().length
+    }
     function updateUexNextVisibility(){
       const next=$('wizardNext')
       if(!next) return
-      // The wizard's outer "Weiter" is gated by the explicit completion
-      // signal from the embedded technical modules. Merely visiting a step or
-      // entering partial data does not release navigation.
+      // Both conditions matter: the protocol must be displayed AND explicitly
+      // completed. A saved finish flag must not unlock a loading/hidden form.
       const configPending=wizardIndex===4&&stepApplicable(4)&&!uexConfigurationCompleted()
       const repairPending=wizardIndex===2&&isRepairCase()&&(
-        isRepairV13Case()
-          ? !(repairV13ReadyForCase()&&values.repairUexV13?.completed===true)
-          : !(values.repairCompleted==='Ja'&&validateStep(2).ok)
+        !repairProtocolIsVisible() ||
+        (isRepairV13Case()
+          ? values.repairUexV13?.completed!==true
+          : !(values.repairCompleted==='Ja'&&validateStep(2).ok))
       )
       next.classList.toggle('hidden',configPending||repairPending)
     }
