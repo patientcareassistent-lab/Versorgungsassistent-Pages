@@ -194,6 +194,8 @@ function setVersorgungsKontext(ctx){
  const rezeptVon=pickFirst(rezeptdaten.rezeptFolgtVon);
  // Bei Wechsel eines Vorgangs keine Stammdaten oder Rezeptangaben aus dem vorherigen Vorgang behalten.
  for(const key of Object.keys(values))data[key]=values[key];
+ const incomingRepairDate=pickFirst(ctx.reparaturdatum);
+ if(incomingRepairDate) data['Datum']=/^\d{4}-\d{2}-\d{2}$/.test(incomingRepairDate)?incomingRepairDate.slice(8,10)+'.'+incomingRepairDate.slice(5,7)+'.'+incomingRepairDate.slice(0,4):incomingRepairDate;
  data.rezept=rezeptFolgt===true;
  data['Rezeptzusteller']=data.rezept?rezeptVon:'';
  contextProvided=true;
@@ -375,7 +377,15 @@ if(window.__VA_EMBEDDED__){
   if(event.source!==window.parent||!event.data||event.data.type!=='VA_REPAIR_V13_PARENT')return;
   if(event.data.action==='context'){
    // Parent and child exchange data only after the frame has been created inside the authenticated app.
-   if(initialized&&event.data.token!==sessionToken)return;
+   if(initialized){
+    if(event.data.token!==sessionToken)return;
+    // Refresh authorized reference data without replacing unsaved repair edits, photos or completion state.
+    const keptDate=data['Datum'],keptPhotos=data.photos;
+    readOnly=!!event.data.readOnly;
+    try{setVersorgungsKontext(event.data.context||{});data['Datum']=keptDate;data.photos=keptPhotos;render();}
+    catch(err){send('error',{message:String(err?.message||err)})}
+    return;
+   }
    sessionToken=String(event.data.token||'');if(!sessionToken)return;
    initialized=true;readOnly=!!event.data.readOnly;
    try{
