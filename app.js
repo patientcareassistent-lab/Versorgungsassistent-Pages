@@ -110,7 +110,8 @@ import { versorgungsziele } from './versorgungsziele.js'
         patientName:row.patient_name||'',
         caseNumber:row.case_number||'',
         insuredNo:row.insured_no||'',
-        caseKind:row.case_kind||''
+        caseKind:row.case_kind||'',
+        nextPlan:{goal:row.next_plan_goal||'',mode:row.next_plan_mode||'open',date:row.next_plan_date||'',week:row.next_plan_week||'',time:row.next_plan_time||'',note:row.next_plan_note||''}
       }
       return {
         id:row.id,
@@ -135,7 +136,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       for(let from=0;;from+=pageSize){
         const response=await supabase
           .from('care_case_overview')
-          .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,schema_version,patient_first_name,patient_last_name,patient_name,case_number,insured_no,case_kind,owner_user_id,last_modified_by,assigned_technician')
+          .select('id,created_at,updated_at,wizard_index,insurer,product_group,himi_id,himi,status,schema_version,patient_first_name,patient_last_name,patient_name,case_number,insured_no,case_kind,owner_user_id,last_modified_by,assigned_technician,next_plan_goal,next_plan_mode,next_plan_date,next_plan_week,next_plan_time,next_plan_note')
           .neq('status','Abgeschlossen')
           .order('updated_at',{ascending:false})
           .range(from,from+pageSize-1)
@@ -444,6 +445,108 @@ import { versorgungsziele } from './versorgungsziele.js'
       return (step.index+1)+'. '+step.label
     }
 
+
+    const nextPlanGoals=[
+      'Terminvereinbarung zur Beratung','Beratung','Konfiguration',
+      'Terminvereinbarung zum Scan/Abdruck','Scan/Abdruck','in Modellierung',
+      'Bestellung | MyFit','In Bearbeitung zur 1. Anprobe',
+      'Terminvereinbarung 1. Anprobe','1. Anprobe','zur Probe außer Haus',
+      'In Bearbeitung zur 2. Anprobe','Terminvereinbarung 2. Anprobe','2. Anprobe',
+      'In Bearbeitung zur 3. oder weiteren Anprobe',
+      'Terminvereinbarung 3. oder weitere Anprobe','3. oder weitere Anprobe',
+      'Herstellung Kosmetik','Fertigstellung','Terminvereinbarung zur Abgabe',
+      'Terminvereinbarung SER | Einbau Servicepassteil',
+      'SER | Einbau Servicepassteil','SER | Passteil im Service',
+      'Terminvereinbarung SER | Ausbau Servicepassteil',
+      'SER | Ausbau Servicepassteil','Abgabe','Abrechnungsfreigabe'
+    ]
+    const nextPlanQuickGoals=['Beratung','Konfiguration','Scan/Abdruck','1. Anprobe','Abgabe']
+    let nextPlanSelectedCase=''
+    function nextPlanTimeLabel(plan){
+      if(!plan?.goal)return 'Keine Terminplanung'
+      if(plan.mode==='week'&&/^\d{4}-W\d{2}$/.test(plan.week||'')){
+        const [y,w]=plan.week.split('-W');return 'KW '+Number(w)+' / '+y
+      }
+      if(plan.mode==='date'&&/^\d{4}-\d{2}-\d{2}$/.test(plan.date||'')){
+        const [y,m,d]=plan.date.split('-');return d+'.'+m+'.'+y+(plan.time?' · '+plan.time+' Uhr':'')
+      }
+      return 'Termin noch offen'
+    }
+    function nextPlanRefreshMode(){
+      const mode=document.querySelector('input[name="nextPlanMode"]:checked')?.value||'open'
+      $('nextPlanDateFields').classList.toggle('hidden',mode!=='date')
+      $('nextPlanWeekFields').classList.toggle('hidden',mode!=='week')
+      $('nextPlanDate').required=mode==='date'
+      $('nextPlanWeek').required=mode==='week'
+      $('nextPlanQuickGoals').querySelectorAll('button').forEach(b=>{
+        b.classList.toggle('is-selected',b.dataset.nextPlanQuickGoal===$('nextPlanGoal').value)
+      })
+    }
+    function openNextPlanDialog(id){
+      const item=readSupplyDrafts().find(x=>x.id===id)
+      if(!item)return
+      nextPlanSelectedCase=id
+      $('nextPlanCaseTitle').textContent=[item.values?.patientFirstName,item.values?.patientLastName].filter(Boolean).join(' ')
+        ||item.values?.patientName||item.values?.caseNumber||'Versorgung'
+      $('nextPlanGoal').innerHTML='<option value="">Bitte Ziel wählen</option>'+
+        nextPlanGoals.map(g=>'<option value="'+escapeHtml(g)+'">'+escapeHtml(g)+'</option>').join('')
+      const plan=item.values?.nextPlan||{}
+      $('nextPlanGoal').value=nextPlanGoals.includes(plan.goal)?plan.goal:''
+      const mode=['date','week','open'].includes(plan.mode)?plan.mode:'open'
+      const radio=document.querySelector('input[name="nextPlanMode"][value="'+mode+'"]')
+      if(radio)radio.checked=true
+      $('nextPlanDate').value=plan.date||''
+      $('nextPlanTime').value=plan.time||''
+      $('nextPlanWeek').value=plan.week||''
+      $('nextPlanNote').value=plan.note||''
+      $('nextPlanMessage').textContent=''
+      $('nextPlanQuickGoals').innerHTML=nextPlanQuickGoals.map(g=>
+        '<button type="button" class="supply-filter-chip" data-next-plan-quick-goal="'+escapeHtml(g)+'">'+escapeHtml(g)+'</button>').join('')
+      nextPlanRefreshMode()
+      $('nextPlanDialog').showModal()
+      $('nextPlanGoal').focus()
+    }
+    async function saveNextPlan(event){
+      event.preventDefault()
+      const id=nextPlanSelectedCase
+      if(!id||!currentSession)return
+      const goal=$('nextPlanGoal').value
+      const mode=document.querySelector('input[name="nextPlanMode"]:checked')?.value||'open'
+      const date=mode==='date'?$('nextPlanDate').value:''
+      const week=mode==='week'?$('nextPlanWeek').value:''
+      if(!nextPlanGoals.includes(goal)){$('nextPlanMessage').textContent='Bitte ein Terminziel wählen.';return}
+      if(mode==='date'&&!/^\d{4}-\d{2}-\d{2}$/.test(date)){$('nextPlanMessage').textContent='Bitte Datum wählen.';return}
+      if(mode==='week'&&!/^\d{4}-W\d{2}$/.test(week)){$('nextPlanMessage').textContent='Bitte Kalenderwoche wählen.';return}
+      const plan={goal,mode,date,week,time:mode==='date'?$('nextPlanTime').value:'',note:$('nextPlanNote').value.trim().slice(0,160)}
+      const save=$('nextPlanSave')
+      save.disabled=true
+      $('nextPlanMessage').textContent='Wird gespeichert …'
+      try{
+        if(activeSupplyId===id&&!(await persistActiveSupplyNow()))throw Error('Aktueller Vorgang konnte nicht gespeichert werden.')
+        const latest=await supabase.from('care_cases').select('id,payload,updated_at').eq('id',id).single()
+        if(latest.error||!latest.data)throw Error('Auftrag konnte nicht geladen werden.')
+        const written=await supabase.from('care_cases').update({payload:{...(latest.data.payload||{}),nextPlan:plan}})
+          .eq('id',id).eq('updated_at',latest.data.updated_at)
+          .select('id,updated_at,last_modified_by').maybeSingle()
+        if(written.error||!written.data)throw Error('Der Auftrag wurde parallel geändert. Bitte Termin erneut prüfen.')
+        const cached=readSupplyDrafts().find(x=>x.id===id)
+        if(cached){
+          supplyDraftCache=[{...cached,updatedAt:written.data.updated_at,
+            lastModifiedBy:written.data.last_modified_by||currentSession.user.id,
+            values:{...cached.values,nextPlan:plan}},...supplyDraftCache.filter(x=>x.id!==id)]
+        }
+        if(activeSupplyId===id){
+          values.nextPlan=plan
+          const active=readSupplyDrafts().find(x=>x.id===id)
+          if(active)lastPersistedSupplyFingerprint=supplyPersistenceFingerprint(active)
+        }
+        $('nextPlanDialog').close()
+        nextPlanSelectedCase=''
+        renderSupplyOverview()
+      }catch(error){$('nextPlanMessage').textContent=error?.message||'Speichern fehlgeschlagen.'}
+      finally{save.disabled=false}
+    }
+
     let supplySelectedStatus=''
     let supplySelectedPg=''
     let supplySelectedStage=''
@@ -501,7 +604,7 @@ import { versorgungsziele } from './versorgungsziele.js'
         if(search){
           const hay=[x.values?.patientFirstName,x.values?.patientLastName,x.values?.patientName,
             x.values?.caseNumber,x.kasse,x.pg,x.himi,x.values?.insuredNo,x.values?.caseKind,
-            x.assignedTechnician,supplyEditorDisplayName(x)].join(' ').toLowerCase()
+            x.assignedTechnician,supplyEditorDisplayName(x),x.values?.nextPlan?.goal].join(' ').toLowerCase()
           if(!hay.includes(search)) return false
         }
         return true
@@ -510,7 +613,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       $('supplyFiltersReset')?.classList.toggle('hidden',!search&&!supplySelectedStatus&&!supplySelectedPg&&!supplySelectedStage)
 
       if(!filtered.length){
-        body.innerHTML='<tr><td colspan="6" class="supply-empty"><strong>'+
+        body.innerHTML='<tr><td colspan="7" class="supply-empty"><strong>'+
           (drafts.length?'Keine passenden Vorgänge.':'Keine offenen Versorgungen.')+
           '</strong><small>'+(drafts.length?'Andere Filter wählen oder zurücksetzen.':'Mit „Neue Versorgung“ einen Vorgang anlegen.')+'</small></td></tr>'
         return
@@ -528,6 +631,10 @@ import { versorgungsziele } from './versorgungsziele.js'
              '<small class="supply-row-sub">'+escapeHtml(x.kasse||'Kostenträger offen')+'</small></td>'+
           '<td data-label="Arbeitsstand"><strong class="supply-row-aux">'+escapeHtml(supplyStepLabel(x))+'</strong>'+
              '<span class="supply-row-status"><span class="pill '+(x.status==='Rückfrage / offen'?'warning':x.status==='Warten / Genehmigung'?'blue':'')+'">'+escapeHtml(x.status)+'</span></span></td>'+
+          '<td data-label="Nächster Schritt / Termin"><strong class="supply-plan-goal">'+escapeHtml(x.values?.nextPlan?.goal||'Noch nicht geplant')+'</strong>'+ 
+          '<small class="supply-row-sub">'+escapeHtml(nextPlanTimeLabel(x.values?.nextPlan))+'</small>'+
+          '<button type="button" class="supply-plan-edit" data-supply-plan="'+escapeHtml(x.id)+'" aria-label="Nächsten Termin für '+escapeHtml(name)+' bearbeiten">'+
+          (x.values?.nextPlan?.goal?'Ändern':'Termin +')+'</button></td>'+
           '<td data-label="Zuletzt bearbeitet von">'+escapeHtml(supplyEditorDisplayName(x))+'</td>'+
           '<td data-label="Zuständiger Techniker">'+escapeHtml(assignedTechnician)+'</td>'+
           '<td data-label="Geändert" class="supply-row-date">'+escapeHtml(formatDraftTime(x.updatedAt))+'</td>'+
@@ -4257,6 +4364,57 @@ import { versorgungsziele } from './versorgungsziele.js'
           : !(values.repairCompleted==='Ja'&&validateStep(2).ok))
       )
       next.classList.toggle('hidden',configPending||repairPending)
+      updatePatientManagementMailActions()
+    }
+    const PATIENT_MANAGEMENT_MAIL='patientenmanagement-prothetik-uex@brillinger.de'
+    function patientManagementMailKind(){
+      if(!activeSupplyId||!currentSession||!supplyHasEditableContext()||
+         String($('carePg')?.value||'')!=='24')return ''
+      if(wizardIndex===4&&stepApplicable(4)&&uexConfigurationCompleted())return 'config'
+      if(wizardIndex===2&&isRepairCase()&&repairProtocolIsVisible()){
+        if(isRepairV13Case())return repairV13ReadyForCase()&&values.repairUexV13?.completed===true?'repair':''
+        return values.repairCompleted==='Ja'&&validateStep(2).ok?'repair':''
+      }
+      return ''
+    }
+    function updatePatientManagementMailActions(){
+      const available=patientManagementMailKind()
+      for(const type of ['repair','config']){
+        const button=$(type==='repair'?'patientManagementMailRepair':'patientManagementMailConfig')
+        if(!button)continue
+        const show=available===type
+        button.classList.toggle('hidden',!show)
+        button.disabled=!show
+        if(!show){
+          const status=$(type==='repair'?'patientManagementMailRepairStatus':'patientManagementMailConfigStatus')
+          if(status)status.textContent=''
+        }
+      }
+    }
+    async function composePatientManagementMail(type,button){
+      if(type!==patientManagementMailKind())return
+      const originalId=String(activeSupplyId)
+      const status=$(type==='repair'?'patientManagementMailRepairStatus':'patientManagementMailConfigStatus')
+      button.disabled=true
+      if(status)status.textContent='Speichere Abschluss …'
+      try{
+        if(!await persistActiveSupplyNow())throw Error('Abschluss konnte nicht gespeichert werden.')
+        if(String(activeSupplyId)!==originalId||type!==patientManagementMailKind())
+          throw Error('Der Vorgang wurde gewechselt oder ist nicht mehr abgeschlossen.')
+        const label=type==='config'?'Prothesenkonfiguration':'Reparaturprotokoll'
+        const candidate=String(values.caseNumber||'').trim()
+        const reference=/^[A-Za-z0-9._/-]{1,40}$/.test(candidate)?candidate:originalId.slice(0,8)
+        const subject='PG24 | '+label+' abgeschlossen'
+        const body='Guten Tag,\n\n'+label+' ist im Versorgungsassistenten abgeschlossen.\n'+
+          'Interne Vorgangsreferenz: '+reference+'\n\n'+
+          'Bitte den Vorgang im geschützten Versorgungsassistenten weiterbearbeiten.\n\n'+
+          'Diese Nachricht enthält absichtlich keine Patientenstammdaten oder Gesundheitsdokumente.'
+        window.location.href='mailto:'+PATIENT_MANAGEMENT_MAIL+'?subject='+encodeURIComponent(subject)+
+          '&body='+encodeURIComponent(body)
+        if(status)status.textContent='Entwurf vorbereitet. Versand im Mailprogramm bestätigen.'
+      }catch(error){
+        if(status)status.textContent='E-Mail nicht vorbereitet: '+(error?.message||String(error))
+      }finally{updatePatientManagementMailActions()}
     }
     function uexConfigurationContext(){
       return {versorgungshoehe:'Unterschenkel',seite:values.side||'',phase:supplyType(),
@@ -6083,6 +6241,10 @@ import { versorgungsziele } from './versorgungsziele.js'
     $('profileAiClear').addEventListener('click',resetProfileAiUi)
     $('measureTranscriptAnalyze')?.addEventListener('click',analyzeMeasureTranscript)
     $('measureTranscriptApply')?.addEventListener('click',applyMeasureTranscript)
+    for(const type of ['repair','config']){
+      const button=$(type==='repair'?'patientManagementMailRepair':'patientManagementMailConfig')
+      button?.addEventListener('click',()=>{void composePatientManagementMail(type,button)})
+    }
     $('supplySearch').addEventListener('input',renderSupplyOverview)
     $('supplyStatusButtons').addEventListener('click',event=>{
       const button=event.target.closest('button[data-supply-status]')
@@ -6110,7 +6272,23 @@ import { versorgungsziele } from './versorgungsziele.js'
       renderSupplyOverview()
       $('supplySearch').focus()
     })
-    $('supplyOverviewBody').addEventListener('click',e=>{const row=e.target.closest('[data-supply-id]');if(row)restoreSupplyDraft(row.dataset.supplyId)})
+    $('supplyOverviewBody').addEventListener('click',e=>{
+      const edit=e.target.closest('[data-supply-plan]')
+      if(edit){e.stopPropagation();openNextPlanDialog(edit.dataset.supplyPlan);return}
+      const row=e.target.closest('[data-supply-id]')
+      if(row)restoreSupplyDraft(row.dataset.supplyId)
+    })
+    $('nextPlanQuickGoals').addEventListener('click',e=>{
+      const quick=e.target.closest('[data-next-plan-quick-goal]')
+      if(!quick)return
+      $('nextPlanGoal').value=quick.dataset.nextPlanQuickGoal
+      nextPlanRefreshMode()
+    })
+    $('nextPlanGoal').addEventListener('change',nextPlanRefreshMode)
+    document.querySelectorAll('input[name="nextPlanMode"]').forEach(r=>r.addEventListener('change',nextPlanRefreshMode))
+    $('nextPlanForm').addEventListener('submit',saveNextPlan)
+    $('nextPlanCancel').addEventListener('click',()=>{$('nextPlanDialog').close();nextPlanSelectedCase=''})
+    $('nextPlanClose').addEventListener('click',()=>{$('nextPlanDialog').close();nextPlanSelectedCase=''})
     $('supplyOverviewBody').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-supply-id]')){e.preventDefault();restoreSupplyDraft(e.target.dataset.supplyId)}})
     if($('archiveRefreshButton')) $('archiveRefreshButton').addEventListener('click',()=>loadArchiveOverview())
     if($('archiveOverviewBody')) $('archiveOverviewBody').addEventListener('click',e=>{
