@@ -39,6 +39,14 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   const second = '[data-supply-id="66666666-6666-4666-8666-666666666662"]'
   await page.goto('/index.html')
   await expect(page.locator('#supplyOverviewBody '+first)).toBeVisible()
+  // Quick scheduling must not steal the ordinary row navigation.
+  await page.locator('#supplyOverviewBody '+first+' [data-supply-plan]').click()
+  await expect(page.locator('#nextPlanDialog')).toBeVisible()
+  await expect(page.locator('#nextPlanGoal option')).toHaveCount(28) // blank + 27 exact targets
+  await page.locator('#nextPlanQuickGoals [data-next-plan-quick-goal="1. Anprobe"]').click()
+  await expect(page.locator('#nextPlanGoal')).toHaveValue('1. Anprobe')
+  await page.locator('#nextPlanCancel').click()
+  await expect(page.locator('#nextPlanDialog')).toBeHidden()
   await page.locator('#supplyOverviewBody '+first).click()
   await expect(page.locator('#careView')).toBeVisible()
   await expect(page.locator('#repairV13Mount')).toBeVisible()
@@ -55,6 +63,7 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await expect(frame.locator('.stepbtn')).toHaveCount(6)
   // An unfinished repair never exposes the outer navigation button.
   await expect(page.locator('#wizardNext')).toBeHidden()
+  await expect(page.locator('#patientManagementMailRepair')).toBeHidden()
   await expect(page.locator('#repairV13SecurePhotos #repairPhotoFiles')).toHaveCount(1)
   await expect(page.locator('#repairV13SecurePhotos #repairLabelFiles')).toHaveCount(1)
 
@@ -79,6 +88,8 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   })).toBe(true)
   await expect(frame.locator('#vaRepairFinish')).toContainText('abgeschlossen')
   await expect(page.locator('#wizardNext')).toBeVisible()
+  await expect(page.locator('#patientManagementMailRepair')).toBeVisible()
+  await expect(page.locator('#patientManagementMailConfig')).toBeHidden()
   // A stored "completed" flag cannot reveal Weiter if the protocol itself is hidden.
   // The visibility guard responds immediately when the protocol reappears.
   await page.locator('#repairV13Mount').evaluate(el=>el.classList.add('hidden'))
@@ -160,6 +171,7 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await reopened.locator('.stepbtn').nth(3).click()
   await reopened.locator('input[aria-label="Hersteller-Artikelnummer 1"]').fill('TEST-ART-988')
   await expect(page.locator('#wizardNext')).toBeHidden()
+  await expect(page.locator('#patientManagementMailRepair')).toBeHidden()
   await reopened.locator('.stepbtn').nth(5).click()
   await expect(reopened.locator('#vaRepairFinish')).toContainText('fertigstellen')
   await reopened.locator('#vaRepairFinish').click()

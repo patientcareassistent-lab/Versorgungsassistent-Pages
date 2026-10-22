@@ -308,7 +308,7 @@ jobs:
       # Run browser smoke checks for generated dependencies only available in
       # the build job (Tesseract/PDF.js/Whisper models and PG23/24 goal widgets).
       - name: Install Chromium for production asset checks
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Verify production runtime and OCR in a browser
         shell: bash
