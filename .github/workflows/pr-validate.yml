@@ -71,7 +71,7 @@ jobs:
         run: node --test tests/security/repair-v13-integration.test.mjs
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Run critical browser regressions
         run: |
