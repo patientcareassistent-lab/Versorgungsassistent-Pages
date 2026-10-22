@@ -631,13 +631,13 @@ import { versorgungsziele } from './versorgungsziele.js'
              '<small class="supply-row-sub">'+escapeHtml(x.kasse||'Kostenträger offen')+'</small></td>'+
           '<td data-label="Arbeitsstand"><strong class="supply-row-aux">'+escapeHtml(supplyStepLabel(x))+'</strong>'+
              '<span class="supply-row-status"><span class="pill '+(x.status==='Rückfrage / offen'?'warning':x.status==='Warten / Genehmigung'?'blue':'')+'">'+escapeHtml(x.status)+'</span></span></td>'+
+          '<td data-label="Zuletzt bearbeitet von">'+escapeHtml(supplyEditorDisplayName(x))+'</td>'+
+          '<td data-label="Zuständiger Techniker">'+escapeHtml(assignedTechnician)+'</td>'+
+          '<td data-label="Geändert" class="supply-row-date">'+escapeHtml(formatDraftTime(x.updatedAt))+'</td>'+
           '<td data-label="Nächster Schritt / Termin"><strong class="supply-plan-goal">'+escapeHtml(x.values?.nextPlan?.goal||'Noch nicht geplant')+'</strong>'+ 
           '<small class="supply-row-sub">'+escapeHtml(nextPlanTimeLabel(x.values?.nextPlan))+'</small>'+
           '<button type="button" class="supply-plan-edit" data-supply-plan="'+escapeHtml(x.id)+'" aria-label="Nächsten Termin für '+escapeHtml(name)+' bearbeiten">'+
           (x.values?.nextPlan?.goal?'Ändern':'Termin +')+'</button></td>'+
-          '<td data-label="Zuletzt bearbeitet von">'+escapeHtml(supplyEditorDisplayName(x))+'</td>'+
-          '<td data-label="Zuständiger Techniker">'+escapeHtml(assignedTechnician)+'</td>'+
-          '<td data-label="Geändert" class="supply-row-date">'+escapeHtml(formatDraftTime(x.updatedAt))+'</td>'+
         '</tr>'
       }).join('')
     }
