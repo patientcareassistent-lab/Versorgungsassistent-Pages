@@ -119,15 +119,46 @@
               </div>
               <div class="table-wrap">
                 <table class="supply-dashboard-table">
-                  <thead><tr><th>Person / Vorgang</th><th>Versorgung</th><th>Arbeitsstand</th><th>Zuletzt bearbeitet von</th><th>Zuständiger Techniker</th><th>Geändert</th></tr></thead>
+                  <thead><tr><th>Person / Vorgang</th><th>Versorgung</th><th>Arbeitsstand</th><th>Nächster Schritt / Termin</th><th>Zuletzt bearbeitet von</th><th>Zuständiger Techniker</th><th>Geändert</th></tr></thead>
                   <tbody id="supplyOverviewBody">
-                    <tr><td colspan="6" class="supply-empty"><strong>Keine offenen Versorgungen.</strong><small>Mit „Neue Versorgung“ einen Vorgang anlegen.</small></td></tr>
+                    <tr><td colspan="7" class="supply-empty"><strong>Keine offenen Versorgungen.</strong><small>Mit „Neue Versorgung“ einen Vorgang anlegen.</small></td></tr>
                   </tbody>
                 </table>
               </div>
             </section>
           </div>
         </section>
+
+        <dialog id="nextPlanDialog" class="next-plan-dialog no-print" aria-labelledby="nextPlanTitle">
+          <form id="nextPlanForm">
+            <div class="next-plan-header">
+              <div><h2 id="nextPlanTitle">Nächster Schritt / Termin</h2><p id="nextPlanCaseTitle"></p></div>
+              <button id="nextPlanClose" type="button" class="next-plan-close" aria-label="Schließen">×</button>
+            </div>
+            <label for="nextPlanGoal" class="next-plan-label">Ziel / Bearbeitungsstand <strong aria-hidden="true">*</strong></label>
+            <div id="nextPlanQuickGoals" class="next-plan-quick" aria-label="Häufige Ziele"></div>
+            <select id="nextPlanGoal" required><option value="">Bitte Ziel wählen</option></select>
+            <fieldset class="next-plan-mode"><legend>Terminplanung</legend>
+              <label><input type="radio" name="nextPlanMode" value="date" /> Tag</label>
+              <label><input type="radio" name="nextPlanMode" value="week" /> Kalenderwoche</label>
+              <label><input type="radio" name="nextPlanMode" value="open" checked /> Noch offen</label>
+            </fieldset>
+            <div id="nextPlanDateFields" class="next-plan-date-fields hidden">
+              <label>Datum <input id="nextPlanDate" type="date" /></label>
+              <label>Uhrzeit (optional) <input id="nextPlanTime" type="time" /></label>
+            </div>
+            <div id="nextPlanWeekFields" class="next-plan-date-fields hidden">
+              <label>Kalenderwoche <input id="nextPlanWeek" type="week" /></label>
+            </div>
+            <label class="next-plan-label" for="nextPlanNote">Kurzer interner Hinweis (optional)</label>
+            <input id="nextPlanNote" type="text" maxlength="160" placeholder="Nur organisatorische Angaben" />
+            <p id="nextPlanMessage" role="status" aria-live="polite" class="next-plan-message"></p>
+            <div class="next-plan-actions">
+              <button id="nextPlanCancel" class="secondary" type="button">Abbrechen</button>
+              <button id="nextPlanSave" class="primary" type="submit">Speichern</button>
+            </div>
+          </form>
+        </dialog>
 
         <section id="archiveView" class="hidden">
           <div class="page-grid">
@@ -484,6 +515,13 @@
                         </div>
                       </section>
                     </div>
+                  <div class="patient-management-mail" data-mail-section="repair">
+                    <div><strong>Patientenmanagement informieren</strong>
+                      <small>Nach Abschluss des Reparaturprotokolls optional einen E-Mail-Entwurf öffnen. Ohne Patientennamen oder Gesundheitsdaten.</small>
+                    </div>
+                    <button id="patientManagementMailRepair" class="secondary hidden" type="button">E-Mail vorbereiten</button>
+                    <small id="patientManagementMailRepairStatus" role="status" aria-live="polite"></small>
+                  </div>
                   </div>
                 </div></section>
 
@@ -519,6 +557,13 @@
                   <p class="source-note">Fachliche Vorlage: Konfigurationsbogen UKB vom 18.08.2026. Die Auswahl ersetzt keine Prüfung der Vertragskombinationen oder Artikelnummern.</p>
                   <div id="uexConfigNotice" class="status-card open" role="status">Konfigurationswerkzeug wird geladen …</div>
                   <iframe id="uexConfigFrame" title="Technische Prothesenkonfiguration UKB" src="./tools/konfiguration-uex/index.html?v=RELEASESHA" loading="lazy" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin" height="850" ></iframe>
+                  <div class="patient-management-mail" data-mail-section="config">
+                    <div><strong>Patientenmanagement informieren</strong>
+                      <small>Nach Abschluss der Prothesenkonfiguration optional einen E-Mail-Entwurf öffnen. Kein automatischer Versand.</small>
+                    </div>
+                    <button id="patientManagementMailConfig" class="secondary hidden" type="button">E-Mail vorbereiten</button>
+                    <small id="patientManagementMailConfigStatus" role="status" aria-live="polite"></small>
+                  </div>
                 </div></section>
                 <section class="wizard-panel" data-panel="5"><div class="card">
                   <h2>6. Versorgungsplanung</h2><p class="lead">Erst die fachliche Planung, danach Vertrag und Preis. So bleibt die Versorgung und nicht die Gebührenposition der Ausgangspunkt.</p>
