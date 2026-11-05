@@ -67,6 +67,9 @@ import { versorgungsziele } from './versorgungsziele.js'
       assignments.set(slot,className)
     }
     const V09_ANAMNESIS_SCOPE=true
+    // Beratungsfokus blendet spätere Produktions- und Abrechnungsschritte aus.
+    // Reparatur und UKB-Konfiguration werden unverändert im Fachablauf aufgerufen.
+    const BERATUNGSFOKUS=true
     const ACTIVE_PRODUCT_GROUPS=new Set(['23','24'])
     const isActiveProductGroup=(pg)=>ACTIVE_PRODUCT_GROUPS.has(String(pg||'').padStart(2,'0'))
     const views = ['overview','care','supplyOverview','archive','forms','contractQuestions','sources']
@@ -4363,7 +4366,14 @@ import { versorgungsziele } from './versorgungsziele.js'
           ? values.repairUexV13?.completed!==true
           : !(values.repairCompleted==='Ja'&&validateStep(2).ok))
       )
-      next.classList.toggle('hidden',configPending||repairPending)
+      const finalStep=BERATUNGSFOKUS && nextApplicableIndex(wizardIndex)===wizardIndex
+      const finish=$('finishConsultationButton')
+      if(finish){
+        const ready=finalStep && validateStep(wizardIndex).ok && supplyHasEditableContext()
+        finish.classList.toggle('hidden',!ready)
+        finish.disabled=!ready
+      }
+      next.classList.toggle('hidden',configPending||repairPending||finalStep)
       updatePatientManagementMailActions()
     }
     const PATIENT_MANAGEMENT_MAIL='patientenmanagement-prothetik-uex@brillinger.de'
@@ -4546,7 +4556,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       const repair=isRepairCase()
       $('orderRepairSicIdField')?.classList.toggle('hidden',!repair||String($('carePg')?.value||'')!=='24')
       syncRxPresence()
-      wizardSteps[2].name=repair?'Reparaturprotokoll':'Profilerhebung'
+      wizardSteps[2].name=repair?'Reparaturprotokoll':'Beratung / Profilerhebung'
       const step=document.querySelector('.wizard-step[data-step="2"] .step-label')
       if(step) step.textContent=wizardSteps[2].name
       const profile=$('profileStepContent'),repairBox=$('repairStepContent')
@@ -4664,6 +4674,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       return !!meta?.Erprobung_erforderlich || supplyType()==='Funktionsbauteilerprobung' || supplyType()==='Erprobung' || values.requiresTrialEvidence==='Ja' || values.evidenceRequired===true
     }
     function stepApplicable(i){
+      if(BERATUNGSFOKUS && i>=6) return false
       if(V09_ANAMNESIS_SCOPE && i===11) return false
       if(i===2) return selectedCaseKind()==='Neuversorgung' || selectedCaseKind()==='Reparatur'
       if(i===3) return !isRepairCase() && requiresMeasure()
@@ -5240,6 +5251,29 @@ import { versorgungsziele } from './versorgungsziele.js'
       }))
       $('wizardBack').addEventListener('click',()=>goWizard(previousApplicableIndex(wizardIndex)))
       $('wizardNext').addEventListener('click',advanceWizard)
+      $('finishConsultationButton')?.addEventListener('click',async()=>{
+        if(!supplyHasEditableContext())return
+        const missing=wizardSteps.map((_,i)=>i).filter(i=>stepApplicable(i)&&!validateStep(i).ok)
+        if(missing.length){
+          showWizardError('Beratung ist noch nicht vollständig dokumentiert:',missing.map(i=>wizardSteps[i].name))
+          return
+        }
+        const button=$('finishConsultationButton')
+        const previous=values.consultationSavedAt
+        values.consultationSavedAt=new Date().toISOString()
+        button.disabled=true
+        const saved=await persistActiveSupplyNow()
+        button.disabled=false
+        if(!saved){
+          if(previous===undefined)delete values.consultationSavedAt
+          else values.consultationSavedAt=previous
+          showWizardError('Beratung konnte nicht gespeichert werden. Bitte Vorgang geöffnet lassen.')
+          return
+        }
+        showWizardError('')
+        $('consultationSaveStatus').textContent='Beratungsdokumentation gespeichert. Bei Bedarf über „PDF / Drucken“ ausgeben.'
+        updateUexNextVisibility()
+      })
       $('uexConfigFrame')?.addEventListener('load',mountUexConfigurationFrame)
       $('newSupplyOverviewButton').addEventListener('click',startNewSupply)
       $('newSupplyNavButton').addEventListener('click',startNewSupply)
@@ -5835,7 +5869,10 @@ import { versorgungsziele } from './versorgungsziele.js'
         b.disabled=!applicable || locked
         b.title=!applicable?'Für diese Versorgung nicht erforderlich':locked?'Zuerst '+wizardSteps[blocker].name+' abschließen':''
       })
-      document.querySelectorAll('.wizard-panel').forEach((p,i)=>p.classList.toggle('active',i===wizardIndex))
+      document.querySelectorAll('.wizard-panel').forEach((p,i)=>{
+        p.classList.toggle('active',i===wizardIndex)
+        p.classList.toggle('focus-print-section',BERATUNGSFOKUS && stepApplicable(i))
+      })
       $('wizardBack').disabled=previousApplicableIndex(wizardIndex)===wizardIndex
       const next=nextApplicableIndex(wizardIndex)
       $('wizardNext').textContent=next===wizardIndex?'Status prüfen':'Weiter →'
@@ -6221,8 +6258,11 @@ import { versorgungsziele } from './versorgungsziele.js'
           return
         }
       }
+      if(BERATUNGSFOKUS)document.body.classList.add('beratung-print')
       window.print()
     })
+    window.addEventListener('afterprint',()=>document.body.classList.remove('beratung-print'))
+    $('careView')?.addEventListener('input',()=>{const note=$('consultationSaveStatus');if(note)note.textContent=''},true)
     $('archiveSupplyButton').addEventListener('click',archiveActiveSupply)
     $('clearButton').addEventListener('click',clearCurrentSupplyInputs)
     $('profileAiMode').addEventListener('change',()=>{
