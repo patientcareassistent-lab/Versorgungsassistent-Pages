@@ -4369,7 +4369,7 @@ import { versorgungsziele } from './versorgungsziele.js'
       const finalStep=BERATUNGSFOKUS && nextApplicableIndex(wizardIndex)===wizardIndex
       const finish=$('finishConsultationButton')
       if(finish){
-        const ready=finalStep && validateStep(wizardIndex).ok && supplyHasEditableContext()
+        const ready=finalStep && !repairPending && !configPending && validateStep(wizardIndex).ok && supplyHasEditableContext()
         finish.classList.toggle('hidden',!ready)
         finish.disabled=!ready
       }
