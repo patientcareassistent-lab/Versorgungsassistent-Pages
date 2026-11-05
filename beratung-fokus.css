@@ -1,0 +1,35 @@
+/* Beratungsfokus: ausschließlich Präsentationsregeln; Vertrags- und Formularlogik bleibt erhalten. */
+#utilityNav{display:none}
+#supplyOverviewView .supply-status-grid,
+#supplyOverviewView .supply-stage-filter-wrap,
+#supplyOverviewView .supply-dashboard-filter-label{display:none}
+#supplyOverviewView .supply-dashboard-table tr > :nth-child(4),
+#supplyOverviewView .supply-dashboard-table tr > :nth-child(5),
+#supplyOverviewView .supply-dashboard-table tr > :nth-child(7){display:none}
+#careView .wizard-step.skipped,
+#careView .wizard-step[data-step="6"],
+#careView .wizard-step[data-step="7"],
+#careView .wizard-step[data-step="8"],
+#careView .wizard-step[data-step="9"],
+#careView .wizard-step[data-step="10"],
+#careView .wizard-step[data-step="11"]{display:none!important}
+#careView #archiveSupplyButton,
+#careView #clearButton{display:none!important}
+#careView .wizard-rail{position:sticky;top:90px}
+#careView .wizard-top h3{color:#00157A}
+#careView #finishConsultationButton{min-height:44px}
+#consultationSaveStatus{margin:8px 0 0;font-size:.82rem;line-height:1.4;color:#14532d}
+#consultationSaveStatus:empty{display:none}
+@media(max-width:1050px){#careView .wizard-rail{position:static}}
+@media print{
+  body.beratung-print #careView{display:block!important}
+  body.beratung-print #careView .wizard-shell{display:block!important}
+  body.beratung-print #careView .wizard-panel.focus-print-section{display:block!important;break-inside:avoid-page}
+  body.beratung-print #careView .wizard-panel:not(.focus-print-section){display:none!important}
+  body.beratung-print #careView .wizard-panel.focus-print-section + .wizard-panel.focus-print-section{break-before:page}
+  body.beratung-print #careView .wizard-panel .card{border:0;box-shadow:none;padding:12px 0}
+  body.beratung-print #careView .wizard-panel input,
+  body.beratung-print #careView .wizard-panel select,
+  body.beratung-print #careView .wizard-panel textarea{color:#111!important}
+  body.beratung-print #careView .wizard-top .actions{display:none!important}
+}
