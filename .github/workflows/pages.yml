@@ -328,7 +328,7 @@ jobs:
           rm -rf dist
           mkdir -p dist/vendor dist/whispercpp dist/assets/aok-pg24 dist/tools/konfiguration-uex dist/tools/reparatur-uex
 
-          cp index.html app.js prescribers.js versorgungsziele.js frame-guard.js styles.css prescribers.css brand-logo.jpg .nojekyll dist/
+          cp index.html app.js prescribers.js versorgungsziele.js frame-guard.js styles.css beratung-fokus.css prescribers.css brand-logo.jpg .nojekyll dist/
           cp -a vendor/. dist/vendor/
           cp whispercpp/runtime.js whispercpp/worker.js whispercpp/whisper.js whispercpp/ggml-tiny-q5_1.bin dist/whispercpp/
           cp -a assets/aok-pg24/. dist/assets/aok-pg24/
@@ -344,8 +344,8 @@ jobs:
           import os, re
           html = Path('dist/index.html')
           raw = html.read_text(encoding='utf-8')
-          if raw.count('v=RELEASESHA') != 3:
-              raise SystemExit('Expected three cache-key placeholders (app, CSS, UKB iframe).')
+          if raw.count('v=RELEASESHA') != 4:
+              raise SystemExit('Expected four cache-key placeholders (app, base CSS, Beratung CSS, UKB iframe).')
           sha = os.environ['GITHUB_SHA']
           if not re.fullmatch(r'[0-9a-f]{40}', sha):
               raise SystemExit('Invalid GitHub commit SHA for cache keys')
@@ -354,6 +354,7 @@ jobs:
           for expected in (
               f'<script type="module" src="./app.js?v={sha}"></script>',
               f'<link id="appStyles" rel="stylesheet" href="./styles.css?v={sha}"',
+              f'<link rel="stylesheet" href="./beratung-fokus.css?v={sha}" />',
               f'tools/konfiguration-uex/index.html?v={sha}"',
           ):
               if expected not in raw:
@@ -367,6 +368,7 @@ jobs:
             dist/versorgungsziele.js
             dist/frame-guard.js
             dist/styles.css
+            dist/beratung-fokus.css
             dist/brand-logo.jpg
             dist/vendor/supabase.js
             dist/vendor/tesseract/tesseract.esm.min.js

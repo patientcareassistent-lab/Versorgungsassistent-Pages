@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   validate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -83,11 +83,19 @@ jobs:
             tests/e2e/repair-v13.spec.cjs \
             tests/e2e/repair-v13-wizard.spec.cjs \
             tests/e2e/workflow.spec.cjs \
-            tests/e2e/live-security.spec.cjs \
             tests/e2e/ocr.spec.cjs \
             tests/e2e/pg-production-scope.spec.cjs \
             tests/e2e/versorgungsziele.spec.cjs
           
+      - name: Live Supabase access-control smoke check (network-dependent)
+        run: |
+          set -euo pipefail
+          if getent ahostsv4 pypljdyqjpdkismbwuag.supabase.co > /dev/null; then
+            npx playwright test --retries=0 tests/e2e/live-security.spec.cjs
+          else
+            echo "::warning::Supabase DNS not available from CI runner. Live security smoke was NOT verified. Re-run from a network with Supabase access before production approval."
+          fi
+
       - name: Upload failure diagnostics
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

@@ -49,11 +49,9 @@ test('focused navigation shows work views and keeps project information availabl
   await expect(page.locator('#supplyOverviewView')).toBeVisible()
   await expect(page.locator('#archiveView')).toBeHidden()
 
-  await page.locator('#utilityNav summary').click()
-  await expect(page.locator('#utilityNav [data-view="overview"]')).toBeVisible()
-  await page.locator('#utilityNav [data-view="overview"]').click()
-  await expect(page.locator('#overviewView')).toBeVisible()
-  await expect(page.locator('#utilityNav')).not.toHaveAttribute('open', '')
+  // Projekt- und Vertragsverwaltung lenken nicht von der Beratung ab.
+  await expect(page.locator('#utilityNav')).toBeHidden()
+  await expect(page.locator('#overviewView')).toBeHidden()
 
   await sidebar.locator('#newSupplyNavButton').click()
   await expect(page.locator('#careView')).toBeVisible()

@@ -11,6 +11,7 @@
   <script src="./frame-guard.js"></script>
   <link id="appStyles" rel="stylesheet" href="./styles.css?v=RELEASESHA" />
   <link rel="stylesheet" href="./prescribers.css" />
+  <link rel="stylesheet" href="./beratung-fokus.css?v=RELEASESHA" />
 
 </head>
 <body>
@@ -18,7 +19,7 @@
 
   <main id="auth" class="auth-page hidden">
     <section class="auth-card">
-      <div class="brand-lockup"><img class="brand-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" /><div><h1>Versorgungsassistent</h1><p>Teststand v0.9 · Anamnese</p></div></div>
+      <div class="brand-lockup"><img class="brand-logo" src="./brand-logo.jpg" alt="brillinger ottobock.care" /><div><h1>Versorgungsassistent</h1><p>Beratung · Dokumentation</p></div></div>
       <div id="loginPane">
         <h2>Anmelden</h2>
         <p class="muted">Zugriff nur für freigegebene Mitarbeiter. Die MFA ist vorübergehend ausgesetzt.</p>
@@ -49,7 +50,7 @@
       </div>
       <div class="side-nav-label">ARBEITSBEREICH</div>
       <nav aria-label="Versorgungsverwaltung">
-        <button id="newSupplyNavButton" class="nav-create" type="button" aria-label="Neue Versorgung"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Neue Versorgung</span></button>
+        <button id="newSupplyNavButton" class="nav-create" type="button" aria-label="Neue Beratung"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Neue Beratung</span></button>
         <button data-view="supplyOverview" class="active" type="button" aria-label="Versorgungsübersicht"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg><span>Versorgungen</span></button>
         <button data-view="archive" type="button" aria-label="Archiv"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11h14V8M10 12h4"/></svg><span>Archiv</span></button>
       </nav>
@@ -59,7 +60,7 @@
 
     <div class="main">
       <header class="topbar">
-        <div><h1 id="pageTitle">Versorgungsübersicht</h1><p>Versorgungsassistent · Digitale Anamnese v0.9</p></div>
+        <div><h1 id="pageTitle">Versorgungsübersicht</h1><p>Versorgungsassistent · Beratungsdokumentation</p></div>
         <div class="header-actions">
           <details id="utilityNav" class="utility-nav">
             <summary>Projektinfos <span aria-hidden="true">⌄</span></summary>
@@ -82,10 +83,10 @@
               <div class="supply-overview-head">
                 <div>
                   <p class="supply-dashboard-eyebrow">ARBEITSÜBERSICHT</p>
-                  <h2>Versorgungsdashboard</h2>
-                  <p>Offene Versorgungen auf einen Blick. Status und Produktgruppe per Klick filtern.</p>
+                  <h2>Beratungsübersicht</h2>
+                  <p>Beratungen öffnen, fortsetzen oder neu dokumentieren.</p>
                 </div>
-                <button id="newSupplyOverviewButton" class="primary no-print" type="button">+ Neue Versorgung</button>
+                <button id="newSupplyOverviewButton" class="primary no-print" type="button">+ Neue Beratung</button>
               </div>
               <div class="supply-dashboard-filter-label">Status <small>Auswahl als Schnellfilter</small></div>
               <div class="supply-status-grid" role="group" aria-label="Versorgungen nach Status filtern" id="supplyStatusButtons">
@@ -197,8 +198,8 @@
           <div class="page-grid">
             <section class="card span2">
               <div class="wizard-top">
-                <div><h3>Anamnese & Versorgungsdokumentation</h3><p>Version 0.9 ersetzt im ersten Schritt die papierhafte Anamnese. Kasse, Produktgruppe und Versorgungssituation steuern die passenden Erhebungs- und Maßblätter.</p></div>
-                <div class="actions no-print"><button id="printButton" class="secondary">Drucken / PDF</button><button id="archiveSupplyButton" class="secondary">Archivieren</button><span id="archiveActionNotice" role="status" aria-live="polite" class="muted hidden"></span><button id="clearButton" class="secondary">Eingaben leeren</button></div>
+                <div><h3>Digitale Beratungsdokumentation</h3><p>Patient zuordnen, Befund und Beratung dokumentieren, bei Bedarf Maßblatt, Reparaturprotokoll oder Prothesenkonfiguration bearbeiten. Danach speichern und als PDF ausgeben.</p></div>
+                <div class="actions no-print"><button id="printButton" class="secondary">PDF / Drucken</button><button id="archiveSupplyButton" class="secondary">Archivieren</button><span id="archiveActionNotice" role="status" aria-live="polite" class="muted hidden"></span><button id="clearButton" class="secondary">Eingaben leeren</button></div>
               </div>
               <div id="wizardContext" class="wizard-context"><span class="pill">Neuer Vorgang</span></div>
             </section>
@@ -207,12 +208,12 @@
               <aside class="wizard-rail no-print">
                 <div class="wizard-progress"><i id="wizardProgressBar"></i></div>
                 <div class="wizard-progress-text"><span id="wizardProgressText">Arbeitsstand wird geprüft</span></div>
-                <button class="wizard-step active" data-step="0"><span class="step-no">1</span><span class="step-label">Auftragserfassung</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="1"><span class="step-no">2</span><span class="step-label">Rezepterfassung</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="2"><span class="step-no">3</span><span class="step-label">Profilerhebung</span><span class="step-state"></span></button>
+                <button class="wizard-step active" data-step="0"><span class="step-no">1</span><span class="step-label">Patient & Vorgang</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="1"><span class="step-no">2</span><span class="step-label">Verordnung</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="2"><span class="step-no">3</span><span class="step-label">Beratung / Profilerhebung</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="3"><span class="step-no">4</span><span class="step-label">Maßblatt</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="4"><span class="step-no">5</span><span class="step-label">Prothesenkonfiguration</span><span class="step-state"></span></button>
-                <button class="wizard-step" data-step="5"><span class="step-no">6</span><span class="step-label">Versorgungsplanung</span><span class="step-state"></span></button>
+                <button class="wizard-step" data-step="5"><span class="step-no">6</span><span class="step-label">Versorgungsziel & Maßnahme</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="6"><span class="step-no">7</span><span class="step-label">Vertrag & Kostenvoranschlag</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="7"><span class="step-no">8</span><span class="step-label">Genehmigung / Voraussetzungen</span><span class="step-state"></span></button>
                 <button class="wizard-step" data-step="8"><span class="step-no">9</span><span class="step-label">Versorgungsverlauf</span><span class="step-state"></span></button>
@@ -223,7 +224,7 @@
 
               <div class="wizard-stage">
                 <section class="wizard-panel active" data-panel="0"><div class="card">
-                  <h2>1. Auftragserfassung</h2>
+                  <h2>1. Patient & Vorgang</h2>
                   <p class="lead">Die wichtigsten Stammdaten einmal erfassen. Sie steuern anschließend Rezept, Profilerhebung und Maßblatt.</p>
                   <div class="order-flow-note">Pflichtfelder sind mit * gekennzeichnet. Rezeptdaten werden anschließend erfasst.</div>
 
@@ -566,7 +567,7 @@
                   </div>
                 </div></section>
                 <section class="wizard-panel" data-panel="5"><div class="card">
-                  <h2>6. Versorgungsplanung</h2><p class="lead">Erst die fachliche Planung, danach Vertrag und Preis. So bleibt die Versorgung und nicht die Gebührenposition der Ausgangspunkt.</p>
+                  <h2>6. Versorgungsziel & Maßnahme</h2><p class="lead">Das Versorgungsziel wird nach Befunderhebung und Maßaufnahme festgehalten. Geplante Maßnahmen und Komponenten werden fachlich dokumentiert.</p>
                   <div class="mini-grid">
                     <label>Formular / Regel<select id="careForm"><option value="">Generisches Blatt / automatisch</option></select></label>
                     <label>Versorgungsziel (nach der Maßaufnahme)<textarea data-case-field="planGoal" rows="3"></textarea></label>
@@ -657,7 +658,8 @@
                 </div></section>
 
                 <div id="wizardError" class="alert error wizard-error hidden"></div>
-                <div class="wizard-actions no-print"><button id="wizardBack" class="secondary">← Zurück</button><div class="right"><button id="wizardNext" class="primary">Weiter →</button></div></div>
+                <p id="consultationSaveStatus" role="status" aria-live="polite" class="no-print"></p>
+                <div class="wizard-actions no-print"><button id="wizardBack" class="secondary">← Zurück</button><div class="right"><button id="finishConsultationButton" type="button" class="primary hidden">Beratung speichern & abschließen</button><button id="wizardNext" class="primary">Weiter →</button></div></div>
               </div>
             </section>
           </div>
