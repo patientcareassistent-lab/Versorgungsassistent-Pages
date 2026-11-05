@@ -39,14 +39,8 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   const second = '[data-supply-id="66666666-6666-4666-8666-666666666662"]'
   await page.goto('/index.html')
   await expect(page.locator('#supplyOverviewBody '+first)).toBeVisible()
-  // Quick scheduling must not steal the ordinary row navigation.
-  await page.locator('#supplyOverviewBody '+first+' [data-supply-plan]').click()
-  await expect(page.locator('#nextPlanDialog')).toBeVisible()
-  await expect(page.locator('#nextPlanGoal option')).toHaveCount(28) // blank + 27 exact targets
-  await page.locator('#nextPlanQuickGoals [data-next-plan-quick-goal="1. Anprobe"]').click()
-  await expect(page.locator('#nextPlanGoal')).toHaveValue('1. Anprobe')
-  await page.locator('#nextPlanCancel').click()
-  await expect(page.locator('#nextPlanDialog')).toBeHidden()
+  // Terminsteuerung ist im Beratungsmodus nicht mehr sichtbar; Zeilen bleiben öffnbar.
+  await expect(page.locator('#supplyOverviewBody '+first+' [data-supply-plan]')).toBeHidden()
   await page.locator('#supplyOverviewBody '+first).click()
   await expect(page.locator('#careView')).toBeVisible()
   await expect(page.locator('#repairV13Mount')).toBeVisible()
@@ -87,7 +81,14 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
     return rows.find(r => r.id.endsWith('661'))?.payload?.repairUexV13?.completed
   })).toBe(true)
   await expect(frame.locator('#vaRepairFinish')).toContainText('abgeschlossen')
-  await expect(page.locator('#wizardNext')).toBeVisible()
+  await expect(page.locator('#wizardNext')).toBeHidden()
+   await expect(page.locator('#finishConsultationButton')).toBeVisible()
+  await page.locator('#finishConsultationButton').click()
+  await expect.poll(() => page.evaluate(() => {
+    const rows=JSON.parse(localStorage.getItem('va:e2e:mock-care-cases')||'[]')
+    return rows.find(r=>r.id.endsWith('661'))?.payload?.consultationSavedAt || ''
+  })).toMatch(/^20\d\d-/)
+  await expect(page.locator('#consultationSaveStatus')).toContainText('gespeichert')
   await expect(page.locator('#patientManagementMailRepair')).toBeVisible()
   await expect(page.locator('#patientManagementMailConfig')).toBeHidden()
   // A stored "completed" flag cannot reveal Weiter if the protocol itself is hidden.
@@ -95,11 +96,13 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await page.locator('#repairV13Mount').evaluate(el=>el.classList.add('hidden'))
   await expect(page.locator('#wizardNext')).toBeHidden()
   await page.locator('#repairV13Mount').evaluate(el=>el.classList.remove('hidden'))
-  await expect(page.locator('#wizardNext')).toBeVisible()
+  await expect(page.locator('#wizardNext')).toBeHidden()
+   await expect(page.locator('#finishConsultationButton')).toBeVisible()
   await page.locator('#repairStepContent').evaluate(el=>el.classList.add('hidden'))
   await expect(page.locator('#wizardNext')).toBeHidden()
   await page.locator('#repairStepContent').evaluate(el=>el.classList.remove('hidden'))
-  await expect(page.locator('#wizardNext')).toBeVisible()
+  await expect(page.locator('#wizardNext')).toBeHidden()
+   await expect(page.locator('#finishConsultationButton')).toBeVisible()
   // The completed button is aligned with the right edge of the summary card.
   const buttonLayout=await frame.locator('#vaRepairFinish').evaluate(button=>{
     const row=button.closest('.va-repair-finish-row')
@@ -156,7 +159,8 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   // Restored completion only becomes actionable when the iframe has loaded
   // and the actual repair document is visible again.
   await expect(page.locator('#repairV13Mount')).toBeVisible()
-  await expect(page.locator('#wizardNext')).toBeVisible()
+  await expect(page.locator('#wizardNext')).toBeHidden()
+   await expect(page.locator('#finishConsultationButton')).toBeVisible()
   const reopened = page.frameLocator('#repairV13Frame')
   await expect(reopened.locator('#baseStatus')).toHaveText('verbunden')
   await expect(reopened.locator('#f_Datum')).toHaveValue('14.10.2026')
@@ -166,7 +170,8 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await expect(reopened.locator('[data-photo-kind="prothese"] .va-photo-card')).toHaveCount(1)
   await reopened.locator('.stepbtn').nth(5).click()
   await expect(reopened.locator('#vaRepairFinish')).toContainText('abgeschlossen')
-  await expect(page.locator('#wizardNext')).toBeVisible()
+  await expect(page.locator('#wizardNext')).toBeHidden()
+   await expect(page.locator('#finishConsultationButton')).toBeVisible()
   // Edits after completion revoke the finish confirmation until it is repeated.
   await reopened.locator('.stepbtn').nth(3).click()
   await reopened.locator('input[aria-label="Hersteller-Artikelnummer 1"]').fill('TEST-ART-988')
@@ -176,7 +181,8 @@ test('PG24 repair V13 replaces legacy form, persists and isolates two care cases
   await expect(reopened.locator('#vaRepairFinish')).toContainText('fertigstellen')
   await reopened.locator('#vaRepairFinish').click()
   await expect(reopened.locator('#vaRepairFinish')).toContainText('abgeschlossen')
-  await expect(page.locator('#wizardNext')).toBeVisible()
+  await expect(page.locator('#wizardNext')).toBeHidden()
+   await expect(page.locator('#finishConsultationButton')).toBeVisible()
 
   // Check original two pages and article labels in the printed overlay.
   await reopened.getByRole('button',{name:/Originalbogen als PDF speichern/}).click()
